@@ -2,15 +2,15 @@
 package vanila_sgd_ext_batch
 
 import (
-	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/layer"
 )
 
 type Net interface {
 	Activate(inputs *data.Data) (output *data.Data)
 	Backprop(deltas *data.Data) (gradient *data.Data)
 	GetLayersCount() int
-	GetLayer(index int) nnet.Layer
+	GetLayer(index int) layer.Layer
 }
 
 type Loss interface {
@@ -18,7 +18,7 @@ type Loss interface {
 }
 
 type TrainableLayer interface {
-	nnet.Layer
+	layer.Layer
 	GetWeightsWithGradient() (w, g *data.Data)
 	GetBiasesWithGradient() (w, g *data.Data)
 }

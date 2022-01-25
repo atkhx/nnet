@@ -1,12 +1,13 @@
 package basic_ffn
 
 import (
-	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/layer"
+
 	"log"
 )
 
-type Layers []nnet.Layer
+type Layers []layer.Layer
 
 func New(iWidth, iHeight, iDepth int, layers Layers) *ffnet {
 	return &ffnet{
@@ -58,7 +59,7 @@ func (n *ffnet) GetLayersCount() int {
 	return len(n.Layers)
 }
 
-func (n *ffnet) GetLayer(index int) nnet.Layer {
+func (n *ffnet) GetLayer(index int) layer.Layer {
 	if index > -1 && index < len(n.Layers) {
 		return n.Layers[index]
 	}

@@ -5,10 +5,11 @@
 package mocks
 
 import (
-	nnet "github.com/atkhx/nnet"
-	data "github.com/atkhx/nnet/data"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	data "github.com/atkhx/nnet/data"
+	nnet "github.com/atkhx/nnet/layer"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockNet is a mock of Net interface
