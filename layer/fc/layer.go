@@ -1,8 +1,10 @@
 package fc
 
 import (
-	"github.com/atkhx/nnet/data"
 	"math"
+	"sync"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func New(options ...Option) *layer {
@@ -31,6 +33,15 @@ type layer struct {
 	gradInputs  *data.Data
 
 	iVolume int
+
+	Threads int
+
+	deltas *data.Data
+
+	activateInChan chan int
+	backpropInChan chan int
+
+	wg sync.WaitGroup
 }
 
 func (l *layer) InitDataSizes(w, h, d int) (oW, oH, oD int) {
@@ -61,42 +72,73 @@ func (l *layer) InitDataSizes(w, h, d int) (oW, oH, oD int) {
 	l.gradWeights = &data.Data{}
 	l.gradWeights.InitHiperCube(l.IWidth, l.IHeight, l.IDepth, l.OWidth*l.OHeight*l.ODepth)
 
+	if l.Threads == 0 {
+		l.Threads = len(l.output.Data)
+	}
+
+	l.activateInChan = make(chan int, l.Threads)
+	l.backpropInChan = make(chan int, l.Threads)
+
+	for i := 0; i < l.Threads; i++ {
+		go func() {
+			for {
+				select {
+				case fi := <-l.activateInChan:
+					l.activateFilter(fi)
+				case fi := <-l.backpropInChan:
+					l.backpropFilter(fi)
+				}
+				l.wg.Done()
+			}
+		}()
+	}
+
 	return l.OWidth, l.OHeight, l.ODepth
 }
 
 func (l *layer) Activate(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 
+	l.wg.Add(len(l.output.Data))
 	for i := 0; i < len(l.output.Data); i++ {
-		k := i * l.iVolume
-		o := 0.0
-
-		for j := 0; j < len(l.inputs.Data); j++ {
-			o += l.Weights.Data[k+j] * l.inputs.Data[j]
-		}
-
-		l.output.Data[i] = o + l.Biases.Data[i]
+		l.activateInChan <- i
 	}
+	l.wg.Wait()
 
 	return l.output
+}
+
+func (l *layer) activateFilter(i int) {
+	k := i * l.iVolume
+	o := 0.0
+
+	for j := 0; j < len(l.inputs.Data); j++ {
+		o += l.Weights.Data[k+j] * l.inputs.Data[j]
+	}
+
+	l.output.Data[i] = o + l.Biases.Data[i]
 }
 
 func (l *layer) Backprop(deltas *data.Data) *data.Data {
 	l.gradInputs.Reset()
 	l.gradWeights.Reset()
-
 	l.gradBiases = deltas.Copy()
+	l.deltas = deltas
 
+	l.wg.Add(len(l.output.Data))
 	for i := 0; i < len(l.output.Data); i++ {
-		k := i * l.iVolume
-		d := deltas.Data[i]
-
-		for j := 0; j < len(l.inputs.Data); j++ {
-			l.gradInputs.Data[j] += l.Weights.Data[k+j] * d
-			l.gradWeights.Data[k+j] += l.inputs.Data[j] * d
-		}
+		l.backpropInChan <- i
 	}
+	l.wg.Wait()
 	return l.gradInputs
+}
+
+func (l *layer) backpropFilter(i int) {
+	k := i * l.iVolume
+	for j := 0; j < len(l.inputs.Data); j++ {
+		l.gradInputs.Data[j] += l.Weights.Data[k+j] * l.deltas.Data[i]
+		l.gradWeights.Data[k+j] += l.inputs.Data[j] * l.deltas.Data[i]
+	}
 }
 
 func (l *layer) GetOutput() *data.Data {

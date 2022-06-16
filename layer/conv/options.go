@@ -42,3 +42,9 @@ func Stride(stride int) Option {
 		layer.FStride = stride
 	}
 }
+
+func Threads(threads int) Option {
+	return func(layer *layer) {
+		layer.Threads = threads
+	}
+}

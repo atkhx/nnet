@@ -1,9 +1,10 @@
 package conv
 
 import (
+	"testing"
+
 	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNew(t *testing.T) {

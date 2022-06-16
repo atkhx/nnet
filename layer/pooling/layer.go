@@ -1,6 +1,8 @@
 package pooling
 
 import (
+	"sync"
+
 	"github.com/atkhx/nnet/data"
 )
 
@@ -19,6 +21,9 @@ type layer struct {
 	iWidth, iHeight, iDepth int
 	oWidth, oHeight, oDepth int
 
+	iSquare int
+	oSquare int
+
 	FWidth  int
 	FHeight int
 
@@ -29,7 +34,16 @@ type layer struct {
 	output *data.Data
 	coords []int
 
+	Threads int
+
+	deltas *data.Data
+
+	activateInChan chan int
+	backpropInChan chan int
+
 	gradInputs *data.Data
+
+	wg sync.WaitGroup
 }
 
 func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
@@ -49,7 +63,30 @@ func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
 	l.gradInputs = &data.Data{}
 	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
 
+	l.iSquare = l.iWidth * l.iHeight
+	l.oSquare = l.oWidth * l.oHeight
 	l.coords = make([]int, l.oWidth*l.oHeight*l.oDepth)
+
+	if l.Threads == 0 {
+		l.Threads = l.oDepth
+	}
+
+	l.activateInChan = make(chan int, l.Threads)
+	l.backpropInChan = make(chan int, l.Threads)
+
+	for i := 0; i < l.Threads; i++ {
+		go func() {
+			for {
+				select {
+				case fi := <-l.activateInChan:
+					l.activateFilter(fi)
+				case fi := <-l.backpropInChan:
+					l.backpropFilter(fi)
+				}
+				l.wg.Done()
+			}
+		}()
+	}
 
 	return l.oWidth, l.oHeight, l.oDepth
 }
@@ -57,52 +94,68 @@ func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
 func (l *layer) Activate(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 
+	l.wg.Add(l.oDepth)
+	for i := 0; i < l.oDepth; i++ {
+		l.activateInChan <- i
+	}
+	l.wg.Wait()
+
+	return l.output
+}
+
+func (l *layer) activateFilter(oz int) {
 	wW, wH := l.FWidth, l.FHeight
-
-	outXYZ := 0
-	iSquare := l.iWidth * l.iHeight
-
+	outXYZ := oz * l.oSquare
 	max := 0.0
 	maxCoord := 0
-	for oz := 0; oz < l.oDepth; oz++ {
-		for oy := 0; oy < l.oHeight; oy++ {
-			for ox := 0; ox < l.oWidth; ox++ {
 
-				iy, n := oy*l.FStride-l.FPadding, true
+	for oy := 0; oy < l.oHeight; oy++ {
+		for ox := 0; ox < l.oWidth; ox++ {
 
-				for fy := 0; fy < wH; fy++ {
-					ix := ox*l.FStride - l.FPadding
-					for fx := 0; fx < wW; fx++ {
-						if ix > -1 && ix < l.iWidth && iy > -1 && iy < l.iHeight {
-							inXYZ := oz*iSquare + iy*l.iWidth + ix
+			iy, n := oy*l.FStride-l.FPadding, true
 
-							if n || max < l.inputs.Data[inXYZ] {
-								max, maxCoord, n = l.inputs.Data[inXYZ], inXYZ, false
-							}
+			for fy := 0; fy < wH; fy++ {
+				ix := ox*l.FStride - l.FPadding
+				for fx := 0; fx < wW; fx++ {
+					if ix > -1 && ix < l.iWidth && iy > -1 && iy < l.iHeight {
+						inXYZ := oz*l.iSquare + iy*l.iWidth + ix
+
+						if n || max < l.inputs.Data[inXYZ] {
+							max, maxCoord, n = l.inputs.Data[inXYZ], inXYZ, false
 						}
-
-						ix++
 					}
-					iy++
+
+					ix++
 				}
-
-				l.output.Data[outXYZ] = max
-				l.coords[outXYZ] = maxCoord
-
-				outXYZ++
+				iy++
 			}
+
+			l.output.Data[outXYZ] = max
+			l.coords[outXYZ] = maxCoord
+
+			outXYZ++
 		}
 	}
-	return l.output
 }
 
 func (l *layer) Backprop(deltas *data.Data) *data.Data {
 	l.gradInputs.Reset()
+	l.deltas = deltas
 
-	for i := 0; i < len(deltas.Data); i++ {
-		l.gradInputs.Data[l.coords[i]] += deltas.Data[i]
+	l.wg.Add(l.oDepth)
+	for i := 0; i < l.oDepth; i++ {
+		l.backpropInChan <- i
 	}
+	l.wg.Wait()
+
 	return l.gradInputs
+}
+
+func (l *layer) backpropFilter(oz int) {
+	offset := oz * l.oSquare
+	for i := offset; i < offset+l.oSquare; i++ {
+		l.gradInputs.Data[l.coords[i]] += l.deltas.Data[i]
+	}
 }
 
 func (l *layer) GetOutput() *data.Data {

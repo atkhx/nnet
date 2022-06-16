@@ -15,3 +15,9 @@ func OutputSizes(w, h, d int) Option {
 		layer.ODepth = d
 	}
 }
+
+func Threads(threads int) Option {
+	return func(layer *layer) {
+		layer.Threads = threads
+	}
+}
