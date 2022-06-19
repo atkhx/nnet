@@ -1,9 +1,10 @@
 package fc
 
 import (
+	"testing"
+
 	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestLayer_InitDataSizes(t *testing.T) {
@@ -43,8 +44,8 @@ func TestLayer(t *testing.T) {
 	layer.InitDataSizes(3, 3, 3)
 
 	bias := 0.017
-	layer.Biases.Data = []float64{bias}
-	layer.Weights.Data = []float64{
+	layer.biases.Data = []float64{bias}
+	layer.weights.Data = []float64{
 		0.01, 0.02, 0.03,
 		0.04, 0.05, 0.06,
 		0.07, 0.08, 0.09,

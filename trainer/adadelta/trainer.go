@@ -1,7 +1,9 @@
 //go:generate mockgen -package=mocks -source=$GOFILE -destination=mocks/$GOFILE
-package vanila_sgd_ext
+package adadelta
 
 import (
+	"math"
+
 	"github.com/atkhx/nnet/data"
 	"github.com/atkhx/nnet/layer"
 )
@@ -24,7 +26,7 @@ type TrainableLayer interface {
 	ResetGradients()
 }
 
-func New(net Net, loss Loss, learning, momentum, weightDecay float64, batchSize int) *trainer {
+func New(net Net, loss Loss, batchSize int) *trainer {
 	if batchSize < 1 {
 		batchSize = 1
 	}
@@ -33,10 +35,7 @@ func New(net Net, loss Loss, learning, momentum, weightDecay float64, batchSize 
 		net:  net,
 		loss: loss,
 
-		batchSize:   batchSize,
-		learnRate:   learning,
-		momentum:    momentum,
-		weightDecay: weightDecay,
+		batchSize: batchSize,
 	}
 }
 
@@ -44,26 +43,30 @@ type trainer struct {
 	net  Net
 	loss Loss
 
-	batchSize   int
-	batchIndex  int
-	learnRate   float64
-	momentum    float64
-	weightDecay float64
+	batchSize  int
+	batchIndex int
 
-	output    *data.Data
-	deltas    *data.Data
-	gradients []*data.Data
+	output *data.Data
+	deltas *data.Data
+	gsum   []*data.Data
+	xsum   []*data.Data
 }
 
+const ro = 0.95
+const eps = 0.000001
+
 func (t *trainer) initGradients() {
-	t.gradients = []*data.Data{}
+	t.gsum = []*data.Data{}
+	t.xsum = []*data.Data{}
 	for i := 0; i < t.net.GetLayersCount(); i++ {
 		if iLayer, ok := t.net.GetLayer(i).(TrainableLayer); ok {
 			_, g := iLayer.GetWeightsWithGradient()
-			t.gradients = append(t.gradients, g.CopyZero())
+			t.gsum = append(t.gsum, g.CopyZero())
+			t.xsum = append(t.xsum, g.CopyZero())
 
 			_, g = iLayer.GetBiasesWithGradient()
-			t.gradients = append(t.gradients, g.CopyZero())
+			t.gsum = append(t.gsum, g.CopyZero())
+			t.xsum = append(t.xsum, g.CopyZero())
 		}
 	}
 }
@@ -78,8 +81,11 @@ func (t *trainer) Activate(inputs, target *data.Data) *data.Data {
 	return t.output
 }
 
+const l1_decay = 0.001
+const l2_decay = 0.001
+
 func (t *trainer) UpdateWeights() {
-	if len(t.gradients) == 0 {
+	if len(t.gsum) == 0 {
 		t.initGradients()
 	}
 
@@ -97,9 +103,18 @@ func (t *trainer) UpdateWeights() {
 			{
 				w, g := iLayer.GetWeightsWithGradient()
 				for j := 0; j < len(w.Data); j++ {
-					value := t.gradients[k].Data[j]*t.momentum - (t.learnRate*g.Data[j]*batchRate + t.weightDecay*w.Data[j])
+					l1grad := l1_decay
+					if w.Data[j] <= 0 {
+						l1grad = -l1grad
+					}
 
-					t.gradients[k].Data[j] = value
+					l2grad := l2_decay * w.Data[j]
+					gradient := (l2grad + l1grad + g.Data[j]) * batchRate
+
+					t.gsum[k].Data[j] = ro*t.gsum[k].Data[j] + (1-ro)*gradient*gradient
+
+					value := -math.Sqrt((t.xsum[k].Data[j]+eps)/(t.gsum[k].Data[j]+eps)) * gradient
+					t.xsum[k].Data[j] = ro*t.xsum[k].Data[j] + (1-ro)*value*value
 					w.Data[j] += value
 				}
 			}
@@ -108,12 +123,22 @@ func (t *trainer) UpdateWeights() {
 			{
 				w, g := iLayer.GetBiasesWithGradient()
 				for j := 0; j < len(w.Data); j++ {
-					value := t.gradients[k].Data[j]*t.momentum - (t.learnRate*g.Data[j]*batchRate + t.weightDecay*w.Data[j])
+					l1grad := l1_decay
+					if w.Data[j] <= 0 {
+						l1grad = -l1grad
+					}
 
-					t.gradients[k].Data[j] = value
+					l2grad := l2_decay * w.Data[j]
+					gradient := (l2grad + l1grad + g.Data[j]) * batchRate
+
+					t.gsum[k].Data[j] = ro*t.gsum[k].Data[j] + (1-ro)*gradient*gradient
+
+					value := -math.Sqrt((t.xsum[k].Data[j]+eps)/(t.gsum[k].Data[j]+eps)) * gradient
+					t.xsum[k].Data[j] = ro*t.xsum[k].Data[j] + (1-ro)*value*value
 					w.Data[j] += value
 				}
 			}
+
 			k++
 			iLayer.ResetGradients()
 		}

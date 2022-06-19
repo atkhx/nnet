@@ -1,17 +1,21 @@
 package softmax
 
-type Option func(layer *layer)
-
-func defaults(layer *layer) {
-	layer.OWidth = 1
-	layer.OHeight = 1
-	layer.ODepth = 1
+func applyOptions(layer *layer, options ...Option) {
+	for _, opt := range options {
+		opt(layer)
+	}
 }
+
+var defaults = []Option{
+	OutputSizes(1, 1, 1),
+}
+
+type Option func(layer *layer)
 
 func OutputSizes(w, h, d int) Option {
 	return func(layer *layer) {
-		layer.OWidth = w
-		layer.OHeight = h
-		layer.ODepth = d
+		layer.oWidth = w
+		layer.oHeight = h
+		layer.oDepth = d
 	}
 }

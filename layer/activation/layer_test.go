@@ -1,18 +1,18 @@
 package activation
 
 import (
+	"testing"
+
 	"github.com/atkhx/nnet/data"
-	"github.com/atkhx/nnet/layer/activation/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestLayer_Activate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	activationFunc := mocks.NewMockActivationFunc(ctrl)
+	activationFunc := NewMockActivation(ctrl)
 	activationFunc.EXPECT().Forward(1.0).Return(0.40)
 	activationFunc.EXPECT().Forward(0.3).Return(0.01)
 
@@ -35,7 +35,7 @@ func TestLayer_Backprop(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	activationFunc := mocks.NewMockActivationFunc(ctrl)
+	activationFunc := NewMockActivation(ctrl)
 
 	activationFunc.EXPECT().Forward(1.0).Return(0.40)
 	activationFunc.EXPECT().Forward(0.3).Return(0.01)

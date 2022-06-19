@@ -8,12 +8,8 @@ import (
 
 func New(options ...Option) *layer {
 	layer := &layer{}
-	defaults(layer)
-
-	for _, opt := range options {
-		opt(layer)
-	}
-
+	applyOptions(layer, defaults...)
+	applyOptions(layer, options...)
 	return layer
 }
 
@@ -24,37 +20,36 @@ type layer struct {
 	iSquare int
 	oSquare int
 
-	FWidth  int
-	FHeight int
+	fWidth  int
+	fHeight int
 
-	FStride  int
-	FPadding int
+	fStride  int
+	fPadding int
 
 	inputs *data.Data
 	output *data.Data
 	coords []int
 
-	Threads int
+	deltas     *data.Data
+	gradInputs *data.Data
 
-	deltas *data.Data
+	threads int
 
 	activateInChan chan int
 	backpropInChan chan int
-
-	gradInputs *data.Data
 
 	wg sync.WaitGroup
 }
 
 func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
-	if l.FStride < 1 {
-		l.FStride = 1
+	if l.fStride < 1 {
+		l.fStride = 1
 	}
 
 	l.iWidth, l.iHeight, l.iDepth = w, h, d
 
-	l.oWidth = (l.iWidth-l.FWidth+2*l.FPadding)/l.FStride + 1
-	l.oHeight = (l.iHeight-l.FHeight+2*l.FPadding)/l.FStride + 1
+	l.oWidth = (l.iWidth-l.fWidth+2*l.fPadding)/l.fStride + 1
+	l.oHeight = (l.iHeight-l.fHeight+2*l.fPadding)/l.fStride + 1
 	l.oDepth = l.iDepth
 
 	l.output = &data.Data{}
@@ -67,14 +62,14 @@ func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
 	l.oSquare = l.oWidth * l.oHeight
 	l.coords = make([]int, l.oWidth*l.oHeight*l.oDepth)
 
-	if l.Threads == 0 {
-		l.Threads = l.oDepth
+	if l.threads == 0 {
+		l.threads = l.oDepth
 	}
 
-	l.activateInChan = make(chan int, l.Threads)
-	l.backpropInChan = make(chan int, l.Threads)
+	l.activateInChan = make(chan int, l.threads)
+	l.backpropInChan = make(chan int, l.threads)
 
-	for i := 0; i < l.Threads; i++ {
+	for i := 0; i < l.threads; i++ {
 		go func() {
 			for {
 				select {
@@ -104,7 +99,7 @@ func (l *layer) Activate(inputs *data.Data) *data.Data {
 }
 
 func (l *layer) activateFilter(oz int) {
-	wW, wH := l.FWidth, l.FHeight
+	wW, wH := l.fWidth, l.fHeight
 	outXYZ := oz * l.oSquare
 	max := 0.0
 	maxCoord := 0
@@ -112,10 +107,10 @@ func (l *layer) activateFilter(oz int) {
 	for oy := 0; oy < l.oHeight; oy++ {
 		for ox := 0; ox < l.oWidth; ox++ {
 
-			iy, n := oy*l.FStride-l.FPadding, true
+			iy, n := oy*l.fStride-l.fPadding, true
 
 			for fy := 0; fy < wH; fy++ {
-				ix := ox*l.FStride - l.FPadding
+				ix := ox*l.fStride - l.fPadding
 				for fx := 0; fx < wW; fx++ {
 					if ix > -1 && ix < l.iWidth && iy > -1 && iy < l.iHeight {
 						inXYZ := oz*l.iSquare + iy*l.iWidth + ix

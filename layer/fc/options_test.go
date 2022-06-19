@@ -1,8 +1,9 @@
 package fc
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestOutputSizes(t *testing.T) {
@@ -10,7 +11,7 @@ func TestOutputSizes(t *testing.T) {
 
 	OutputSizes(3, 4, 5)(layer)
 
-	assert.Equal(t, layer.OWidth, 3)
-	assert.Equal(t, layer.OHeight, 4)
-	assert.Equal(t, layer.ODepth, 5)
+	assert.Equal(t, layer.oWidth, 3)
+	assert.Equal(t, layer.oHeight, 4)
+	assert.Equal(t, layer.oDepth, 5)
 }

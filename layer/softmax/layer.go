@@ -1,39 +1,35 @@
 package softmax
 
 import (
-	"github.com/atkhx/nnet/data"
 	"math"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func New(options ...Option) *layer {
 	layer := &layer{}
-	defaults(layer)
-
-	for _, opt := range options {
-		opt(layer)
-	}
+	applyOptions(layer, defaults...)
+	applyOptions(layer, options...)
 
 	return layer
 }
 
 type layer struct {
-	IWidth, IHeight, IDepth int
-	OWidth, OHeight, ODepth int
+	iWidth, iHeight, iDepth int
+	oWidth, oHeight, oDepth int
 
 	inputs *data.Data
 	output *data.Data
-
-	debug bool
 }
 
 func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
-	l.IWidth, l.IHeight, l.IDepth = w, h, d
-	l.OWidth, l.OHeight, l.ODepth = w, h, d
+	l.iWidth, l.iHeight, l.iDepth = w, h, d
+	l.oWidth, l.oHeight, l.oDepth = w, h, d
 
 	l.output = &data.Data{}
 	l.output.InitCube(w, h, d)
 
-	return l.OWidth, l.OHeight, l.ODepth
+	return l.oWidth, l.oHeight, l.oDepth
 }
 
 func (l *layer) Activate(inputs *data.Data) *data.Data {

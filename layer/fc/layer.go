@@ -9,21 +9,18 @@ import (
 
 func New(options ...Option) *layer {
 	layer := &layer{}
-	defaults(layer)
-
-	for _, opt := range options {
-		opt(layer)
-	}
+	applyOptions(layer, defaults...)
+	applyOptions(layer, options...)
 
 	return layer
 }
 
 type layer struct {
-	IWidth, IHeight, IDepth int
-	OWidth, OHeight, ODepth int
+	iWidth, iHeight, iDepth int
+	oWidth, oHeight, oDepth int
 
-	Weights *data.Data
-	Biases  *data.Data
+	weights *data.Data
+	biases  *data.Data
 
 	inputs *data.Data
 	output *data.Data
@@ -31,12 +28,10 @@ type layer struct {
 	gradWeights *data.Data
 	gradBiases  *data.Data
 	gradInputs  *data.Data
+	deltas      *data.Data
 
 	iVolume int
-
-	Threads int
-
-	deltas *data.Data
+	threads int
 
 	activateInChan chan int
 	backpropInChan chan int
@@ -46,40 +41,40 @@ type layer struct {
 
 func (l *layer) InitDataSizes(w, h, d int) (oW, oH, oD int) {
 	l.output = &data.Data{}
-	l.output.InitCube(l.OWidth, l.OHeight, l.ODepth)
+	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
 
-	l.IWidth, l.IHeight, l.IDepth = w, h, d
+	l.iWidth, l.iHeight, l.iDepth = w, h, d
 	l.iVolume = w * h * d
 
-	if l.Weights == nil {
-		l.Weights = &data.Data{}
-		l.Biases = &data.Data{}
+	if l.weights == nil {
+		l.weights = &data.Data{}
+		l.biases = &data.Data{}
 	}
 
-	if len(l.Weights.Data) == 0 {
-		maxWeight := math.Sqrt(1.0 / float64(l.IWidth*l.IHeight*l.IDepth))
+	if len(l.weights.Data) == 0 {
+		maxWeight := math.Sqrt(1.0 / float64(l.iWidth*l.iHeight*l.iDepth))
 
-		l.Biases.InitCube(l.OWidth, l.OHeight, l.ODepth)
-		l.Weights.InitHiperCubeRandom(l.IWidth, l.IHeight, l.IDepth, l.OWidth*l.OHeight*l.ODepth, 0, maxWeight)
+		l.biases.InitCube(l.oWidth, l.oHeight, l.oDepth)
+		l.weights.InitHiperCubeRandom(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth, 0, maxWeight)
 	}
 
 	l.gradInputs = &data.Data{}
-	l.gradInputs.InitCube(l.IWidth, l.IHeight, l.IDepth)
+	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
 
 	l.gradBiases = &data.Data{}
-	l.gradBiases.InitCube(l.OWidth, l.OHeight, l.ODepth)
+	l.gradBiases.InitCube(l.oWidth, l.oHeight, l.oDepth)
 
 	l.gradWeights = &data.Data{}
-	l.gradWeights.InitHiperCube(l.IWidth, l.IHeight, l.IDepth, l.OWidth*l.OHeight*l.ODepth)
+	l.gradWeights.InitHiperCube(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth)
 
-	if l.Threads == 0 {
-		l.Threads = len(l.output.Data)
+	if l.threads == 0 {
+		l.threads = len(l.output.Data)
 	}
 
-	l.activateInChan = make(chan int, l.Threads)
-	l.backpropInChan = make(chan int, l.Threads)
+	l.activateInChan = make(chan int, l.threads)
+	l.backpropInChan = make(chan int, l.threads)
 
-	for i := 0; i < l.Threads; i++ {
+	for i := 0; i < l.threads; i++ {
 		go func() {
 			for {
 				select {
@@ -93,7 +88,7 @@ func (l *layer) InitDataSizes(w, h, d int) (oW, oH, oD int) {
 		}()
 	}
 
-	return l.OWidth, l.OHeight, l.ODepth
+	return l.oWidth, l.oHeight, l.oDepth
 }
 
 func (l *layer) Activate(inputs *data.Data) *data.Data {
@@ -113,21 +108,26 @@ func (l *layer) activateFilter(i int) {
 	o := 0.0
 
 	for j := 0; j < len(l.inputs.Data); j++ {
-		o += l.Weights.Data[k+j] * l.inputs.Data[j]
+		o += l.weights.Data[k+j] * l.inputs.Data[j]
 	}
 
-	l.output.Data[i] = o + l.Biases.Data[i]
+	l.output.Data[i] = o + l.biases.Data[i]
+}
+
+func (l *layer) ResetGradients() {
+	l.gradWeights.Reset()
+	l.gradBiases.Reset()
 }
 
 func (l *layer) Backprop(deltas *data.Data) *data.Data {
 	l.gradInputs.Reset()
-	l.gradWeights.Reset()
-	l.gradBiases = deltas.Copy()
 	l.deltas = deltas
 
 	l.wg.Add(len(l.output.Data))
 	for i := 0; i < len(l.output.Data); i++ {
 		l.backpropInChan <- i
+		l.gradBiases.Data[i] += deltas.Data[i]
+
 	}
 	l.wg.Wait()
 	return l.gradInputs
@@ -136,7 +136,7 @@ func (l *layer) Backprop(deltas *data.Data) *data.Data {
 func (l *layer) backpropFilter(i int) {
 	k := i * l.iVolume
 	for j := 0; j < len(l.inputs.Data); j++ {
-		l.gradInputs.Data[j] += l.Weights.Data[k+j] * l.deltas.Data[i]
+		l.gradInputs.Data[j] += l.weights.Data[k+j] * l.deltas.Data[i]
 		l.gradWeights.Data[k+j] += l.inputs.Data[j] * l.deltas.Data[i]
 	}
 }
@@ -146,21 +146,25 @@ func (l *layer) GetOutput() *data.Data {
 }
 
 func (l *layer) GetWeights() *data.Data {
-	return l.Weights
+	return l.weights
 }
 
 func (l *layer) GetBiases() *data.Data {
-	return l.Biases
+	return l.biases
 }
 
 func (l *layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
-	return l.Weights, l.gradWeights
+	return l.weights, l.gradWeights
 }
 
 func (l *layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
-	return l.Biases, l.gradBiases
+	return l.biases, l.gradBiases
 }
 
 func (l *layer) GetInputGradients() (g *data.Data) {
 	return l.gradInputs
+}
+
+func (l *layer) GetWeightGradients() *data.Data {
+	return l.gradWeights
 }

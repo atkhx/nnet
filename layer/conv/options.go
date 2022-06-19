@@ -1,21 +1,25 @@
 package conv
 
+func applyOptions(layer *layer, options ...Option) {
+	for _, opt := range options {
+		opt(layer)
+	}
+}
+
+var defaults = []Option{
+	FilterSize(3),
+	FiltersCount(1),
+	Stride(1),
+	Padding(0),
+	InitWeights(InitWeightsParams{-0.7, 0.7, 0.1}),
+}
+
 type Option func(layer *layer)
 
-const (
-	defaultFilterWidth  = 3
-	defaultFilterHeight = 3
-	defaultFiltersCount = 1
-	defaultStride       = 1
-	defaultPadding      = 0
-)
-
-func defaults(layer *layer) {
-	layer.FWidth = defaultFilterWidth
-	layer.FHeight = defaultFilterHeight
-	layer.FCount = defaultFiltersCount
-	layer.FStride = defaultStride
-	layer.FPadding = defaultPadding
+type InitWeightsParams struct {
+	WeightMinThreshold float64
+	WeightMaxThreshold float64
+	BiasInitialValue   float64
 }
 
 func FilterSize(size int) Option {
@@ -27,24 +31,30 @@ func FilterSize(size int) Option {
 
 func FiltersCount(count int) Option {
 	return func(layer *layer) {
-		layer.FCount = count
+		layer.fCount = count
 	}
 }
 
 func Padding(padding int) Option {
 	return func(layer *layer) {
-		layer.FPadding = padding
+		layer.fPadding = padding
 	}
 }
 
 func Stride(stride int) Option {
 	return func(layer *layer) {
-		layer.FStride = stride
+		layer.fStride = stride
 	}
 }
 
 func Threads(threads int) Option {
 	return func(layer *layer) {
-		layer.Threads = threads
+		layer.threads = threads
+	}
+}
+
+func InitWeights(value InitWeightsParams) Option {
+	return func(layer *layer) {
+		layer.InitWeights = value
 	}
 }

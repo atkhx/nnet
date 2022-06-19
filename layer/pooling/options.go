@@ -1,29 +1,34 @@
 package pooling
 
-type Option func(layer *layer)
-
-func defaults(layer *layer) {
-	layer.FWidth = 2
-	layer.FHeight = 2
-	layer.FStride = 2
-	layer.FPadding = 0
+func applyOptions(layer *layer, options ...Option) {
+	for _, opt := range options {
+		opt(layer)
+	}
 }
+
+var defaults = []Option{
+	FilterSize(2),
+	Stride(2),
+	Padding(0),
+}
+
+type Option func(layer *layer)
 
 func FilterSize(size int) Option {
 	return func(layer *layer) {
-		layer.FWidth = size
-		layer.FHeight = size
+		layer.fWidth = size
+		layer.fHeight = size
 	}
 }
 
 func Padding(padding int) Option {
 	return func(layer *layer) {
-		layer.FPadding = padding
+		layer.fPadding = padding
 	}
 }
 
 func Stride(stride int) Option {
 	return func(layer *layer) {
-		layer.FStride = stride
+		layer.fStride = stride
 	}
 }

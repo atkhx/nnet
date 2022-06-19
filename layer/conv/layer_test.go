@@ -7,13 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNew(t *testing.T) {
-	layer := New()
-	assert.Equal(t, defaultFilterWidth, layer.FWidth)
-	assert.Equal(t, defaultFilterHeight, layer.FHeight)
-	assert.Equal(t, defaultFiltersCount, layer.FCount)
-}
-
 func TestLayer(t *testing.T) {
 	layer := New(FilterSize(2), FiltersCount(2), Stride(1))
 	layer.InitDataSizes(3, 3, 2)
@@ -30,7 +23,7 @@ func TestLayer(t *testing.T) {
 		1.7, 1.8, 1.9,
 	}
 
-	layer.Weights.Data = []float64{
+	layer.weights.Data = []float64{
 		// filter 1, chan 1 weights
 		2.1, 2.2,
 		2.4, 2.5,
@@ -59,17 +52,15 @@ func TestLayer(t *testing.T) {
 		},
 	}
 
-	layer.Biases.Data = []float64{4.1, 4.2}
-
-	layer.Activate(inputs)
+	layer.biases.Data = []float64{4.1, 4.2}
 
 	// test correct activation algorithm
 	assert.Equal(t, expectedOutput, layer.Activate(inputs))
 
-	// check than output saved in layer
+	// check that output saved in layer
 	assert.Equal(t, expectedOutput, layer.GetOutput())
 
-	{ // check than input is link on original data
+	{ // check that input is link on original data
 		inputs.Data[0] = 17.0
 
 		assert.Equal(t, inputs, layer.GetInputs())
@@ -77,7 +68,7 @@ func TestLayer(t *testing.T) {
 		inputs.Data[0] = 0.1
 	}
 
-	{ // check than GetWeights return mutable data
+	{ // check that GetWeights return mutable data
 		weights := layer.GetWeights()
 		weights.Data[0] = 18.0
 
@@ -114,14 +105,10 @@ func TestLayer(t *testing.T) {
 	// test backprop algorithm
 	assert.Equal(t, expectedGrads, layer.Backprop(deltas))
 
-	// check than input gradients saved in layer
+	// check that input gradients saved in layer
 	assert.Equal(t, expectedGrads, layer.GetInputGradients())
 
-	// test than gradients not leak between backprop calls
-	assert.Equal(t, expectedGrads, layer.Backprop(deltas))
-
 	{
-
 		expected := &data.Data{}
 		expected.InitCube(2, 2, 4)
 		expected.Data = []float64{
@@ -138,8 +125,7 @@ func TestLayer(t *testing.T) {
 			0, 0,
 		}
 
-		_, g := layer.GetWeightsWithGradient()
-		assert.Equal(t, expected, g)
+		assert.Equal(t, expected, layer.GetWeightGradients())
 	}
 
 	{
