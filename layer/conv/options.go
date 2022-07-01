@@ -12,6 +12,7 @@ var defaults = []Option{
 	Stride(1),
 	Padding(0),
 	InitWeights(InitWeightsParams{-0.7, 0.7, 0.1}),
+	IsTrainable(true),
 }
 
 type Option func(layer *layer)
@@ -56,5 +57,11 @@ func Threads(threads int) Option {
 func InitWeights(value InitWeightsParams) Option {
 	return func(layer *layer) {
 		layer.InitWeights = value
+	}
+}
+
+func IsTrainable(trainable bool) Option {
+	return func(layer *layer) {
+		layer.trainable = trainable
 	}
 }

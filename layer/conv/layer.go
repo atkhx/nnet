@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/atkhx/nnet/data"
@@ -40,6 +41,8 @@ type layer struct {
 	oSquare int
 	wSquare int
 	wCube   int
+
+	trainable bool
 
 	deltas *data.Data
 
@@ -114,6 +117,8 @@ func (l *layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 			}
 		}()
 	}
+
+	fmt.Println("is trainable conv layer", l.IsTrainable())
 
 	return l.oWidth, l.oHeight, l.oDepth
 }
@@ -225,4 +230,8 @@ func (l *layer) GetInputGradients() *data.Data {
 
 func (l *layer) GetWeightGradients() *data.Data {
 	return l.gradWeights
+}
+
+func (l *layer) IsTrainable() bool {
+	return l.trainable
 }

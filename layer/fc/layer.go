@@ -127,7 +127,6 @@ func (l *layer) Backprop(deltas *data.Data) *data.Data {
 	for i := 0; i < len(l.output.Data); i++ {
 		l.backpropInChan <- i
 		l.gradBiases.Data[i] += deltas.Data[i]
-
 	}
 	l.wg.Wait()
 	return l.gradInputs
@@ -167,4 +166,8 @@ func (l *layer) GetInputGradients() (g *data.Data) {
 
 func (l *layer) GetWeightGradients() *data.Data {
 	return l.gradWeights
+}
+
+func (l *layer) IsTrainable() bool {
+	return true
 }
