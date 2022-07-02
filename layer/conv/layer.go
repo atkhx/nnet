@@ -39,8 +39,8 @@ type layer struct {
 	iCube   int
 
 	oSquare int
-	wSquare int
-	wCube   int
+	fSquare int
+	fCube   int
 
 	trainable bool
 
@@ -93,8 +93,9 @@ func (l *layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 
 	l.iSquare = l.iWidth * l.iHeight
 	l.oSquare = l.oWidth * l.oHeight
-	l.wSquare = l.FWidth * l.FHeight
-	l.wCube = l.FDepth * l.wSquare
+	l.fSquare = l.FWidth * l.FHeight
+
+	l.fCube = l.FDepth * l.fSquare
 	l.iCube = l.iDepth * l.iSquare
 
 	if l.threads == 0 {
@@ -135,26 +136,36 @@ func (l *layer) Activate(inputs *data.Data) *data.Data {
 
 func (l *layer) activateFilter(filterIndex int) {
 	filterOutputOffset := filterIndex * l.oSquare
-	filterWeightsOffset := filterIndex * l.wCube
 
-	for oy, initInputY := 0, -l.fPadding; oy < l.oHeight; oy, initInputY = oy+1, initInputY+l.fStride {
-		for ox, initInputX := 0, -l.fPadding; ox < l.oWidth; ox, initInputX = ox+1, initInputX+l.fStride {
-			l.output.Data[filterOutputOffset] = l.biases.Data[filterIndex]
+	for i := filterOutputOffset; i < (filterIndex+1)*l.oSquare; i++ {
+		l.output.Data[i] = l.biases.Data[filterIndex]
+	}
 
-			wCoord := filterWeightsOffset
-			for iz := 0; iz < l.iCube; iz += l.iSquare {
-				iCoord := iz + initInputY*l.iWidth
-				for iy := initInputY; iy < initInputY+l.FHeight; iy++ {
-					for ix := initInputX; ix < initInputX+l.FWidth; ix++ {
-						if iy > -1 && iy < l.iHeight && ix > -1 && ix < l.iWidth {
-							l.output.Data[filterOutputOffset] += l.inputs.Data[iCoord+ix] * l.weights.Data[wCoord]
+	wCoord := filterIndex * l.fCube
+	for fz := 0; fz < l.FDepth; fz++ {
+		izOffset := fz * l.iSquare
+		for fy := 0; fy < l.FHeight; fy++ {
+			for fx := 0; fx < l.FWidth; fx++ {
+
+				oCoord := filterOutputOffset
+				for oy, iy := 0, -l.fPadding; oy < l.oHeight; oy, iy = oy+1, iy+l.fStride {
+					if fiy := fy + iy; fiy > -1 && fiy < l.iHeight {
+
+						iCoord := izOffset + fiy*l.iHeight
+						for ox, ix := 0, -l.fPadding; ox < l.oWidth; ox, ix = ox+1, ix+l.fStride {
+							if fix := fx + ix; fix > -1 && fix < l.iWidth {
+								l.output.Data[oCoord] += l.inputs.Data[iCoord+fix] * l.weights.Data[wCoord]
+							}
+
+							oCoord++
 						}
-						wCoord++
+					} else {
+						oCoord += l.oWidth
 					}
-					iCoord += l.iWidth
 				}
+
+				wCoord++
 			}
-			filterOutputOffset++
 		}
 	}
 }
@@ -173,28 +184,37 @@ func (l *layer) Backprop(deltas *data.Data) *data.Data {
 
 func (l *layer) backpropFilter(filterIndex int) {
 	filterOutputOffset := filterIndex * l.oSquare
-	filterWeightsOffset := filterIndex * l.wCube
 
-	for oy, initInputY := 0, -l.fPadding; oy < l.oHeight; oy, initInputY = oy+1, initInputY+l.fStride {
-		for ox, initInputX := 0, -l.fPadding; ox < l.oWidth; ox, initInputX = ox+1, initInputX+l.fStride {
-			delta := l.deltas.Data[filterOutputOffset]
-			wCoord := filterWeightsOffset
-			for iz := 0; iz < l.iSquare*l.iDepth; iz += l.iSquare {
-				iCoord := iz + initInputY*l.iWidth
-				for iy := initInputY; iy < initInputY+l.FHeight; iy++ {
-					for ix := initInputX; ix < initInputX+l.FWidth; ix++ {
-						if iy > -1 && iy < l.iHeight && ix > -1 && ix < l.iWidth {
-							l.gradInputs.Data[iCoord+ix] += l.weights.Data[wCoord] * delta
-							l.gradWeights.Data[wCoord] += l.inputs.Data[iCoord+ix] * delta
+	for i := filterOutputOffset; i < (filterIndex+1)*l.oSquare; i++ {
+		l.gradBiases.Data[filterIndex] += l.deltas.Data[i]
+	}
+
+	wCoord := filterIndex * l.fCube
+	for fz := 0; fz < l.FDepth; fz++ {
+		izOffset := fz * l.iSquare
+		for fy := 0; fy < l.FHeight; fy++ {
+			for fx := 0; fx < l.FWidth; fx++ {
+
+				oCoord := filterOutputOffset
+				for oy, iy := 0, -l.fPadding; oy < l.oHeight; oy, iy = oy+1, iy+l.fStride {
+					if fiy := fy + iy; fiy > -1 && fiy < l.iHeight {
+
+						iCoord := izOffset + fiy*l.iWidth
+						for ox, ix := 0, -l.fPadding; ox < l.oWidth; ox, ix = ox+1, ix+l.fStride {
+							if fix := fx + ix; fix > -1 && fix < l.iWidth {
+								l.gradInputs.Data[iCoord+fix] += l.deltas.Data[oCoord] * l.weights.Data[wCoord]
+								l.gradWeights.Data[wCoord] += l.deltas.Data[oCoord] * l.inputs.Data[iCoord+fix]
+							}
+
+							oCoord++
 						}
-						wCoord++
+					} else {
+						oCoord += l.oWidth
 					}
-					iCoord += l.iWidth
 				}
-			}
 
-			l.gradBiases.Data[filterIndex] += delta
-			filterOutputOffset++
+				wCoord++
+			}
 		}
 	}
 }
