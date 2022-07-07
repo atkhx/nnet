@@ -107,8 +107,11 @@ func (l *layer) activateFilter(i int) {
 	k := i * l.iVolume
 	o := 0.0
 
-	for j := 0; j < len(l.inputs.Data); j++ {
-		o += l.weights.Data[k+j] * l.inputs.Data[j]
+	weightsData := l.weights.Data[k : k+len(l.inputs.Data)]
+	inputsData := l.inputs.Data
+
+	for j := 0; j < l.iVolume; j++ {
+		o += weightsData[j] * inputsData[j]
 	}
 
 	l.output.Data[i] = o + l.biases.Data[i]
@@ -126,7 +129,6 @@ func (l *layer) Backprop(deltas *data.Data) *data.Data {
 	l.wg.Add(len(l.output.Data))
 	for i := 0; i < len(l.output.Data); i++ {
 		l.backpropInChan <- i
-		l.gradBiases.Data[i] += deltas.Data[i]
 	}
 	l.wg.Wait()
 	return l.gradInputs
@@ -134,10 +136,19 @@ func (l *layer) Backprop(deltas *data.Data) *data.Data {
 
 func (l *layer) backpropFilter(i int) {
 	k := i * l.iVolume
-	for j := 0; j < len(l.inputs.Data); j++ {
-		l.gradInputs.Data[j] += l.weights.Data[k+j] * l.deltas.Data[i]
-		l.gradWeights.Data[k+j] += l.inputs.Data[j] * l.deltas.Data[i]
+	delta := l.deltas.Data[i]
+
+	weightsData := l.weights.Data[k : k+len(l.inputs.Data)]
+	inputsData := l.inputs.Data
+
+	gradWeightsData := l.gradWeights.Data[k : k+len(l.inputs.Data)]
+	gradInputsData := l.gradInputs.Data
+
+	for j := 0; j < l.iVolume; j++ {
+		gradInputsData[j] += weightsData[j] * delta
+		gradWeightsData[j] += inputsData[j] * delta
 	}
+	l.gradBiases.Data[i] += delta
 }
 
 func (l *layer) GetOutput() *data.Data {
