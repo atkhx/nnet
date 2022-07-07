@@ -18,6 +18,7 @@ func New(net Net, loss Loss, method Method, batchSize int) *trainer {
 		batchSize: batchSize,
 	}
 
+	res.batchRate = 1 / float64(res.batchSize)
 	res.method.Init(res.getWeightsCount())
 	return res
 }
@@ -28,6 +29,7 @@ type trainer struct {
 
 	batchSize  int
 	batchIndex int
+	batchRate  float64
 
 	method Method
 }
@@ -61,18 +63,17 @@ func (t *trainer) UpdateWeights() {
 	}
 
 	t.batchIndex = 0
-	batchRate := 1 / float64(t.batchSize)
 
 	k := 0
 	for i := 0; i < t.net.GetLayersCount(); i++ {
 		iLayer, ok := t.net.GetLayer(i).(TrainableLayer)
 		if ok && iLayer.IsTrainable() {
 			w, g := iLayer.GetWeightsWithGradient()
-			t.updateWeights(batchRate, k, w, g)
+			t.updateWeights(k, w, g)
 			k += len(g.Data)
 
 			w, g = iLayer.GetBiasesWithGradient()
-			t.updateWeights(batchRate, k, w, g)
+			t.updateWeights(k, w, g)
 			k += len(g.Data)
 
 			iLayer.ResetGradients()
@@ -80,7 +81,7 @@ func (t *trainer) UpdateWeights() {
 	}
 }
 
-func (t *trainer) updateWeights(batchRate float64, offset int, w, g *data.Data) {
+func (t *trainer) updateWeights(offset int, w, g *data.Data) {
 	for j := 0; j < len(w.Data); j++ {
 		l1grad := l1Decay
 		if w.Data[j] <= 0 {
@@ -88,7 +89,7 @@ func (t *trainer) updateWeights(batchRate float64, offset int, w, g *data.Data) 
 		}
 
 		l2grad := l2Decay * w.Data[j]
-		gradient := (l2grad + l1grad + g.Data[j]) * batchRate
+		gradient := (l2grad + l1grad + g.Data[j]) * t.batchRate
 
 		w.Data[j] += t.method.GetDelta(offset+j, gradient)
 	}

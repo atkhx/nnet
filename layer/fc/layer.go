@@ -16,19 +16,24 @@ func New(options ...Option) *layer {
 }
 
 type layer struct {
+	// begin storable layer config
+	Weights *data.Data
+	Biases  *data.Data
+
+	GradWeights *data.Data
+	GradBiases  *data.Data
+
+	Trainable bool
+	// end storable layer config
+
 	iWidth, iHeight, iDepth int
 	oWidth, oHeight, oDepth int
 
-	weights *data.Data
-	biases  *data.Data
-
 	inputs *data.Data
 	output *data.Data
+	deltas *data.Data
 
-	gradWeights *data.Data
-	gradBiases  *data.Data
-	gradInputs  *data.Data
-	deltas      *data.Data
+	gradInputs *data.Data
 
 	iVolume int
 	threads int
@@ -46,26 +51,26 @@ func (l *layer) InitDataSizes(w, h, d int) (oW, oH, oD int) {
 	l.iWidth, l.iHeight, l.iDepth = w, h, d
 	l.iVolume = w * h * d
 
-	if l.weights == nil {
-		l.weights = &data.Data{}
-		l.biases = &data.Data{}
+	if l.Weights == nil {
+		l.Weights = &data.Data{}
+		l.Biases = &data.Data{}
 	}
 
-	if len(l.weights.Data) == 0 {
-		maxWeight := math.Sqrt(1.0 / float64(l.iWidth*l.iHeight*l.iDepth))
+	if len(l.Weights.Data) == 0 {
+		maxWeight := math.Sqrt(1.0 / float64(l.iVolume))
 
-		l.biases.InitCube(l.oWidth, l.oHeight, l.oDepth)
-		l.weights.InitHiperCubeRandom(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth, 0, maxWeight)
+		l.Biases.InitCube(l.oWidth, l.oHeight, l.oDepth)
+		l.Weights.InitHiperCubeRandom(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth, 0, maxWeight)
 	}
 
 	l.gradInputs = &data.Data{}
 	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
 
-	l.gradBiases = &data.Data{}
-	l.gradBiases.InitCube(l.oWidth, l.oHeight, l.oDepth)
+	l.GradBiases = &data.Data{}
+	l.GradBiases.InitCube(l.oWidth, l.oHeight, l.oDepth)
 
-	l.gradWeights = &data.Data{}
-	l.gradWeights.InitHiperCube(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth)
+	l.GradWeights = &data.Data{}
+	l.GradWeights.InitHiperCube(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth)
 
 	if l.threads == 0 {
 		l.threads = len(l.output.Data)
@@ -107,19 +112,19 @@ func (l *layer) activateFilter(i int) {
 	k := i * l.iVolume
 	o := 0.0
 
-	weightsData := l.weights.Data[k : k+len(l.inputs.Data)]
+	weightsData := l.Weights.Data[k : k+len(l.inputs.Data)]
 	inputsData := l.inputs.Data
 
 	for j := 0; j < l.iVolume; j++ {
 		o += weightsData[j] * inputsData[j]
 	}
 
-	l.output.Data[i] = o + l.biases.Data[i]
+	l.output.Data[i] = o + l.Biases.Data[i]
 }
 
 func (l *layer) ResetGradients() {
-	l.gradWeights.Reset()
-	l.gradBiases.Reset()
+	l.GradWeights.Reset()
+	l.GradBiases.Reset()
 }
 
 func (l *layer) Backprop(deltas *data.Data) *data.Data {
@@ -138,17 +143,17 @@ func (l *layer) backpropFilter(i int) {
 	k := i * l.iVolume
 	delta := l.deltas.Data[i]
 
-	weightsData := l.weights.Data[k : k+len(l.inputs.Data)]
+	weightsData := l.Weights.Data[k : k+len(l.inputs.Data)]
 	inputsData := l.inputs.Data
 
-	gradWeightsData := l.gradWeights.Data[k : k+len(l.inputs.Data)]
+	gradWeightsData := l.GradWeights.Data[k : k+len(l.inputs.Data)]
 	gradInputsData := l.gradInputs.Data
 
 	for j := 0; j < l.iVolume; j++ {
 		gradInputsData[j] += weightsData[j] * delta
 		gradWeightsData[j] += inputsData[j] * delta
 	}
-	l.gradBiases.Data[i] += delta
+	l.GradBiases.Data[i] += delta
 }
 
 func (l *layer) GetOutput() *data.Data {
@@ -156,19 +161,19 @@ func (l *layer) GetOutput() *data.Data {
 }
 
 func (l *layer) GetWeights() *data.Data {
-	return l.weights
+	return l.Weights
 }
 
 func (l *layer) GetBiases() *data.Data {
-	return l.biases
+	return l.Biases
 }
 
 func (l *layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
-	return l.weights, l.gradWeights
+	return l.Weights, l.GradWeights
 }
 
 func (l *layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
-	return l.biases, l.gradBiases
+	return l.Biases, l.GradBiases
 }
 
 func (l *layer) GetInputGradients() (g *data.Data) {
@@ -176,9 +181,9 @@ func (l *layer) GetInputGradients() (g *data.Data) {
 }
 
 func (l *layer) GetWeightGradients() *data.Data {
-	return l.gradWeights
+	return l.GradWeights
 }
 
 func (l *layer) IsTrainable() bool {
-	return true
+	return l.Trainable
 }

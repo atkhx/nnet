@@ -19,19 +19,19 @@ func TestFiltersCount(t *testing.T) {
 	layer := &layer{}
 
 	FiltersCount(17)(layer)
-	assert.Equal(t, layer.fCount, 17)
+	assert.Equal(t, layer.FCount, 17)
 }
 
 func TestPadding(t *testing.T) {
 	layer := &layer{}
 
 	Padding(3)(layer)
-	assert.Equal(t, layer.fPadding, 3)
+	assert.Equal(t, layer.FPadding, 3)
 }
 
 func TestStride(t *testing.T) {
 	layer := &layer{}
 
 	Stride(7)(layer)
-	assert.Equal(t, layer.fStride, 7)
+	assert.Equal(t, layer.FStride, 7)
 }

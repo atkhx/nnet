@@ -32,19 +32,19 @@ func FilterSize(size int) Option {
 
 func FiltersCount(count int) Option {
 	return func(layer *layer) {
-		layer.fCount = count
+		layer.FCount = count
 	}
 }
 
 func Padding(padding int) Option {
 	return func(layer *layer) {
-		layer.fPadding = padding
+		layer.FPadding = padding
 	}
 }
 
 func Stride(stride int) Option {
 	return func(layer *layer) {
-		layer.fStride = stride
+		layer.FStride = stride
 	}
 }
 
@@ -56,12 +56,12 @@ func Threads(threads int) Option {
 
 func InitWeights(value InitWeightsParams) Option {
 	return func(layer *layer) {
-		layer.InitWeights = value
+		layer.initWeights = value
 	}
 }
 
 func IsTrainable(trainable bool) Option {
 	return func(layer *layer) {
-		layer.trainable = trainable
+		layer.Trainable = trainable
 	}
 }

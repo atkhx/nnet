@@ -8,6 +8,7 @@ func applyOptions(layer *layer, options ...Option) {
 
 var defaults = []Option{
 	OutputSizes(1, 1, 1),
+	IsTrainable(true),
 }
 
 type Option func(layer *layer)
@@ -23,5 +24,11 @@ func OutputSizes(w, h, d int) Option {
 func Threads(threads int) Option {
 	return func(layer *layer) {
 		layer.threads = threads
+	}
+}
+
+func IsTrainable(trainable bool) Option {
+	return func(layer *layer) {
+		layer.Trainable = trainable
 	}
 }

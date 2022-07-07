@@ -18,9 +18,10 @@ type layer struct {
 
 	activation Activation
 
-	inputs     *data.Data
-	output     *data.Data
-	deltas     *data.Data
+	inputs *data.Data
+	output *data.Data
+	deltas *data.Data
+
 	gradInputs *data.Data
 
 	threads        int
