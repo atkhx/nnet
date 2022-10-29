@@ -23,9 +23,6 @@ type layer struct {
 	Weights *data.Data
 	Biases  *data.Data
 
-	GradWeights *data.Data
-	GradBiases  *data.Data
-
 	Trainable bool
 	// end storable layer config
 
@@ -40,6 +37,8 @@ type layer struct {
 	deltas *data.Data
 
 	gradInputs     *data.Data
+	gradWeights    *data.Data
+	gradBiases     *data.Data
 	weightsRotated *data.Data
 
 	iSquare int
@@ -99,11 +98,11 @@ func (l *layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	l.output = &data.Data{}
 	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
 
-	l.GradBiases = &data.Data{}
-	l.GradBiases.InitVector(l.FCount)
+	l.gradBiases = &data.Data{}
+	l.gradBiases.InitVector(l.FCount)
 
-	l.GradWeights = &data.Data{}
-	l.GradWeights.InitCube(l.FWidth, l.FHeight, l.FCount*l.FDepth)
+	l.gradWeights = &data.Data{}
+	l.gradWeights.InitCube(l.FWidth, l.FHeight, l.FCount*l.FDepth)
 
 	l.gradInputs = &data.Data{}
 	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
@@ -128,8 +127,8 @@ func (l *layer) Activate(inputs *data.Data) *data.Data {
 func (l *layer) Backprop(deltas *data.Data) *data.Data {
 	l.gradInputs.Reset()
 
-	l.weightsRotated = l.Weights.Copy()
-	l.weightsRotated.Rotate180()
+	//l.weightsRotated = l.Weights.Copy()
+	//l.weightsRotated.Rotate180()
 
 	l.deltas = deltas
 
@@ -169,9 +168,10 @@ func (l *layer) listenChannels() {
 						fi,
 						l.inputs.Data,
 						l.deltas.Data[outputOffset:outputOffset+l.oSquare],
-						l.weightsRotated.Data[filterOffset:filterOffset+l.fCube],
+						l.Weights.Data[filterOffset:filterOffset+l.fCube],
+						//l.weightsRotated.Data[filterOffset:filterOffset+l.fCube],
 						l.gradInputs.Data,
-						l.GradWeights.Data[filterOffset:filterOffset+l.fCube],
+						l.gradWeights.Data[filterOffset:filterOffset+l.fCube],
 					)
 				}
 				l.wg.Done()
@@ -213,7 +213,7 @@ func (l *layer) backpropFilter(
 	gradFilter []float64,
 ) {
 	for i := 0; i < l.oSquare; i++ {
-		l.GradBiases.Data[filterIndex] += deltas[i]
+		l.gradBiases.Data[filterIndex] += deltas[i]
 	}
 
 	wCoord := 0
@@ -238,8 +238,8 @@ func (l *layer) backpropFilter(
 }
 
 func (l *layer) ResetGradients() {
-	l.GradWeights.Reset()
-	l.GradBiases.Reset()
+	l.gradWeights.Reset()
+	l.gradBiases.Reset()
 }
 
 func (l *layer) GetWeights() *data.Data {
@@ -255,11 +255,11 @@ func (l *layer) GetInputs() *data.Data {
 }
 
 func (l *layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
-	return l.Weights, l.GradWeights
+	return l.Weights, l.gradWeights
 }
 
 func (l *layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
-	return l.Biases, l.GradBiases
+	return l.Biases, l.gradBiases
 }
 
 func (l *layer) GetInputGradients() *data.Data {
@@ -267,7 +267,7 @@ func (l *layer) GetInputGradients() *data.Data {
 }
 
 func (l *layer) GetWeightGradients() *data.Data {
-	return l.GradWeights
+	return l.gradWeights
 }
 
 func (l *layer) IsTrainable() bool {

@@ -1,6 +1,6 @@
 module github.com/atkhx/nnet
 
-go 1.18
+go 1.19
 
 require (
 	github.com/golang/mock v1.4.3
