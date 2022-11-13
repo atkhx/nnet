@@ -47,7 +47,7 @@ func TestLayer_Activate(t *testing.T) {
 	layer := New()
 	layer.InitDataSizes(2, 1, 1)
 
-	inputs := data.NewVector(0.7, -0.7)
+	inputs := data.NewVectorWithCopyData(0.7, -0.7)
 	output := layer.Activate(inputs)
 
 	expected := &data.Data{

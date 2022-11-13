@@ -1,17 +1,25 @@
 package data
 
 import (
-	"fmt"
 	"math/rand"
 )
+
+func NewVector(w int) *Data {
+	res := &Data{}
+	res.InitVector(w)
+	return res
+}
+
+func NewVectorWithCopyData(data ...float64) *Data {
+	res := NewVector(len(data))
+	copy(res.Data, data)
+
+	return res
+}
 
 type Data struct {
 	Dims []int
 	Data []float64
-}
-
-func (m *Data) IsEmpty() bool {
-	return len(m.Dims) == 0
 }
 
 func (m *Data) ExtractDimensions(dims ...*int) {
@@ -29,7 +37,13 @@ func (m *Data) ExtractDimensions(dims ...*int) {
 	}
 }
 
-func (m *Data) Reset() {
+func (m *Data) IsEmpty() bool {
+	return len(m.Dims) == 0
+}
+
+// Fill data methods
+
+func (m *Data) FillZero() {
 	for i := range m.Data {
 		m.Data[i] = 0
 	}
@@ -47,20 +61,21 @@ func (m *Data) FillRandom(min, max float64) {
 	}
 }
 
-func (m *Data) Dot(floats []float64) (dot float64) {
-	for i, v := range m.Data {
-		dot += v * floats[i]
-	}
+// initialize methods
+
+func (m *Data) Copy() (r *Data) {
+	r = m.CopyZero()
+	copy(r.Data, m.Data)
 	return
 }
 
-func (m *Data) Add(src ...[]float64) {
-	data := m.Data
-	for _, items := range src {
-		for j, v := range items {
-			data[j] += v
-		}
-	}
+func (m *Data) CopyZero() (r *Data) {
+	r = &Data{}
+	r.Dims = make([]int, len(m.Dims))
+	r.Data = make([]float64, len(m.Data))
+	copy(r.Dims, m.Dims) // copy struct
+
+	return
 }
 
 func (m *Data) InitVector(w int) {
@@ -118,19 +133,22 @@ func (m *Data) InitHiperCubeRandom(w, h, d, t int, min, max float64) {
 	m.FillRandom(min, max)
 }
 
-func (m *Data) CopyZero() (r *Data) {
-	r = &Data{}
-	r.Dims = make([]int, len(m.Dims))
-	r.Data = make([]float64, len(m.Data))
-	copy(r.Dims, m.Dims) // copy struct
+// math methods
 
+func (m *Data) Dot(floats []float64) (dot float64) {
+	for i, v := range m.Data {
+		dot += v * floats[i]
+	}
 	return
 }
 
-func (m *Data) Copy() (r *Data) {
-	r = m.CopyZero()
-	copy(r.Data, m.Data)
-	return
+func (m *Data) Add(src ...[]float64) {
+	data := m.Data
+	for _, items := range src {
+		for j, v := range items {
+			data[j] += v
+		}
+	}
 }
 
 func (m *Data) GetMaxValue() (max float64) {
@@ -153,24 +171,6 @@ func (m *Data) GetMinMaxValues(fromIndex, toIndex int) (min, max float64) {
 		}
 	}
 	return
-}
-
-func (m *Data) PrintlnCube() {
-	var w, h, d int
-	m.ExtractDimensions(&w, &h, &d)
-
-	fmt.Printf("data dims: %d x %d x %d \n", w, h, d)
-	for z := 0; z < d; z++ {
-		fmt.Println("z:", z)
-
-		for y := 0; y < h; y++ {
-			fmt.Print("      ")
-			for x := 0; x < w; x++ {
-				fmt.Print(m.Data[z*w*h+y*w+x], " ")
-			}
-			fmt.Println()
-		}
-	}
 }
 
 func (m *Data) Rotate180() *Data {

@@ -99,7 +99,7 @@ func (l *Layer) activateFilter(oz int) {
 }
 
 func (l *Layer) Backprop(deltas *data.Data) *data.Data {
-	l.gradInputs.Reset()
+	l.gradInputs.FillZero()
 	l.deltas = deltas
 	executor.RunParallel(l.oDepth, l.backpropFilter)
 

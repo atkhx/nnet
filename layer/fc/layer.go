@@ -84,12 +84,12 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 }
 
 func (l *Layer) ResetGradients() {
-	l.gradWeights.Reset()
-	l.gradBiases.Reset()
+	l.gradWeights.FillZero()
+	l.gradBiases.FillZero()
 }
 
 func (l *Layer) Backprop(deltas *data.Data) *data.Data {
-	l.gradInputs.Reset()
+	l.gradInputs.FillZero()
 	l.gradBiases.Add(deltas.Data)
 
 	executor.RunParallel(l.oVolume, func(i int) {

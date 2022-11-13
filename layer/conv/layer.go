@@ -145,7 +145,7 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 }
 
 func (l *Layer) Backprop(deltas *data.Data) *data.Data {
-	l.iGrads.Reset()
+	l.iGrads.FillZero()
 
 	executor.RunParallel(l.FCount, func(filterIndex int) {
 		outputOffset := filterIndex * l.oSquare
@@ -194,8 +194,8 @@ func (l *Layer) Backprop(deltas *data.Data) *data.Data {
 }
 
 func (l *Layer) ResetGradients() {
-	l.wGrads.Reset()
-	l.bGrads.Reset()
+	l.wGrads.FillZero()
+	l.bGrads.FillZero()
 }
 
 func (l *Layer) GetWeights() *data.Data {

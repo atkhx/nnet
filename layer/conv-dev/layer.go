@@ -153,7 +153,7 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 }
 
 func (l *Layer) Backprop(del *data.Data) *data.Data {
-	l.gradInputs.Reset()
+	l.gradInputs.FillZero()
 
 	// calc weight gradients
 	executor.RunParallel(l.FCount, func(filterIndex int) {
@@ -244,8 +244,8 @@ func (l *Layer) Backprop(del *data.Data) *data.Data {
 }
 
 func (l *Layer) ResetGradients() {
-	l.gradWeights.Reset()
-	l.gradBiases.Reset()
+	l.gradWeights.FillZero()
+	l.gradBiases.FillZero()
 }
 
 func (l *Layer) GetWeights() *data.Data {

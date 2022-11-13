@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -22,8 +23,7 @@ func NewOneHotVector(index, count int) (*Data, error) {
 		return nil, errors.Wrap(ErrorVectorIndexToHigh, fmt.Sprintf("index: %d, count: %d", index, count))
 	}
 
-	res := &Data{}
-	res.InitVector(count)
+	res := NewVector(count)
 	res.Data[index] = 1
 	return res, nil
 }
