@@ -1,7 +1,9 @@
 package fc
 
 import (
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
@@ -120,4 +122,58 @@ func TestLayer(t *testing.T) {
 
 	assert.Equal(t, expectedGradients, layer.Backprop(deltas))
 	assert.Equal(t, expectedGradients, layer.GetInputGradients())
+}
+
+var output *data.Data
+
+func makeRandData(w, h, d int) *data.Data {
+	whd := w * h * d
+	bbuf := make([]byte, whd)
+	fbuf := make([]float64, whd)
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Read(bbuf)
+
+	for i := 0; i < whd; i++ {
+		fbuf[i] = float64(bbuf[i]) / 255.0
+	}
+
+	return &data.Data{
+		Dims: []int{w, h, d},
+		Data: fbuf,
+	}
+}
+
+func BenchmarkLayer_Activate(b *testing.B) {
+	var r *data.Data
+
+	fc := New()
+	fc.InitDataSizes(100, 100, 100)
+
+	input := makeRandData(100, 100, 100)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r = fc.Activate(input)
+	}
+	output = r
+}
+
+func BenchmarkLayer_Backprop(b *testing.B) {
+	var r *data.Data
+
+	fc := New()
+
+	ow, oh, od := fc.InitDataSizes(100, 100, 100)
+
+	input := makeRandData(100, 100, 100)
+	deltas := makeRandData(ow, oh, od)
+
+	fc.Activate(input)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r = fc.Backprop(deltas)
+	}
+	output = r
 }

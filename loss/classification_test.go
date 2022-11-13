@@ -1,14 +1,15 @@
-package classification
+package loss
 
 import (
-	"github.com/atkhx/nnet/data"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
+
+	"github.com/atkhx/nnet/data"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestLoss_GetDeltas(t *testing.T) {
-	loss := New()
+func TestClassification_GetDeltas(t *testing.T) {
+	loss := NewClassification()
 
 	type testCase struct {
 		target   *data.Data
@@ -18,8 +19,8 @@ func TestLoss_GetDeltas(t *testing.T) {
 	testCases := map[string]testCase{
 		"PositiveOutput": {
 			target:   data.NewVector(0.0, 1.0, 0.0),
-			output:   data.NewVector(0.5, 0.7, 0.3),
-			expected: data.NewVector(0.5, -0.30000000000000004, 0.3),
+			output:   data.NewVector(0.5, 0.6, 0.3),
+			expected: data.NewVector(0.5, -0.4, 0.3),
 		},
 		"NegativeOutput": {
 			target:   data.NewVector(0.0, 1.0, 0.0),
@@ -29,14 +30,13 @@ func TestLoss_GetDeltas(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, loss.GetDeltas(tc.target, tc.output))
 		})
 	}
 }
 
-func TestLoss_GetError(t *testing.T) {
+func TestClassification_GetError(t *testing.T) {
 	type testCase struct {
 		target   []float64
 		output   []float64
@@ -66,7 +66,7 @@ func TestLoss_GetError(t *testing.T) {
 		},
 	}
 
-	loss := New()
+	loss := NewClassification()
 
 	for name, tc := range testCases {
 		tc := tc

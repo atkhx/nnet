@@ -1,21 +1,20 @@
 package conv
 
 import (
-	"sync"
-
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/executor"
 )
 
-func New(options ...Option) *layer {
-	layer := &layer{}
+func New(options ...Option) *Layer {
+	layer := &Layer{}
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
 
 	return layer
 }
 
-type layer struct {
-	// begin storable layer config
+type Layer struct {
+	// begin storable Layer config
 	FCount   int
 	FPadding int
 	FStride  int
@@ -24,7 +23,7 @@ type layer struct {
 	Biases  *data.Data
 
 	Trainable bool
-	// end storable layer config
+	// end storable Layer config
 
 	iWidth, iHeight, iDepth int
 	FWidth, FHeight, FDepth int
@@ -34,12 +33,10 @@ type layer struct {
 
 	inputs *data.Data
 	output *data.Data
-	deltas *data.Data
 
-	gradInputs     *data.Data
-	gradWeights    *data.Data
-	gradBiases     *data.Data
-	weightsRotated *data.Data
+	iGrads *data.Data
+	wGrads *data.Data
+	bGrads *data.Data
 
 	iSquare int
 	oSquare int
@@ -48,18 +45,13 @@ type layer struct {
 	iCube int
 	fCube int
 
-	oiHW int
-	fiHW int
+	oHiW int
+	fHiW int
 
-	threads        int
-	activateInChan chan int
-	backpropInChan chan int
-
-	wg sync.WaitGroup
+	iGradsSeparated [][]float64
 }
 
-func (l *layer) InitDataSizes(iw, ih, id int) (int, int, int) {
-	//l.iWidth, l.iHeight, l.iDepth = iw, ih, id
+func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	l.iWidth, l.iHeight, l.iDepth = iw+2*l.FPadding, ih+2*l.FPadding, id
 
 	l.oWidth = (iw-l.FWidth+2*l.FPadding)/l.FStride + 1
@@ -75,8 +67,8 @@ func (l *layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	l.fCube = l.FDepth * l.fSquare
 	l.iCube = l.iDepth * l.iSquare
 
-	l.oiHW = l.oHeight * l.iWidth
-	l.fiHW = l.FHeight * l.iWidth
+	l.oHiW = l.oHeight * l.iWidth
+	l.fHiW = l.FHeight * l.iWidth
 
 	if l.Weights == nil {
 		l.Weights = &data.Data{}
@@ -98,178 +90,142 @@ func (l *layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	l.output = &data.Data{}
 	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
 
-	l.gradBiases = &data.Data{}
-	l.gradBiases.InitVector(l.FCount)
+	l.bGrads = &data.Data{}
+	l.bGrads.InitVector(l.FCount)
 
-	l.gradWeights = &data.Data{}
-	l.gradWeights.InitCube(l.FWidth, l.FHeight, l.FCount*l.FDepth)
+	l.wGrads = &data.Data{}
+	l.wGrads.InitCube(l.FWidth, l.FHeight, l.FCount*l.FDepth)
 
-	l.gradInputs = &data.Data{}
-	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
+	l.iGrads = &data.Data{}
+	l.iGrads.InitCube(l.iWidth, l.iHeight, l.iDepth)
 
-	l.listenChannels()
+	l.iGradsSeparated = make([][]float64, l.FCount)
+	for i := 0; i < len(l.iGradsSeparated); i++ {
+		l.iGradsSeparated[i] = make([]float64, l.iCube)
+	}
 
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
-func (l *layer) Activate(inputs *data.Data) *data.Data {
+func (l *Layer) Activate(inputs *data.Data) *data.Data {
 	l.inputs = inputs.AddPadding(l.FPadding)
 
-	l.wg.Add(l.FCount)
-	for filterIndex := 0; filterIndex < l.FCount; filterIndex++ {
-		l.activateInChan <- filterIndex
-	}
-	l.wg.Wait()
+	executor.RunParallel(l.FCount, func(filterIndex int) {
+		outputOffset := filterIndex * l.oSquare
+		filterOffset := filterIndex * l.fCube
+
+		inputs := l.inputs.Data
+		output := l.output.Data[outputOffset : outputOffset+l.oSquare]
+		filter := l.Weights.Data[filterOffset : filterOffset+l.fCube]
+
+		data.Fill(output, l.Biases.Data[filterIndex])
+
+		wCoord := 0
+		for izo := 0; izo < l.iCube; izo += l.iSquare {
+			for iyo := izo; iyo < izo+l.fHiW; iyo += l.iWidth {
+				for ixo := iyo; ixo < iyo+l.FWidth; ixo++ {
+					weight := filter[wCoord]
+					wCoord++
+
+					oCoord := 0
+					for iCoord := ixo; iCoord < ixo+l.oHiW; iCoord += l.iWidth {
+						output := output[oCoord : oCoord+l.oWidth]
+						inputs := inputs[iCoord : iCoord+l.oWidth]
+						for ic, iv := range inputs {
+							output[ic] += iv * weight
+						}
+						oCoord += l.oWidth
+					}
+				}
+			}
+		}
+	})
 
 	return l.output
 }
 
-func (l *layer) Backprop(deltas *data.Data) *data.Data {
-	l.gradInputs.Reset()
+func (l *Layer) Backprop(deltas *data.Data) *data.Data {
+	l.iGrads.Reset()
 
-	//l.weightsRotated = l.Weights.Copy()
-	//l.weightsRotated.Rotate180()
+	executor.RunParallel(l.FCount, func(filterIndex int) {
+		outputOffset := filterIndex * l.oSquare
+		filterOffset := filterIndex * l.fCube
 
-	l.deltas = deltas
+		inputs := l.inputs.Data
+		filter := l.Weights.Data[filterOffset : filterOffset+l.fCube]
+		deltas := deltas.Data[outputOffset : outputOffset+l.oSquare]
+		wGrads := l.wGrads.Data[filterOffset : filterOffset+l.fCube]
 
-	l.wg.Add(l.FCount)
-	for filterIndex := 0; filterIndex < l.FCount; filterIndex++ {
-		l.backpropInChan <- filterIndex
-	}
-	l.wg.Wait()
-	return l.gradInputs.RemovePadding(l.FPadding)
-}
+		l.bGrads.Data[filterIndex] += data.SumElements(deltas)
 
-func (l *layer) listenChannels() {
-	if l.threads == 0 {
-		l.threads = l.FCount
-	}
+		iGrads := l.iGradsSeparated[filterIndex]
+		copy(iGrads, l.iGrads.Data)
 
-	l.activateInChan = make(chan int, l.threads)
-	l.backpropInChan = make(chan int, l.threads)
+		wCoord := 0
+		for izo := 0; izo < l.iCube; izo += l.iSquare {
+			for iyo := izo; iyo < izo+l.fHiW; iyo += l.iWidth {
+				for ixo := iyo; ixo < iyo+l.FWidth; ixo++ {
+					wgradv := wGrads[wCoord]
+					weight := filter[wCoord]
+					oCoord := 0
 
-	for i := 0; i < l.threads; i++ {
-		go func() {
-			for {
-				select {
-				case fi := <-l.activateInChan:
-					outputOffset := fi * l.oSquare
-					filterOffset := fi * l.fCube
-					l.activateFilter(
-						fi,
-						l.inputs.Data,
-						l.output.Data[outputOffset:outputOffset+l.oSquare],
-						l.Weights.Data[filterOffset:filterOffset+l.fCube],
-					)
-				case fi := <-l.backpropInChan:
-					outputOffset := fi * l.oSquare
-					filterOffset := fi * l.fCube
-					l.backpropFilter(
-						fi,
-						l.inputs.Data,
-						l.deltas.Data[outputOffset:outputOffset+l.oSquare],
-						l.Weights.Data[filterOffset:filterOffset+l.fCube],
-						//l.weightsRotated.Data[filterOffset:filterOffset+l.fCube],
-						l.gradInputs.Data,
-						l.gradWeights.Data[filterOffset:filterOffset+l.fCube],
-					)
-				}
-				l.wg.Done()
-			}
-		}()
-	}
-}
+					for iCoord := ixo; iCoord < ixo+l.oHiW; iCoord += l.iWidth {
+						inputs := inputs[iCoord : iCoord+l.oWidth]
+						iGrads := iGrads[iCoord : iCoord+l.oWidth]
+						deltas := deltas[oCoord : oCoord+l.oWidth]
 
-func (l *layer) activateFilter(filterIndex int, inputs, output, filter []float64) {
-	for i := 0; i < l.oSquare; i++ {
-		output[i] = l.Biases.Data[filterIndex]
-	}
+						for dc, delta := range deltas {
+							iGrads[dc] += delta * weight
+							wgradv += inputs[dc] * delta
+						}
 
-	wCoord := 0
-	for izo := 0; izo < l.iCube; izo += l.iSquare {
-		for iyo := izo; iyo < izo+l.fiHW; iyo += l.iWidth {
-			for ixo := iyo; ixo < iyo+l.FWidth; ixo++ {
-				weight := filter[wCoord]
-				oCoord := 0
-				for iy := ixo; iy < ixo+l.oiHW; iy += l.iWidth {
-					for iCoord := iy; iCoord < iy+l.oWidth; iCoord++ {
-						output[oCoord] += inputs[iCoord] * weight
-						oCoord++
+						oCoord += l.oWidth
 					}
-				}
 
-				wCoord++
+					wGrads[wCoord] = wgradv
+					wCoord++
+				}
 			}
 		}
-	}
+	})
+
+	l.iGrads.Add(l.iGradsSeparated...)
+	return l.iGrads.RemovePadding(l.FPadding)
 }
 
-func (l *layer) backpropFilter(
-	filterIndex int,
-	inputs,
-	deltas,
-	filter,
-	gradInputs,
-	gradFilter []float64,
-) {
-	for i := 0; i < l.oSquare; i++ {
-		l.gradBiases.Data[filterIndex] += deltas[i]
-	}
-
-	wCoord := 0
-	for izo := 0; izo < l.iCube; izo += l.iSquare {
-		for iyo := izo; iyo < izo+l.fiHW; iyo += l.iWidth {
-			for ixo := iyo; ixo < iyo+l.FWidth; ixo++ {
-				weight := filter[wCoord]
-				oCoord := 0
-				for iy := ixo; iy < ixo+l.oiHW; iy += l.iWidth {
-					for iCoord := iy; iCoord < iy+l.oWidth; iCoord++ {
-						gradInputs[iCoord] += deltas[oCoord] * weight
-						gradFilter[wCoord] += inputs[iCoord] * deltas[oCoord]
-
-						oCoord++
-					}
-				}
-
-				wCoord++
-			}
-		}
-	}
+func (l *Layer) ResetGradients() {
+	l.wGrads.Reset()
+	l.bGrads.Reset()
 }
 
-func (l *layer) ResetGradients() {
-	l.gradWeights.Reset()
-	l.gradBiases.Reset()
-}
-
-func (l *layer) GetWeights() *data.Data {
+func (l *Layer) GetWeights() *data.Data {
 	return l.Weights
 }
 
-func (l *layer) GetOutput() *data.Data {
+func (l *Layer) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *layer) GetInputs() *data.Data {
+func (l *Layer) GetInputs() *data.Data {
 	return l.inputs
 }
 
-func (l *layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
-	return l.Weights, l.gradWeights
+func (l *Layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
+	return l.Weights, l.wGrads
 }
 
-func (l *layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
-	return l.Biases, l.gradBiases
+func (l *Layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
+	return l.Biases, l.bGrads
 }
 
-func (l *layer) GetInputGradients() *data.Data {
-	return l.gradInputs
+func (l *Layer) GetInputGradients() *data.Data {
+	return l.iGrads
 }
 
-func (l *layer) GetWeightGradients() *data.Data {
-	return l.gradWeights
+func (l *Layer) GetWeightGradients() *data.Data {
+	return l.wGrads
 }
 
-func (l *layer) IsTrainable() bool {
+func (l *Layer) IsTrainable() bool {
 	return l.Trainable
 }

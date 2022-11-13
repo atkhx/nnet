@@ -1,13 +1,14 @@
-package regression
+package loss
 
 import (
+	"testing"
+
 	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
-func TestLoss_GetDeltas(t *testing.T) {
-	loss := New()
+func TestRegression_GetDeltas(t *testing.T) {
+	loss := NewRegression()
 
 	type testCase struct {
 		target   *data.Data
@@ -28,15 +29,14 @@ func TestLoss_GetDeltas(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, loss.GetDeltas(tc.target, tc.output))
 		})
 	}
 }
 
-func TestLoss_GetError(t *testing.T) {
-	loss := New()
+func TestRegression_GetError(t *testing.T) {
+	loss := NewRegression()
 
 	type testCase struct {
 		target   []float64

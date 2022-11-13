@@ -1,4 +1,4 @@
-package basic_ffn
+package net
 
 import (
 	"github.com/atkhx/nnet/data"
@@ -9,24 +9,24 @@ import (
 
 type Layers []layer.Layer
 
-func New(iWidth, iHeight, iDepth int, layers Layers) *ffnet {
-	return &ffnet{
-		iWidth:  iWidth,
-		iHeight: iHeight,
-		iDepth:  iDepth,
+func New(iWidth, iHeight, iDepth int, layers Layers) *FeedForward {
+	return &FeedForward{
+		IWidth:  iWidth,
+		IHeight: iHeight,
+		IDepth:  iDepth,
 		Layers:  layers,
 	}
 }
 
-type ffnet struct {
-	iWidth, iHeight, iDepth int
-	oWidth, oHeight, oDepth int
+type FeedForward struct {
+	IWidth, IHeight, IDepth int
+	OWidth, OHeight, ODepth int
 
 	Layers Layers
 }
 
-func (n *ffnet) Init() (err error) {
-	w, h, d := n.iWidth, n.iHeight, n.iDepth
+func (n *FeedForward) Init() (err error) {
+	w, h, d := n.IWidth, n.IHeight, n.IDepth
 
 	log.Printf("input [*]: %d:%d:%d, %T", w, h, d, n)
 	for i := 0; i < len(n.Layers); i++ {
@@ -34,19 +34,19 @@ func (n *ffnet) Init() (err error) {
 		log.Printf("layer [%d]: %d:%d:%d, %T", i, w, h, d, n.Layers[i])
 	}
 
-	n.oWidth, n.oHeight, n.oDepth = w, h, d
+	n.OWidth, n.OHeight, n.ODepth = w, h, d
 
 	return
 }
 
-func (n *ffnet) Activate(inputs *data.Data) *data.Data {
+func (n *FeedForward) Activate(inputs *data.Data) *data.Data {
 	for i := 0; i < len(n.Layers); i++ {
 		inputs = n.Layers[i].Activate(inputs)
 	}
 	return inputs
 }
 
-func (n *ffnet) Backprop(deltas *data.Data) (gradient *data.Data) {
+func (n *FeedForward) Backprop(deltas *data.Data) (gradient *data.Data) {
 	gradient = deltas.Copy()
 
 	for i := len(n.Layers) - 1; i >= 0; i-- {
@@ -55,11 +55,11 @@ func (n *ffnet) Backprop(deltas *data.Data) (gradient *data.Data) {
 	return gradient
 }
 
-func (n *ffnet) GetLayersCount() int {
+func (n *FeedForward) GetLayersCount() int {
 	return len(n.Layers)
 }
 
-func (n *ffnet) GetLayer(index int) layer.Layer {
+func (n *FeedForward) GetLayer(index int) layer.Layer {
 	if index > -1 && index < len(n.Layers) {
 		return n.Layers[index]
 	}

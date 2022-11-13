@@ -1,19 +1,18 @@
 package pooling
 
 import (
-	"sync"
-
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/executor"
 )
 
-func New(options ...Option) *layer {
-	layer := &layer{}
+func New(options ...Option) *Layer {
+	layer := &Layer{}
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
 	return layer
 }
 
-type layer struct {
+type Layer struct {
 	iWidth, iHeight, iDepth int
 	oWidth, oHeight, oDepth int
 
@@ -32,16 +31,9 @@ type layer struct {
 
 	deltas     *data.Data
 	gradInputs *data.Data
-
-	threads int
-
-	activateInChan chan int
-	backpropInChan chan int
-
-	wg sync.WaitGroup
 }
 
-func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
+func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
 	if l.fStride < 1 {
 		l.fStride = 1
 	}
@@ -62,43 +54,16 @@ func (l *layer) InitDataSizes(w, h, d int) (int, int, int) {
 	l.oSquare = l.oWidth * l.oHeight
 	l.coords = make([]int, l.oWidth*l.oHeight*l.oDepth)
 
-	if l.threads == 0 {
-		l.threads = l.oDepth
-	}
-
-	l.activateInChan = make(chan int, l.threads)
-	l.backpropInChan = make(chan int, l.threads)
-
-	for i := 0; i < l.threads; i++ {
-		go func() {
-			for {
-				select {
-				case fi := <-l.activateInChan:
-					l.activateFilter(fi)
-				case fi := <-l.backpropInChan:
-					l.backpropFilter(fi)
-				}
-				l.wg.Done()
-			}
-		}()
-	}
-
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
-func (l *layer) Activate(inputs *data.Data) *data.Data {
+func (l *Layer) Activate(inputs *data.Data) *data.Data {
 	l.inputs = inputs
-
-	l.wg.Add(l.oDepth)
-	for i := 0; i < l.oDepth; i++ {
-		l.activateInChan <- i
-	}
-	l.wg.Wait()
-
+	executor.RunParallel(l.oDepth, l.activateFilter)
 	return l.output
 }
 
-func (l *layer) activateFilter(oz int) {
+func (l *Layer) activateFilter(oz int) {
 	wW, wH := l.fWidth, l.fHeight
 	outXYZ := oz * l.oSquare
 	max := 0.0
@@ -133,30 +98,25 @@ func (l *layer) activateFilter(oz int) {
 	}
 }
 
-func (l *layer) Backprop(deltas *data.Data) *data.Data {
+func (l *Layer) Backprop(deltas *data.Data) *data.Data {
 	l.gradInputs.Reset()
 	l.deltas = deltas
-
-	l.wg.Add(l.oDepth)
-	for i := 0; i < l.oDepth; i++ {
-		l.backpropInChan <- i
-	}
-	l.wg.Wait()
+	executor.RunParallel(l.oDepth, l.backpropFilter)
 
 	return l.gradInputs
 }
 
-func (l *layer) backpropFilter(oz int) {
+func (l *Layer) backpropFilter(oz int) {
 	offset := oz * l.oSquare
 	for i := offset; i < offset+l.oSquare; i++ {
 		l.gradInputs.Data[l.coords[i]] += l.deltas.Data[i]
 	}
 }
 
-func (l *layer) GetOutput() *data.Data {
+func (l *Layer) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *layer) GetInputGradients() *data.Data {
+func (l *Layer) GetInputGradients() *data.Data {
 	return l.gradInputs
 }

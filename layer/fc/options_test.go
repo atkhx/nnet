@@ -7,7 +7,7 @@ import (
 )
 
 func TestOutputSizes(t *testing.T) {
-	layer := &layer{}
+	layer := &Layer{}
 
 	OutputSizes(3, 4, 5)(layer)
 

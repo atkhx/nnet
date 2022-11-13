@@ -1,4 +1,4 @@
-package activation
+package tahn
 
 import (
 	"testing"
@@ -8,23 +8,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func BenchmarkLayer_Activate(b *testing.B) {
+	layer := New()
+	layer.InitDataSizes(28, 28, 28)
+
+	input := &data.Data{}
+	input.InitCubeRandom(28, 28, 28, -1, 1)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		layer.Activate(input)
+	}
+}
+
+func BenchmarkLayer_Backprop(b *testing.B) {
+	layer := New()
+
+	ow, oh, od := layer.InitDataSizes(28, 28, 28)
+
+	input := &data.Data{}
+	input.InitCubeRandom(28, 28, 28, -1, 1)
+
+	deltas := &data.Data{}
+	deltas.InitCubeRandom(ow, oh, od, -1, 1)
+
+	layer.Activate(input)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		layer.Backprop(deltas)
+	}
+}
+
 func TestLayer_Activate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	activationFunc := NewMockActivation(ctrl)
-	activationFunc.EXPECT().Forward(1.0).Return(0.40)
-	activationFunc.EXPECT().Forward(0.3).Return(0.01)
-
-	layer := New(activationFunc)
+	layer := New()
 	layer.InitDataSizes(2, 1, 1)
 
-	inputs := data.NewVector(1.0, 0.3)
+	inputs := data.NewVector(0.07, -0.3)
 	output := layer.Activate(inputs)
 
 	expected := &data.Data{
 		Dims: []int{2, 1, 1},
-		Data: []float64{0.40, 0.01},
+		Data: []float64{0.06988589031642899, -0.2913126124515909},
 	}
 
 	assert.Equal(t, expected, output)
@@ -35,24 +63,16 @@ func TestLayer_Backprop(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	activationFunc := NewMockActivation(ctrl)
-
-	activationFunc.EXPECT().Forward(1.0).Return(0.40)
-	activationFunc.EXPECT().Forward(0.3).Return(0.01)
-
-	activationFunc.EXPECT().Backward(0.40).Return(0.7)
-	activationFunc.EXPECT().Backward(0.01).Return(0.3)
-
-	layer := New(activationFunc)
+	layer := New()
 	layer.InitDataSizes(2, 1, 1)
 	layer.Activate(&data.Data{
 		Dims: []int{2, 1, 1},
-		Data: []float64{1.0, 0.3},
+		Data: []float64{0.07, -0.3},
 	})
 
 	expected := &data.Data{
 		Dims: []int{2, 1, 1},
-		Data: []float64{-0.063, 0.00027},
+		Data: []float64{-0.0895604366101212, 0.0008236232656439662},
 	}
 
 	assert.Equal(t, expected, layer.Backprop(&data.Data{

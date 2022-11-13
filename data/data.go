@@ -10,7 +10,15 @@ type Data struct {
 	Data []float64
 }
 
+func (m *Data) IsEmpty() bool {
+	return len(m.Dims) == 0
+}
+
 func (m *Data) ExtractDimensions(dims ...*int) {
+	if m.IsEmpty() {
+		return
+	}
+
 	dimsCount := len(m.Dims)
 	for i, dim := range dims {
 		if i < dimsCount {
@@ -22,20 +30,36 @@ func (m *Data) ExtractDimensions(dims ...*int) {
 }
 
 func (m *Data) Reset() {
-	for i := 0; i < len(m.Data); i++ {
+	for i := range m.Data {
 		m.Data[i] = 0
 	}
 }
 
 func (m *Data) Fill(v float64) {
-	for i := 0; i < len(m.Data); i++ {
+	for i := range m.Data {
 		m.Data[i] = v
 	}
 }
 
 func (m *Data) FillRandom(min, max float64) {
-	for i := 0; i < len(m.Data); i++ {
+	for i := range m.Data {
 		m.Data[i] = min + (max-min)*rand.Float64()
+	}
+}
+
+func (m *Data) Dot(floats []float64) (dot float64) {
+	for i, v := range m.Data {
+		dot += v * floats[i]
+	}
+	return
+}
+
+func (m *Data) Add(src ...[]float64) {
+	data := m.Data
+	for _, items := range src {
+		for j, v := range items {
+			data[j] += v
+		}
 	}
 }
 
@@ -103,9 +127,18 @@ func (m *Data) CopyZero() (r *Data) {
 	return
 }
 
-func (m Data) Copy() (r *Data) {
+func (m *Data) Copy() (r *Data) {
 	r = m.CopyZero()
 	copy(r.Data, m.Data)
+	return
+}
+
+func (m *Data) GetMaxValue() (max float64) {
+	for i := 0; i < len(m.Data); i++ {
+		if i == 0 || max < m.Data[i] {
+			max = m.Data[i]
+		}
+	}
 	return
 }
 
@@ -140,21 +173,21 @@ func (m *Data) PrintlnCube() {
 	}
 }
 
-func (m *Data) Rotate180() {
-	var w, h, d int
-	m.ExtractDimensions(&w, &h, &d)
+func (m *Data) Rotate180() *Data {
+	res := m.Copy()
 
-	f := make([]float64, len(m.Data))
+	var w, h, d int
+	res.ExtractDimensions(&w, &h, &d)
 
 	for z := 0; z < d; z++ {
 		for y := 0; y < h; y++ {
 			for x := 0; x < w; x++ {
-				f[z*w*h+(h-y-1)*w+(w-x-1)] = m.Data[z*w*h+y*w+x]
+				res.Data[z*w*h+(h-y-1)*w+(w-x-1)] = m.Data[z*w*h+y*w+x]
 			}
 		}
 	}
 
-	m.Data = f
+	return res
 }
 
 func (m *Data) RotateRight90() {
@@ -198,6 +231,10 @@ func (m *Data) RotateLeft90() {
 }
 
 func (m *Data) AddPadding(padding int) *Data {
+	if padding == 0 {
+		return m
+	}
+
 	var ow, oh, od int
 	var pw, ph, pd int
 	m.ExtractDimensions(&ow, &oh, &od)
@@ -208,12 +245,19 @@ func (m *Data) AddPadding(padding int) *Data {
 
 	res := make([]float64, pw*ph*pd)
 
+	phpw := ph * pw
+	ohow := oh * ow
+
 	for z := 0; z < pd; z++ {
 		for y := padding; y < ph-padding; y++ {
 			copy(
-				res[z*ph*pw+y*pw+padding:z*ph*pw+y*pw+padding+ow],
-				m.Data[z*oh*ow+(y-padding)*ow:z*oh*ow+(y-padding)*ow+ow],
+				res[z*phpw+y*pw+padding:z*phpw+y*pw+padding+ow],
+				m.Data[z*ohow+(y-padding)*ow:z*ohow+(y-padding)*ow+ow],
 			)
+			//copy(
+			//	res[z*ph*pw+y*pw+padding:z*ph*pw+y*pw+padding+ow],
+			//	m.Data[z*oh*ow+(y-padding)*ow:z*oh*ow+(y-padding)*ow+ow],
+			//)
 		}
 	}
 
@@ -224,6 +268,10 @@ func (m *Data) AddPadding(padding int) *Data {
 }
 
 func (m *Data) RemovePadding(padding int) *Data {
+	if padding == 0 {
+		return m
+	}
+
 	var ow, oh, od int
 	var pw, ph, pd int
 	m.ExtractDimensions(&ow, &oh, &od)
