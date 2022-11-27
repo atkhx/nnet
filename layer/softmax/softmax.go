@@ -6,15 +6,11 @@ import (
 	"github.com/atkhx/nnet/data"
 )
 
-func New(options ...Option) *Layer {
-	layer := &Layer{}
-	applyOptions(layer, defaults...)
-	applyOptions(layer, options...)
-
-	return layer
+func New() *Softmax {
+	return &Softmax{}
 }
 
-type Layer struct {
+type Softmax struct {
 	iWidth, iHeight, iDepth int
 	oWidth, oHeight, oDepth int
 
@@ -22,17 +18,17 @@ type Layer struct {
 	output *data.Data
 }
 
-func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
+func (l *Softmax) InitDataSizes(w, h, d int) (int, int, int) {
 	l.iWidth, l.iHeight, l.iDepth = w, h, d
 	l.oWidth, l.oHeight, l.oDepth = w, h, d
 
 	l.output = &data.Data{}
-	l.output.InitCube(w, h, d)
+	l.output.Init3D(w, h, d)
 
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
-func (l *Layer) Activate(inputs *data.Data) *data.Data {
+func (l *Softmax) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 
 	summ := 0.0
@@ -52,10 +48,10 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 	return l.output
 }
 
-func (l *Layer) GetOutput() *data.Data {
+func (l *Softmax) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Layer) Backprop(deltas *data.Data) *data.Data {
+func (l *Softmax) Backward(deltas *data.Data) *data.Data {
 	return deltas.Copy()
 }

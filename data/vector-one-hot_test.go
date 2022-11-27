@@ -1,9 +1,10 @@
 package data
 
 import (
+	"testing"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewOneHotVector(t *testing.T) {

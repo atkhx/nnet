@@ -4,26 +4,13 @@ import (
 	"math/rand"
 )
 
-func NewVector(w int) *Data {
-	res := &Data{}
-	res.InitVector(w)
-	return res
-}
-
-func NewVectorWithCopyData(data ...float64) *Data {
-	res := NewVector(len(data))
-	copy(res.Data, data)
-
-	return res
-}
-
 type Data struct {
 	Dims []int
 	Data []float64
 }
 
 func (m *Data) ExtractDimensions(dims ...*int) {
-	if m.IsEmpty() {
+	if len(m.Dims) == 0 {
 		return
 	}
 
@@ -35,10 +22,6 @@ func (m *Data) ExtractDimensions(dims ...*int) {
 			*dim = 1
 		}
 	}
-}
-
-func (m *Data) IsEmpty() bool {
-	return len(m.Dims) == 0
 }
 
 // Fill data methods
@@ -76,61 +59,6 @@ func (m *Data) CopyZero() (r *Data) {
 	copy(r.Dims, m.Dims) // copy struct
 
 	return
-}
-
-func (m *Data) InitVector(w int) {
-	m.Dims = []int{w, 1, 1}
-	m.Data = make([]float64, w)
-}
-
-func (m *Data) InitVectorWithData(w int, data []float64) {
-	m.Dims = []int{w, 1, 1}
-	m.Data = data
-}
-
-func (m *Data) InitVectorRandom(w int, min, max float64) {
-	m.InitVector(w)
-	m.FillRandom(min, max)
-}
-
-func (m *Data) InitMatrix(w, h int) {
-	m.Dims = []int{w, h, 1}
-	m.Data = make([]float64, w*h)
-}
-
-func (m *Data) InitMatrixWithData(w, h int, data []float64) {
-	m.Dims = []int{w, h, 1}
-	m.Data = data
-}
-
-func (m *Data) InitMatrixRandom(w, h int, min, max float64) {
-	m.InitMatrix(w, h)
-	m.FillRandom(min, max)
-}
-
-func (m *Data) InitCube(w, h, d int) {
-	m.Dims = []int{w, h, d}
-	m.Data = make([]float64, w*h*d)
-}
-
-func (m *Data) InitCubeWithData(w, h, d int, data []float64) {
-	m.Dims = []int{w, h, d}
-	m.Data = data
-}
-
-func (m *Data) InitCubeRandom(w, h, d int, min, max float64) {
-	m.InitCube(w, h, d)
-	m.FillRandom(min, max)
-}
-
-func (m *Data) InitHiperCube(w, h, d, t int) {
-	m.Dims = []int{w, h, d, t}
-	m.Data = make([]float64, w*h*d*t)
-}
-
-func (m *Data) InitHiperCubeRandom(w, h, d, t int, min, max float64) {
-	m.InitHiperCube(w, h, d, t)
-	m.FillRandom(min, max)
 }
 
 // math methods
@@ -262,7 +190,7 @@ func (m *Data) AddPadding(padding int) *Data {
 	}
 
 	vec := &Data{}
-	vec.InitCubeWithData(pw, ph, pd, res)
+	vec.Init3DWithData(pw, ph, pd, res)
 
 	return vec
 }
@@ -292,7 +220,7 @@ func (m *Data) RemovePadding(padding int) *Data {
 	}
 
 	vec := &Data{}
-	vec.InitCubeWithData(pw, ph, pd, res)
+	vec.Init3DWithData(pw, ph, pd, res)
 
 	return vec
 }

@@ -38,14 +38,14 @@ func TestNewVectorWithCopyData(t *testing.T) {
 	for name, tc := range testCases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, NewVectorWithCopyData(tc.values...))
+			assert.Equal(t, tc.expected, NewVector(tc.values...))
 		})
 	}
 }
 
 func TestNewVectorWithCopyDataNotLinkToSource(t *testing.T) {
 	source := []float64{1, 2, 3, 4, 5}
-	vector := NewVectorWithCopyData(source...)
+	vector := NewVector(source...)
 
 	expected := []float64{1, 2, 3, 4, 5}
 	assert.EqualValues(t, expected, vector.Data, "invalid values in vector")

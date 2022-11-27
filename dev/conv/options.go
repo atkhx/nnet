@@ -1,4 +1,4 @@
-package conv_dev
+package conv
 
 func applyOptions(layer *Layer, options ...Option) {
 	for _, opt := range options {

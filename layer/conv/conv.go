@@ -5,16 +5,14 @@ import (
 	"github.com/atkhx/nnet/executor"
 )
 
-func New(options ...Option) *Layer {
-	layer := &Layer{}
+func New(options ...Option) *Conv {
+	layer := &Conv{}
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
-
 	return layer
 }
 
-type Layer struct {
-	// begin storable Layer config
+type Conv struct {
 	FCount   int
 	FPadding int
 	FStride  int
@@ -23,13 +21,12 @@ type Layer struct {
 	Biases  *data.Data
 
 	Trainable bool
-	// end storable Layer config
 
 	iWidth, iHeight, iDepth int
 	FWidth, FHeight, FDepth int
 	oWidth, oHeight, oDepth int
 
-	initWeights InitWeightsParams
+	InitWeightsParams InitWeightsParams
 
 	inputs *data.Data
 	output *data.Data
@@ -51,7 +48,7 @@ type Layer struct {
 	iGradsSeparated [][]float64
 }
 
-func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
+func (l *Conv) InitDataSizes(iw, ih, id int) (int, int, int) {
 	l.iWidth, l.iHeight, l.iDepth = iw+2*l.FPadding, ih+2*l.FPadding, id
 
 	l.oWidth = (iw-l.FWidth+2*l.FPadding)/l.FStride + 1
@@ -76,28 +73,28 @@ func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	}
 
 	if len(l.Weights.Data) == 0 {
-		l.Weights.InitCubeRandom(
+		l.Weights.Init3DRandom(
 			l.FWidth,
 			l.FHeight,
 			l.FCount*l.FDepth,
-			l.initWeights.WeightMinThreshold,
-			l.initWeights.WeightMaxThreshold,
+			l.InitWeightsParams.WeightMinThreshold,
+			l.InitWeightsParams.WeightMaxThreshold,
 		)
 		l.Biases.InitVector(l.FCount)
-		l.Biases.Fill(l.initWeights.BiasInitialValue)
+		l.Biases.Fill(l.InitWeightsParams.BiasInitialValue)
 	}
 
 	l.output = &data.Data{}
-	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
+	l.output.Init3D(l.oWidth, l.oHeight, l.oDepth)
 
 	l.bGrads = &data.Data{}
 	l.bGrads.InitVector(l.FCount)
 
 	l.wGrads = &data.Data{}
-	l.wGrads.InitCube(l.FWidth, l.FHeight, l.FCount*l.FDepth)
+	l.wGrads.Init3D(l.FWidth, l.FHeight, l.FCount*l.FDepth)
 
 	l.iGrads = &data.Data{}
-	l.iGrads.InitCube(l.iWidth, l.iHeight, l.iDepth)
+	l.iGrads.Init3D(l.iWidth, l.iHeight, l.iDepth)
 
 	l.iGradsSeparated = make([][]float64, l.FCount)
 	for i := 0; i < len(l.iGradsSeparated); i++ {
@@ -107,7 +104,7 @@ func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
-func (l *Layer) Activate(inputs *data.Data) *data.Data {
+func (l *Conv) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs.AddPadding(l.FPadding)
 
 	executor.RunParallel(l.FCount, func(filterIndex int) {
@@ -144,7 +141,7 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 	return l.output
 }
 
-func (l *Layer) Backprop(deltas *data.Data) *data.Data {
+func (l *Conv) Backward(deltas *data.Data) *data.Data {
 	l.iGrads.FillZero()
 
 	executor.RunParallel(l.FCount, func(filterIndex int) {
@@ -193,39 +190,39 @@ func (l *Layer) Backprop(deltas *data.Data) *data.Data {
 	return l.iGrads.RemovePadding(l.FPadding)
 }
 
-func (l *Layer) ResetGradients() {
+func (l *Conv) ResetGradients() {
 	l.wGrads.FillZero()
 	l.bGrads.FillZero()
 }
 
-func (l *Layer) GetWeights() *data.Data {
+func (l *Conv) GetWeights() *data.Data {
 	return l.Weights
 }
 
-func (l *Layer) GetOutput() *data.Data {
+func (l *Conv) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Layer) GetInputs() *data.Data {
+func (l *Conv) GetInputs() *data.Data {
 	return l.inputs
 }
 
-func (l *Layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
+func (l *Conv) GetWeightsWithGradient() (*data.Data, *data.Data) {
 	return l.Weights, l.wGrads
 }
 
-func (l *Layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
+func (l *Conv) GetBiasesWithGradient() (*data.Data, *data.Data) {
 	return l.Biases, l.bGrads
 }
 
-func (l *Layer) GetInputGradients() *data.Data {
+func (l *Conv) GetInputGradients() *data.Data {
 	return l.iGrads
 }
 
-func (l *Layer) GetWeightGradients() *data.Data {
+func (l *Conv) GetWeightGradients() *data.Data {
 	return l.wGrads
 }
 
-func (l *Layer) IsTrainable() bool {
+func (l *Conv) IsTrainable() bool {
 	return l.Trainable
 }

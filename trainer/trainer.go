@@ -51,7 +51,7 @@ func (t *trainer) Activate(inputs, target *data.Data) *data.Data {
 	output := t.net.Activate(inputs).Copy()
 	deltas := t.loss.GetDeltas(target, output)
 
-	t.net.Backprop(deltas)
+	t.net.Backward(deltas)
 	t.batchIndex++
 
 	return output

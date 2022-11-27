@@ -1,8 +1,6 @@
 package data
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -14,23 +12,24 @@ var (
 
 func NewOneHotVector(index, count int) (*Data, error) {
 	if index < 0 {
-		return nil, errors.Wrap(ErrorVectorIndexToLow, fmt.Sprintf("%d less than zero", index))
+		return nil, ErrorVectorIndexToLow
 	}
 	if count < 1 {
-		return nil, errors.Wrap(ErrorVectorCountToLow, fmt.Sprintf("%d less than one", count))
+		return nil, ErrorVectorCountToLow
 	}
 	if index >= count {
-		return nil, errors.Wrap(ErrorVectorIndexToHigh, fmt.Sprintf("index: %d, count: %d", index, count))
+		return nil, ErrorVectorIndexToHigh
 	}
 
-	res := NewVector(count)
+	res := &Data{}
+	res.InitVector(count)
 	res.Data[index] = 1
 	return res, nil
 }
 
 func NewOneHotVectors(count int) ([]*Data, error) {
 	if count < 1 {
-		return nil, errors.Wrap(ErrorVectorCountToLow, fmt.Sprintf("%d less than one", count))
+		return nil, ErrorVectorCountToLow
 	}
 
 	res := make([]*Data, count)

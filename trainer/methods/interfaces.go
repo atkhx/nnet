@@ -1,15 +1,15 @@
 package methods
 
 import (
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/data"
-	"github.com/atkhx/nnet/layer"
 )
 
 type Net interface {
 	Activate(inputs *data.Data) (output *data.Data)
-	Backprop(deltas *data.Data) (gradient *data.Data)
+	Backward(deltas *data.Data) (gradient *data.Data)
 	GetLayersCount() int
-	GetLayer(index int) layer.Layer
+	GetLayer(index int) nnet.Layer
 }
 
 type TrainableLayer interface {

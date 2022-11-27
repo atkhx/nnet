@@ -1,4 +1,4 @@
-package conv_dev
+package conv
 
 import (
 	"github.com/atkhx/nnet/data"
@@ -82,7 +82,7 @@ func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	}
 
 	if len(l.Weights.Data) == 0 {
-		l.Weights.InitCubeRandom(
+		l.Weights.Init3DRandom(
 			l.FWidth,
 			l.FHeight,
 			l.FCount*l.FDepth,
@@ -94,17 +94,17 @@ func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	}
 
 	l.output = &data.Data{}
-	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
+	l.output.Init3D(l.oWidth, l.oHeight, l.oDepth)
 
 	l.gradBiases = &data.Data{}
 	l.gradBiases.InitVector(l.FCount)
 
 	l.gradWeights = &data.Data{}
-	l.gradWeights.InitCube(l.FWidth, l.FHeight, l.FCount*l.FDepth)
+	l.gradWeights.Init3D(l.FWidth, l.FHeight, l.FCount*l.FDepth)
 
 	l.gradInputs = &data.Data{}
-	//l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
-	l.gradInputs.InitCube(iw, ih, id)
+	//l.gradInputs.Init3D(l.iWidth, l.iHeight, l.iDepth)
+	l.gradInputs.Init3D(iw, ih, id)
 
 	l.gradInputsSeparated = make([][]float64, l.FCount)
 	for i := 0; i < len(l.gradInputsSeparated); i++ {
@@ -115,7 +115,7 @@ func (l *Layer) InitDataSizes(iw, ih, id int) (int, int, int) {
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
-func (l *Layer) Activate(inputs *data.Data) *data.Data {
+func (l *Layer) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs.AddPadding(l.FPadding)
 
 	executor.RunParallel(l.FCount, func(filterIndex int) {
@@ -152,7 +152,7 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 	return l.output
 }
 
-func (l *Layer) Backprop(del *data.Data) *data.Data {
+func (l *Layer) Backward(del *data.Data) *data.Data {
 	l.gradInputs.FillZero()
 
 	// calc weight gradients

@@ -1,6 +1,6 @@
 package fc
 
-func applyOptions(layer *Layer, options ...Option) {
+func applyOptions(layer *FC, options ...Option) {
 	for _, opt := range options {
 		opt(layer)
 	}
@@ -11,18 +11,18 @@ var defaults = []Option{
 	IsTrainable(true),
 }
 
-type Option func(layer *Layer)
+type Option func(layer *FC)
 
-func OutputSizes(w, h, d int) Option {
-	return func(layer *Layer) {
-		layer.oWidth = w
-		layer.oHeight = h
-		layer.oDepth = d
+func OutputSizes(w, h, d int) func(layer *FC) {
+	return func(layer *FC) {
+		layer.OWidth = w
+		layer.OHeight = h
+		layer.ODepth = d
 	}
 }
 
-func IsTrainable(trainable bool) Option {
-	return func(layer *Layer) {
+func IsTrainable(trainable bool) func(layer *FC) {
+	return func(layer *FC) {
 		layer.Trainable = trainable
 	}
 }

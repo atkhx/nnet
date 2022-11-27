@@ -1,4 +1,4 @@
-package layer
+package nnet
 
 import "github.com/atkhx/nnet/data"
 
@@ -13,8 +13,8 @@ type Layer interface {
 		outputDepth int,
 	)
 
-	Activate(inputs *data.Data) (output *data.Data)
-	Backprop(deltas *data.Data) (nextDeltas *data.Data)
+	Forward(inputs *data.Data) (output *data.Data)
+	Backward(oGrads *data.Data) (iGrads *data.Data)
 }
 
 type WithOutput interface {

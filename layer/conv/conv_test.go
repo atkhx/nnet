@@ -7,38 +7,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkLayer_Activate(b *testing.B) {
+func BenchmarkConv_Activate(b *testing.B) {
 	conv := New(FilterSize(5), FiltersCount(20))
 	conv.InitDataSizes(34, 34, 20)
 
 	input := &data.Data{}
-	input.InitCubeRandom(34, 34, 20, -1, 1)
+	input.Init3DRandom(34, 34, 20, -1, 1)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		conv.Activate(input)
+		conv.Forward(input)
 	}
 }
 
-func BenchmarkLayer_Backprop(b *testing.B) {
+func BenchmarkConv_Backward(b *testing.B) {
 	conv := New(FilterSize(5), FiltersCount(20))
 	ow, oh, od := conv.InitDataSizes(34, 34, 20)
 
 	input := &data.Data{}
-	input.InitCubeRandom(34, 34, 20, -1, 1)
+	input.Init3DRandom(34, 34, 20, -1, 1)
 
 	deltas := &data.Data{}
-	deltas.InitCubeRandom(ow, oh, od, -1, 1)
+	deltas.Init3DRandom(ow, oh, od, -1, 1)
 
-	conv.Activate(input)
+	conv.Forward(input)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		conv.Backprop(deltas)
+		conv.Backward(deltas)
 	}
 }
 
-func TestLayer_OneLayerFilter2x2WithoutPadding(t *testing.T) {
+func TestConv_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 	conv := New(FilterSize(2), FiltersCount(1))
 	conv.InitDataSizes(3, 3, 3)
 
@@ -52,7 +52,7 @@ func TestLayer_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 	i21, i22, i23, i24, i25, i26, i27, i28, i29 := 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0
 	i31, i32, i33, i34, i35, i36, i37, i38, i39 := 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0
 
-	conv.Weights.InitCubeWithData(2, 2, 3, []float64{
+	conv.Weights.Init3DWithData(2, 2, 3, []float64{
 		w11, w12,
 		w13, w14,
 
@@ -101,7 +101,7 @@ func TestLayer_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 		(i25*w21 + i26*w22 + i28*w23 + i29*w24) +
 		(i35*w31 + i36*w32 + i38*w33 + i39*w34)
 
-	out := conv.Activate(input)
+	out := conv.Forward(input)
 	assert.Equal(t, []float64{
 		y11, y12,
 		y13, y14,
@@ -115,7 +115,7 @@ func TestLayer_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 		d13, d14,
 	})
 
-	igrad := conv.Backprop(deltas)
+	igrad := conv.Backward(deltas)
 
 	// weight rotated
 	//wr := []float64{
@@ -240,7 +240,7 @@ func TestLayer_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 	}, conv.wGrads)
 }
 
-func TestLayer_OneLayerFilter2x2WithPadding1(t *testing.T) {
+func TestConv_OneLayerFilter2x2WithPadding1(t *testing.T) {
 	conv := New(FilterSize(2), FiltersCount(1), Padding(1))
 	conv.InitDataSizes(3, 3, 3)
 
@@ -254,7 +254,7 @@ func TestLayer_OneLayerFilter2x2WithPadding1(t *testing.T) {
 	i21, i22, i23, i24, i25, i26, i27, i28, i29 := 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0
 	i31, i32, i33, i34, i35, i36, i37, i38, i39 := 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0
 
-	conv.Weights.InitCubeWithData(2, 2, 3, []float64{
+	conv.Weights.Init3DWithData(2, 2, 3, []float64{
 		w11, w12,
 		w13, w14,
 
@@ -375,7 +375,7 @@ func TestLayer_OneLayerFilter2x2WithPadding1(t *testing.T) {
 		(i29*w21 + 0.0*w22 + 0.0*w23 + 0.0*w24) +
 		(i39*w31 + 0.0*w32 + 0.0*w33 + 0.0*w34)
 
-	out := conv.Activate(input)
+	out := conv.Forward(input)
 	assert.Equal(t, []float64{
 		y11, y12, y13, y14,
 		y15, y16, y17, y18,
@@ -402,7 +402,7 @@ func TestLayer_OneLayerFilter2x2WithPadding1(t *testing.T) {
 		d23, d24, d25, d26,
 	})
 
-	igrad := conv.Backprop(deltas)
+	igrad := conv.Backward(deltas)
 
 	// weight rotated
 	//wr := []float64{

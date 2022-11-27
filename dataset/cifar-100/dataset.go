@@ -115,9 +115,9 @@ func (d *dataset) ReadSample(index int) (input, target *data.Data, err error) {
 	input = &data.Data{}
 
 	if d.rgb {
-		input.InitCubeWithData(ImageWidth, ImageHeight, 3, d.images[index*ImageSizeRGB:(index+1)*ImageSizeRGB])
+		input.Init3DWithData(ImageWidth, ImageHeight, 3, d.images[index*ImageSizeRGB:(index+1)*ImageSizeRGB])
 	} else {
-		input.InitCubeWithData(ImageWidth, ImageHeight, 1, d.images[index*ImageSizeGray:(index+1)*ImageSizeGray])
+		input.Init3DWithData(ImageWidth, ImageHeight, 1, d.images[index*ImageSizeGray:(index+1)*ImageSizeGray])
 	}
 
 	return

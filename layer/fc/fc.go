@@ -7,24 +7,21 @@ import (
 	"github.com/atkhx/nnet/executor"
 )
 
-func New(options ...Option) *Layer {
-	layer := &Layer{}
+func New(options ...Option) *FC {
+	layer := &FC{}
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
-
 	return layer
 }
 
-type Layer struct {
-	// begin storable Layer config
+type FC struct {
 	Weights *data.Data
 	Biases  *data.Data
 
 	Trainable bool
-	// end storable Layer config
 
 	iWidth, iHeight, iDepth, iVolume int
-	oWidth, oHeight, oDepth, oVolume int
+	OWidth, OHeight, ODepth, oVolume int
 
 	inputs *data.Data
 	output *data.Data
@@ -36,14 +33,14 @@ type Layer struct {
 	gradInputsSeparated [][]float64
 }
 
-func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
+func (l *FC) InitDataSizes(w, h, d int) (int, int, int) {
 	l.output = &data.Data{}
-	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
+	l.output.Init3D(l.OWidth, l.OHeight, l.ODepth)
 
 	l.iWidth, l.iHeight, l.iDepth = w, h, d
 
 	l.iVolume = w * h * d
-	l.oVolume = l.oWidth * l.oHeight * l.oDepth
+	l.oVolume = l.OWidth * l.OHeight * l.ODepth
 
 	if l.Weights == nil {
 		l.Weights = &data.Data{}
@@ -53,12 +50,12 @@ func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
 	if len(l.Weights.Data) == 0 {
 		maxWeight := math.Sqrt(1.0 / float64(l.iVolume))
 
-		l.Biases.InitCube(l.oWidth, l.oHeight, l.oDepth)
-		l.Weights.InitHiperCubeRandom(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth, 0, maxWeight)
+		l.Biases.Init3D(l.OWidth, l.OHeight, l.ODepth)
+		l.Weights.Init4DRandom(l.iWidth, l.iHeight, l.iDepth, l.oVolume, 0, maxWeight)
 	}
 
 	l.gradInputs = &data.Data{}
-	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
+	l.gradInputs.Init3D(l.iWidth, l.iHeight, l.iDepth)
 
 	zcount := len(l.output.Data)
 	l.gradInputsSeparated = make([][]float64, zcount)
@@ -67,15 +64,15 @@ func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
 	}
 
 	l.gradBiases = &data.Data{}
-	l.gradBiases.InitCube(l.oWidth, l.oHeight, l.oDepth)
+	l.gradBiases.Init3D(l.OWidth, l.OHeight, l.ODepth)
 
 	l.gradWeights = &data.Data{}
-	l.gradWeights.InitHiperCube(l.iWidth, l.iHeight, l.iDepth, l.oWidth*l.oHeight*l.oDepth)
+	l.gradWeights.Init4D(l.iWidth, l.iHeight, l.iDepth, l.OWidth*l.OHeight*l.ODepth)
 
-	return l.oWidth, l.oHeight, l.oDepth
+	return l.OWidth, l.OHeight, l.ODepth
 }
 
-func (l *Layer) Activate(inputs *data.Data) *data.Data {
+func (l *FC) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	executor.RunParallel(l.oVolume, func(i int) {
 		l.output.Data[i] = l.Biases.Data[i] + l.inputs.Dot(l.Weights.Data[i*l.iVolume:])
@@ -83,12 +80,12 @@ func (l *Layer) Activate(inputs *data.Data) *data.Data {
 	return l.output
 }
 
-func (l *Layer) ResetGradients() {
+func (l *FC) ResetGradients() {
 	l.gradWeights.FillZero()
 	l.gradBiases.FillZero()
 }
 
-func (l *Layer) Backprop(deltas *data.Data) *data.Data {
+func (l *FC) Backward(deltas *data.Data) *data.Data {
 	l.gradInputs.FillZero()
 	l.gradBiases.Add(deltas.Data)
 
@@ -116,34 +113,34 @@ func (l *Layer) Backprop(deltas *data.Data) *data.Data {
 	return l.gradInputs
 }
 
-func (l *Layer) GetOutput() *data.Data {
+func (l *FC) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Layer) GetWeights() *data.Data {
+func (l *FC) GetWeights() *data.Data {
 	return l.Weights
 }
 
-func (l *Layer) GetBiases() *data.Data {
+func (l *FC) GetBiases() *data.Data {
 	return l.Biases
 }
 
-func (l *Layer) GetWeightsWithGradient() (*data.Data, *data.Data) {
+func (l *FC) GetWeightsWithGradient() (*data.Data, *data.Data) {
 	return l.Weights, l.gradWeights
 }
 
-func (l *Layer) GetBiasesWithGradient() (*data.Data, *data.Data) {
+func (l *FC) GetBiasesWithGradient() (*data.Data, *data.Data) {
 	return l.Biases, l.gradBiases
 }
 
-func (l *Layer) GetInputGradients() (g *data.Data) {
+func (l *FC) GetInputGradients() (g *data.Data) {
 	return l.gradInputs
 }
 
-func (l *Layer) GetWeightGradients() *data.Data {
+func (l *FC) GetWeightGradients() *data.Data {
 	return l.gradWeights
 }
 
-func (l *Layer) IsTrainable() bool {
+func (l *FC) IsTrainable() bool {
 	return l.Trainable
 }

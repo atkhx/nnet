@@ -7,11 +7,11 @@ import (
 )
 
 func TestOutputSizes(t *testing.T) {
-	layer := &Layer{}
+	layer := &FC{}
 
 	OutputSizes(3, 4, 5)(layer)
 
-	assert.Equal(t, layer.oWidth, 3)
-	assert.Equal(t, layer.oHeight, 4)
-	assert.Equal(t, layer.oDepth, 5)
+	assert.Equal(t, layer.OWidth, 3)
+	assert.Equal(t, layer.OHeight, 4)
+	assert.Equal(t, layer.ODepth, 5)
 }

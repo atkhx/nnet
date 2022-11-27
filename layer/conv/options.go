@@ -1,6 +1,6 @@
 package conv
 
-func applyOptions(layer *Layer, options ...Option) {
+func applyOptions(layer *Conv, options ...Option) {
 	for _, opt := range options {
 		opt(layer)
 	}
@@ -15,7 +15,7 @@ var defaults = []Option{
 	IsTrainable(true),
 }
 
-type Option func(layer *Layer)
+type Option func(layer *Conv)
 
 type InitWeightsParams struct {
 	WeightMinThreshold float64
@@ -24,38 +24,38 @@ type InitWeightsParams struct {
 }
 
 func FilterSize(size int) Option {
-	return func(layer *Layer) {
+	return func(layer *Conv) {
 		layer.FWidth = size
 		layer.FHeight = size
 	}
 }
 
-func FiltersCount(count int) Option {
-	return func(layer *Layer) {
+func FiltersCount(count int) func(layer *Conv) {
+	return func(layer *Conv) {
 		layer.FCount = count
 	}
 }
 
-func Padding(padding int) Option {
-	return func(layer *Layer) {
+func Padding(padding int) func(layer *Conv) {
+	return func(layer *Conv) {
 		layer.FPadding = padding
 	}
 }
 
-func Stride(stride int) Option {
-	return func(layer *Layer) {
+func Stride(stride int) func(layer *Conv) {
+	return func(layer *Conv) {
 		layer.FStride = stride
 	}
 }
 
-func InitWeights(value InitWeightsParams) Option {
-	return func(layer *Layer) {
-		layer.initWeights = value
+func InitWeights(value InitWeightsParams) func(layer *Conv) {
+	return func(layer *Conv) {
+		layer.InitWeightsParams = value
 	}
 }
 
-func IsTrainable(trainable bool) Option {
-	return func(layer *Layer) {
+func IsTrainable(trainable bool) func(layer *Conv) {
+	return func(layer *Conv) {
 		layer.Trainable = trainable
 	}
 }

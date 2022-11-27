@@ -1,13 +1,14 @@
 package softmax
 
 import (
-	"github.com/atkhx/nnet/data"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
+
+	"github.com/atkhx/nnet/data"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestLayer_Activate(t *testing.T) {
+func TestSoftmax_Activate(t *testing.T) {
 	type testCase struct {
 		inputs *data.Data
 		output *data.Data
@@ -71,10 +72,10 @@ func TestLayer_Activate(t *testing.T) {
 	for name, tc := range testCases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			layer := New(OutputSizes(3, 1, 1))
+			layer := New()
 			layer.InitDataSizes(3, 1, 1)
 
-			output := layer.Activate(tc.inputs)
+			output := layer.Forward(tc.inputs)
 			assert.Equal(t, tc.output, output)
 
 			sum := 0.0

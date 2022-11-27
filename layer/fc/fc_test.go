@@ -1,15 +1,13 @@
 package fc
 
 import (
-	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLayer_InitDataSizes(t *testing.T) {
+func TestFC_InitDataSizes(t *testing.T) {
 	iw, ih, id := 3, 3, 3
 	ow, oh, od := 13, 14, 15
 
@@ -41,7 +39,7 @@ func TestLayer_InitDataSizes(t *testing.T) {
 	assert.Equal(t, outputNeuronsCount, len(gradBiases.Data))
 }
 
-func TestLayer(t *testing.T) {
+func TestFC(t *testing.T) {
 	layer := New()
 	layer.InitDataSizes(3, 3, 3)
 
@@ -62,7 +60,7 @@ func TestLayer(t *testing.T) {
 	}
 
 	inputs := &data.Data{}
-	inputs.InitCube(3, 3, 3)
+	inputs.Init3D(3, 3, 3)
 	inputs.Data = []float64{
 		0.32, 0.33, 0.34,
 		0.35, 0.36, 0.37,
@@ -96,11 +94,11 @@ func TestLayer(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expected, layer.Activate(inputs))
+	assert.Equal(t, expected, layer.Forward(inputs))
 	assert.Equal(t, expected, layer.GetOutput())
 
 	deltas := &data.Data{}
-	deltas.InitCube(1, 1, 1)
+	deltas.Init3D(1, 1, 1)
 	deltas.Data = []float64{0.01}
 
 	expectedGradients := &data.Data{
@@ -120,60 +118,38 @@ func TestLayer(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expectedGradients, layer.Backprop(deltas))
+	assert.Equal(t, expectedGradients, layer.Backward(deltas))
 	assert.Equal(t, expectedGradients, layer.GetInputGradients())
 }
 
-var output *data.Data
-
-func makeRandData(w, h, d int) *data.Data {
-	whd := w * h * d
-	bbuf := make([]byte, whd)
-	fbuf := make([]float64, whd)
-
-	rand.Seed(time.Now().UnixNano())
-	rand.Read(bbuf)
-
-	for i := 0; i < whd; i++ {
-		fbuf[i] = float64(bbuf[i]) / 255.0
-	}
-
-	return &data.Data{
-		Dims: []int{w, h, d},
-		Data: fbuf,
-	}
-}
-
-func BenchmarkLayer_Activate(b *testing.B) {
-	var r *data.Data
-
+func BenchmarkFC_Activate(b *testing.B) {
 	fc := New()
 	fc.InitDataSizes(100, 100, 100)
 
-	input := makeRandData(100, 100, 100)
+	input := &data.Data{}
+	input.Init3DRandom(100, 100, 100, -1, 1)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r = fc.Activate(input)
+		fc.Forward(input)
 	}
-	output = r
 }
 
-func BenchmarkLayer_Backprop(b *testing.B) {
-	var r *data.Data
-
+func BenchmarkFC_Backward(b *testing.B) {
 	fc := New()
 
 	ow, oh, od := fc.InitDataSizes(100, 100, 100)
 
-	input := makeRandData(100, 100, 100)
-	deltas := makeRandData(ow, oh, od)
+	input := &data.Data{}
+	input.Init3DRandom(100, 100, 100, -1, 1)
 
-	fc.Activate(input)
+	deltas := &data.Data{}
+	deltas.Init3DRandom(ow, oh, od, -1, 1)
+
+	fc.Forward(input)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r = fc.Backprop(deltas)
+		fc.Backward(deltas)
 	}
-	output = r
 }

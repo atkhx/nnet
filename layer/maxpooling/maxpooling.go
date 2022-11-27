@@ -1,29 +1,29 @@
-package pooling
+package maxpooling
 
 import (
 	"github.com/atkhx/nnet/data"
 	"github.com/atkhx/nnet/executor"
 )
 
-func New(options ...Option) *Layer {
-	layer := &Layer{}
+func New(options ...Option) *MaxPool {
+	layer := &MaxPool{}
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
 	return layer
 }
 
-type Layer struct {
+type MaxPool struct {
 	iWidth, iHeight, iDepth int
 	oWidth, oHeight, oDepth int
 
 	iSquare int
 	oSquare int
 
-	fWidth  int
-	fHeight int
+	FWidth  int
+	FHeight int
 
-	fStride  int
-	fPadding int
+	FStride  int
+	FPadding int
 
 	inputs *data.Data
 	output *data.Data
@@ -33,22 +33,22 @@ type Layer struct {
 	gradInputs *data.Data
 }
 
-func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
-	if l.fStride < 1 {
-		l.fStride = 1
+func (l *MaxPool) InitDataSizes(w, h, d int) (int, int, int) {
+	if l.FStride < 1 {
+		l.FStride = 1
 	}
 
 	l.iWidth, l.iHeight, l.iDepth = w, h, d
 
-	l.oWidth = (l.iWidth-l.fWidth+2*l.fPadding)/l.fStride + 1
-	l.oHeight = (l.iHeight-l.fHeight+2*l.fPadding)/l.fStride + 1
+	l.oWidth = (l.iWidth-l.FWidth+2*l.FPadding)/l.FStride + 1
+	l.oHeight = (l.iHeight-l.FHeight+2*l.FPadding)/l.FStride + 1
 	l.oDepth = l.iDepth
 
 	l.output = &data.Data{}
-	l.output.InitCube(l.oWidth, l.oHeight, l.oDepth)
+	l.output.Init3D(l.oWidth, l.oHeight, l.oDepth)
 
 	l.gradInputs = &data.Data{}
-	l.gradInputs.InitCube(l.iWidth, l.iHeight, l.iDepth)
+	l.gradInputs.Init3D(l.iWidth, l.iHeight, l.iDepth)
 
 	l.iSquare = l.iWidth * l.iHeight
 	l.oSquare = l.oWidth * l.oHeight
@@ -57,14 +57,14 @@ func (l *Layer) InitDataSizes(w, h, d int) (int, int, int) {
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
-func (l *Layer) Activate(inputs *data.Data) *data.Data {
+func (l *MaxPool) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	executor.RunParallel(l.oDepth, l.activateFilter)
 	return l.output
 }
 
-func (l *Layer) activateFilter(oz int) {
-	wW, wH := l.fWidth, l.fHeight
+func (l *MaxPool) activateFilter(oz int) {
+	wW, wH := l.FWidth, l.FHeight
 	outXYZ := oz * l.oSquare
 	max := 0.0
 	maxCoord := 0
@@ -72,10 +72,10 @@ func (l *Layer) activateFilter(oz int) {
 	for oy := 0; oy < l.oHeight; oy++ {
 		for ox := 0; ox < l.oWidth; ox++ {
 
-			iy, n := oy*l.fStride-l.fPadding, true
+			iy, n := oy*l.FStride-l.FPadding, true
 
 			for fy := 0; fy < wH; fy++ {
-				ix := ox*l.fStride - l.fPadding
+				ix := ox*l.FStride - l.FPadding
 				for fx := 0; fx < wW; fx++ {
 					if ix > -1 && ix < l.iWidth && iy > -1 && iy < l.iHeight {
 						inXYZ := oz*l.iSquare + iy*l.iWidth + ix
@@ -98,25 +98,25 @@ func (l *Layer) activateFilter(oz int) {
 	}
 }
 
-func (l *Layer) Backprop(deltas *data.Data) *data.Data {
+func (l *MaxPool) Backward(deltas *data.Data) *data.Data {
 	l.gradInputs.FillZero()
 	l.deltas = deltas
-	executor.RunParallel(l.oDepth, l.backpropFilter)
+	executor.RunParallel(l.oDepth, l.BackwardFilter)
 
 	return l.gradInputs
 }
 
-func (l *Layer) backpropFilter(oz int) {
+func (l *MaxPool) BackwardFilter(oz int) {
 	offset := oz * l.oSquare
 	for i := offset; i < offset+l.oSquare; i++ {
 		l.gradInputs.Data[l.coords[i]] += l.deltas.Data[i]
 	}
 }
 
-func (l *Layer) GetOutput() *data.Data {
+func (l *MaxPool) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Layer) GetInputGradients() *data.Data {
+func (l *MaxPool) GetInputGradients() *data.Data {
 	return l.gradInputs
 }

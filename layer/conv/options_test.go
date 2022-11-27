@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFilterSize(t *testing.T) {
-	layer := &Layer{}
+func TestConvFilterSize(t *testing.T) {
+	layer := &Conv{}
 
 	FilterSize(15)(layer)
 
@@ -15,22 +15,22 @@ func TestFilterSize(t *testing.T) {
 	assert.Equal(t, layer.FHeight, 15)
 }
 
-func TestFiltersCount(t *testing.T) {
-	layer := &Layer{}
+func TestConvFiltersCount(t *testing.T) {
+	layer := &Conv{}
 
 	FiltersCount(17)(layer)
 	assert.Equal(t, layer.FCount, 17)
 }
 
-func TestPadding(t *testing.T) {
-	layer := &Layer{}
+func TestConvPadding(t *testing.T) {
+	layer := &Conv{}
 
 	Padding(3)(layer)
 	assert.Equal(t, layer.FPadding, 3)
 }
 
-func TestStride(t *testing.T) {
-	layer := &Layer{}
+func TestConvStride(t *testing.T) {
+	layer := &Conv{}
 
 	Stride(7)(layer)
 	assert.Equal(t, layer.FStride, 7)
