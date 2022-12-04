@@ -1,22 +1,22 @@
 package data
 
-import (
-	"math/rand"
-)
-
 type Data struct {
 	Dims []int
 	Data []float64
 }
 
+func (m *Data) GetDimensionsCount() int {
+	return len(m.Dims)
+}
+
 func (m *Data) ExtractDimensions(dims ...*int) {
-	if len(m.Dims) == 0 {
+	dimensionsCount := m.GetDimensionsCount()
+	if dimensionsCount == 0 {
 		return
 	}
 
-	dimsCount := len(m.Dims)
 	for i, dim := range dims {
-		if i < dimsCount {
+		if i < dimensionsCount {
 			*dim = m.Dims[i]
 		} else {
 			*dim = 1
@@ -27,79 +27,67 @@ func (m *Data) ExtractDimensions(dims ...*int) {
 // Fill data methods
 
 func (m *Data) FillZero() {
-	for i := range m.Data {
-		m.Data[i] = 0
-	}
+	Fill(m.Data, 0)
 }
 
 func (m *Data) Fill(v float64) {
-	for i := range m.Data {
-		m.Data[i] = v
-	}
+	Fill(m.Data, v)
 }
 
 func (m *Data) FillRandom(min, max float64) {
-	for i := range m.Data {
-		m.Data[i] = min + (max-min)*rand.Float64()
-	}
+	FillRandom(m.Data, min, max)
 }
 
 // initialize methods
 
-func (m *Data) Copy() (r *Data) {
-	r = m.CopyZero()
+func (m *Data) Copy() *Data {
+	r := m.CopyZero()
+
 	copy(r.Data, m.Data)
-	return
+	return r
 }
 
-func (m *Data) CopyZero() (r *Data) {
-	r = &Data{}
-	r.Dims = make([]int, len(m.Dims))
-	r.Data = make([]float64, len(m.Data))
-	copy(r.Dims, m.Dims) // copy struct
+func (m *Data) CopyZero() *Data {
+	r := &Data{
+		Dims: make([]int, len(m.Dims)),
+		Data: make([]float64, len(m.Data)),
+	}
 
-	return
+	copy(r.Dims, m.Dims)
+	return r
 }
 
 // math methods
 
-func (m *Data) Dot(floats []float64) (dot float64) {
-	for i, v := range m.Data {
-		dot += v * floats[i]
-	}
-	return
+func (m *Data) Dot(floats []float64) float64 {
+	return Dot(m.Data, floats)
 }
 
 func (m *Data) Add(src ...[]float64) {
-	data := m.Data
-	for _, items := range src {
-		for j, v := range items {
-			data[j] += v
-		}
-	}
+	AddTo(m.Data, src...)
 }
 
-func (m *Data) GetMaxValue() (max float64) {
-	for i := 0; i < len(m.Data); i++ {
-		if i == 0 || max < m.Data[i] {
-			max = m.Data[i]
-		}
-	}
-	return
+func (m *Data) GetMaxValue() float64 {
+	return GetMaxValue(m.Data)
 }
 
-func (m *Data) GetMinMaxValues(fromIndex, toIndex int) (min, max float64) {
-	min, max = m.Data[fromIndex], m.Data[fromIndex]
-	for i := fromIndex + 1; i < toIndex; i++ {
-		if min > m.Data[i] {
-			min = m.Data[i]
-		}
-		if max < m.Data[i] {
-			max = m.Data[i]
-		}
-	}
-	return
+func (m *Data) GetMinValue() float64 {
+	return GetMinValue(m.Data)
 }
+
+func (m *Data) GetMinMaxValues() (float64, float64) {
+	return GetMinMaxValues(m.Data)
+}
+
+func (m *Data) GetMinMaxValuesInRange(from, to int) (float64, float64) {
+	return GetMinMaxValuesInRange(m.Data, from, to)
+}
+
+func (m *Data) SumElements() float64 {
+	return SumElements(m.Data)
+}
+
+// special methods
 
 func (m *Data) Rotate180() *Data {
 	res := m.Copy()
