@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkConv_Activate(b *testing.B) {
+func BenchmarkConv_Forward(b *testing.B) {
 	conv := New(FilterSize(5), FiltersCount(20))
 	conv.InitDataSizes(34, 34, 20)
 

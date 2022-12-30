@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkTahn_Activate(b *testing.B) {
+func BenchmarkTahn_Forward(b *testing.B) {
 	layer := NewTahn()
 	layer.InitDataSizes(28, 28, 28)
 
@@ -40,7 +40,7 @@ func BenchmarkTahn_Backward(b *testing.B) {
 	}
 }
 
-func TestTahn_Activate(t *testing.T) {
+func TestTahn_Forward(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

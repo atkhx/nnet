@@ -59,58 +59,54 @@ func (l *MaxPool) InitDataSizes(w, h, d int) (int, int, int) {
 
 func (l *MaxPool) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
-	executor.RunParallel(l.oDepth, l.activateFilter)
-	return l.output
-}
+	executor.RunParallel(l.oDepth, func(oz int) {
+		wW, wH := l.FWidth, l.FHeight
+		outXYZ := oz * l.oSquare
+		max := 0.0
+		maxCoord := 0
 
-func (l *MaxPool) activateFilter(oz int) {
-	wW, wH := l.FWidth, l.FHeight
-	outXYZ := oz * l.oSquare
-	max := 0.0
-	maxCoord := 0
+		for oy := 0; oy < l.oHeight; oy++ {
+			for ox := 0; ox < l.oWidth; ox++ {
 
-	for oy := 0; oy < l.oHeight; oy++ {
-		for ox := 0; ox < l.oWidth; ox++ {
+				iy, n := oy*l.FStride-l.FPadding, true
 
-			iy, n := oy*l.FStride-l.FPadding, true
+				for fy := 0; fy < wH; fy++ {
+					ix := ox*l.FStride - l.FPadding
+					for fx := 0; fx < wW; fx++ {
+						if ix > -1 && ix < l.iWidth && iy > -1 && iy < l.iHeight {
+							inXYZ := oz*l.iSquare + iy*l.iWidth + ix
 
-			for fy := 0; fy < wH; fy++ {
-				ix := ox*l.FStride - l.FPadding
-				for fx := 0; fx < wW; fx++ {
-					if ix > -1 && ix < l.iWidth && iy > -1 && iy < l.iHeight {
-						inXYZ := oz*l.iSquare + iy*l.iWidth + ix
-
-						if n || max < l.inputs.Data[inXYZ] {
-							max, maxCoord, n = l.inputs.Data[inXYZ], inXYZ, false
+							if n || max < l.inputs.Data[inXYZ] {
+								max, maxCoord, n = l.inputs.Data[inXYZ], inXYZ, false
+							}
 						}
+
+						ix++
 					}
-
-					ix++
+					iy++
 				}
-				iy++
+
+				l.output.Data[outXYZ] = max
+				l.coords[outXYZ] = maxCoord
+
+				outXYZ++
 			}
-
-			l.output.Data[outXYZ] = max
-			l.coords[outXYZ] = maxCoord
-
-			outXYZ++
 		}
-	}
+	})
+	return l.output
 }
 
 func (l *MaxPool) Backward(deltas *data.Data) *data.Data {
 	l.gradInputs.FillZero()
 	l.deltas = deltas
-	executor.RunParallel(l.oDepth, l.BackwardFilter)
+	executor.RunParallel(l.oDepth, func(oz int) {
+		offset := oz * l.oSquare
+		for i := offset; i < offset+l.oSquare; i++ {
+			l.gradInputs.Data[l.coords[i]] += l.deltas.Data[i]
+		}
+	})
 
 	return l.gradInputs
-}
-
-func (l *MaxPool) BackwardFilter(oz int) {
-	offset := oz * l.oSquare
-	for i := offset; i < offset+l.oSquare; i++ {
-		l.gradInputs.Data[l.coords[i]] += l.deltas.Data[i]
-	}
 }
 
 func (l *MaxPool) GetOutput() *data.Data {

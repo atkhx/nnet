@@ -6,7 +6,7 @@ import (
 )
 
 type Net interface {
-	Activate(inputs *data.Data) (output *data.Data)
+	Forward(inputs *data.Data) (output *data.Data)
 	Backward(deltas *data.Data) (gradient *data.Data)
 	GetLayersCount() int
 	GetLayer(index int) nnet.Layer

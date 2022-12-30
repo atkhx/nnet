@@ -131,7 +131,7 @@ func TestFC(t *testing.T) {
 	//assert.Equal(t, expectedGradients, layer.GetInputGradients())
 }
 
-func BenchmarkFC_Activate(b *testing.B) {
+func BenchmarkFC_Forward(b *testing.B) {
 	fc := New()
 	fc.InitDataSizes(100, 100, 100)
 

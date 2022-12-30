@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkSigmoid_Activate(b *testing.B) {
+func BenchmarkSigmoid_Forward(b *testing.B) {
 	layer := NewSigmoid()
 	layer.InitDataSizes(28, 28, 28)
 
@@ -40,7 +40,7 @@ func BenchmarkSigmoid_Backward(b *testing.B) {
 	}
 }
 
-func TestSigmoid_Activate(t *testing.T) {
+func TestSigmoid_Forward(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMaxPooling_Activate(t *testing.T) {
+func TestMaxPooling_Forward(t *testing.T) {
 	layer := New(FilterSize(2), Stride(2))
 	layer.InitDataSizes(4, 4, 1)
 

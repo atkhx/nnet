@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkRelu_Activate(b *testing.B) {
+func BenchmarkRelu_Forward(b *testing.B) {
 	layer := NewReLu()
 	layer.InitDataSizes(28, 28, 28)
 
@@ -40,7 +40,7 @@ func BenchmarkRelu_Backward(b *testing.B) {
 	}
 }
 
-func TestRelu_Activate(t *testing.T) {
+func TestRelu_Forward(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

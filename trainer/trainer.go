@@ -47,8 +47,8 @@ func (t *trainer) getWeightsCount() (weightsCount int) {
 	return
 }
 
-func (t *trainer) Activate(inputs, target *data.Data) *data.Data {
-	output := t.net.Activate(inputs).Copy()
+func (t *trainer) Forward(inputs, target *data.Data) *data.Data {
+	output := t.net.Forward(inputs).Copy()
 	deltas := t.loss.GetDeltas(target, output)
 
 	t.net.Backward(deltas)

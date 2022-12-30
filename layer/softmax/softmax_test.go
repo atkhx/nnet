@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSoftmax_Activate(t *testing.T) {
+func TestSoftmax_Forward(t *testing.T) {
 	type testCase struct {
 		inputs *data.Data
 		output *data.Data

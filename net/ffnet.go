@@ -39,7 +39,7 @@ func (n *FeedForward) Init() (err error) {
 	return
 }
 
-func (n *FeedForward) Activate(inputs *data.Data) *data.Data {
+func (n *FeedForward) Forward(inputs *data.Data) *data.Data {
 	for i := 0; i < len(n.Layers); i++ {
 		inputs = n.Layers[i].Forward(inputs)
 	}
