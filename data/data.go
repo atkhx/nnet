@@ -1,5 +1,9 @@
 package data
 
+import (
+	"github.com/atkhx/nnet/floats"
+)
+
 type Data struct {
 	Dims []int
 	Data []float64
@@ -27,15 +31,15 @@ func (m *Data) ExtractDimensions(dims ...*int) {
 // Fill data methods
 
 func (m *Data) FillZero() {
-	Fill(m.Data, 0)
+	floats.Fill(m.Data, 0)
 }
 
 func (m *Data) Fill(v float64) {
-	Fill(m.Data, v)
+	floats.Fill(m.Data, v)
 }
 
 func (m *Data) FillRandom(min, max float64) {
-	FillRandom(m.Data, min, max)
+	floats.FillRandom(m.Data, min, max)
 }
 
 // initialize methods
@@ -59,32 +63,32 @@ func (m *Data) CopyZero() *Data {
 
 // math methods
 
-func (m *Data) Dot(floats []float64) float64 {
-	return Dot(m.Data, floats)
+func (m *Data) Dot(f []float64) float64 {
+	return floats.Dot(m.Data, f)
 }
 
 func (m *Data) Add(src ...[]float64) {
-	AddTo(m.Data, src...)
+	floats.AddTo(m.Data, src...)
 }
 
 func (m *Data) GetMaxValue() float64 {
-	return GetMaxValue(m.Data)
+	return floats.GetMaxValue(m.Data)
 }
 
 func (m *Data) GetMinValue() float64 {
-	return GetMinValue(m.Data)
+	return floats.GetMinValue(m.Data)
 }
 
 func (m *Data) GetMinMaxValues() (float64, float64) {
-	return GetMinMaxValues(m.Data)
+	return floats.GetMinMaxValues(m.Data)
 }
 
 func (m *Data) GetMinMaxValuesInRange(from, to int) (float64, float64) {
-	return GetMinMaxValuesInRange(m.Data, from, to)
+	return floats.GetMinMaxValuesInRange(m.Data, from, to)
 }
 
 func (m *Data) SumElements() float64 {
-	return SumElements(m.Data)
+	return floats.SumElements(m.Data)
 }
 
 // special methods

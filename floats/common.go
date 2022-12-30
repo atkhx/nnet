@@ -1,8 +1,15 @@
-package data
+package floats
 
 import (
+	"math"
 	"math/rand"
 )
+
+func Round(floats []float64, k float64) {
+	for i, v := range floats {
+		floats[i] = math.Round(v*k) / k
+	}
+}
 
 func Fill(dst []float64, value float64) {
 	for i := range dst {
@@ -14,13 +21,6 @@ func FillRandom(dst []float64, min, max float64) {
 	for i := range dst {
 		dst[i] = min + (max-min)*rand.Float64()
 	}
-}
-
-func Dot(sliceA, sliceB []float64) (dot float64) {
-	for i, v := range sliceA {
-		dot += v * sliceB[i]
-	}
-	return
 }
 
 func AddTo(dst []float64, src ...[]float64) {
@@ -85,12 +85,6 @@ func SumElements(src []float64) (sum float64) {
 		sum += v
 	}
 	return
-}
-
-func MultiplyAndAddTo(dst, src []float64, k float64) {
-	for ic, iv := range src {
-		dst[ic] += iv * k
-	}
 }
 
 func MultiplyAndAdd(src []float64, k float64) (dst []float64) {

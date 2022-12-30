@@ -3,6 +3,7 @@ package conv
 import (
 	"github.com/atkhx/nnet/data"
 	"github.com/atkhx/nnet/executor"
+	"github.com/atkhx/nnet/floats"
 )
 
 func New(options ...Option) *Conv {
@@ -115,7 +116,7 @@ func (l *Conv) Forward(inputs *data.Data) *data.Data {
 		output := l.output.Data[outputOffset : outputOffset+l.oSquare]
 		filter := l.Weights.Data[filterOffset : filterOffset+l.fCube]
 
-		data.Fill(output, l.Biases.Data[filterIndex])
+		floats.Fill(output, l.Biases.Data[filterIndex])
 
 		wCoord := 0
 		for izo := 0; izo < l.iCube; izo += l.iSquare {
@@ -126,11 +127,16 @@ func (l *Conv) Forward(inputs *data.Data) *data.Data {
 
 					oCoord := 0
 					for iCoord := ixo; iCoord < ixo+l.oHiW; iCoord += l.iWidth {
-						output := output[oCoord : oCoord+l.oWidth]
-						inputs := inputs[iCoord : iCoord+l.oWidth]
-						for ic, iv := range inputs {
-							output[ic] += iv * weight
-						}
+						//output := output[oCoord : oCoord+l.oWidth]
+						//inputs := inputs[iCoord : iCoord+l.oWidth]
+						//for ic, iv := range inputs {
+						//	output[ic] += iv * weight
+						//}
+						floats.MultiplyAndAddTo(
+							output[oCoord:oCoord+l.oWidth],
+							inputs[iCoord:iCoord+l.oWidth],
+							weight,
+						)
 						oCoord += l.oWidth
 					}
 				}
@@ -153,7 +159,7 @@ func (l *Conv) Backward(deltas *data.Data) *data.Data {
 		deltas := deltas.Data[outputOffset : outputOffset+l.oSquare]
 		wGrads := l.wGrads.Data[filterOffset : filterOffset+l.fCube]
 
-		l.bGrads.Data[filterIndex] += data.SumElements(deltas)
+		l.bGrads.Data[filterIndex] += floats.SumElements(deltas)
 
 		iGrads := l.iGradsSeparated[filterIndex]
 		copy(iGrads, l.iGrads.Data)
@@ -171,10 +177,13 @@ func (l *Conv) Backward(deltas *data.Data) *data.Data {
 						iGrads := iGrads[iCoord : iCoord+l.oWidth]
 						deltas := deltas[oCoord : oCoord+l.oWidth]
 
-						for dc, delta := range deltas {
-							iGrads[dc] += delta * weight
-							wgradv += inputs[dc] * delta
-						}
+						//for dc, delta := range deltas {
+						//	iGrads[dc] += delta * weight
+						//	wgradv += inputs[dc] * delta
+						//}
+
+						floats.MultiplyAndAddTo(iGrads, deltas, weight)
+						wgradv += floats.Dot(inputs, deltas)
 
 						oCoord += l.oWidth
 					}

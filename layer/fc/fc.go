@@ -1,6 +1,7 @@
 package fc
 
 import (
+	"github.com/atkhx/nnet/floats"
 	"math"
 
 	"github.com/atkhx/nnet/data"
@@ -95,18 +96,28 @@ func (l *FC) Backward(deltas *data.Data) *data.Data {
 
 		delta := deltas.Data[i]
 
-		// 2 cycles faster
-		weightsData := l.Weights.Data[ki:kj]
-		gradWeightsData := l.gradWeights.Data[ki:kj]
-		gradInputsData := l.gradInputsSeparated[i]
-		for j, iv := range weightsData {
-			gradInputsData[j] = iv * delta
-		}
+		//weightsData := l.Weights.Data[ki:kj]
+		//gradWeightsData := l.gradWeights.Data[ki:kj]
+		//gradInputsData := l.gradInputsSeparated[i]
 
-		inputsData := l.inputs.Data
-		for j, iv := range inputsData {
-			gradWeightsData[j] += iv * delta
-		}
+		//for j, iv := range weightsData {
+		//	gradInputsData[j] = iv * delta
+		//}
+		floats.MultiplyTo(
+			l.gradInputsSeparated[i],
+			l.Weights.Data[ki:kj],
+			delta,
+		)
+
+		//inputsData := l.inputs.Data
+		//for j, iv := range inputsData {
+		//	gradWeightsData[j] += iv * delta
+		//}
+		floats.MultiplyAndAddTo(
+			l.gradWeights.Data[ki:kj],
+			l.inputs.Data,
+			delta,
+		)
 	})
 
 	l.gradInputs.Add(l.gradInputsSeparated...)

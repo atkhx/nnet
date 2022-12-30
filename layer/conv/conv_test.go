@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"github.com/atkhx/nnet/floats"
 	"testing"
 
 	"github.com/atkhx/nnet/data"
@@ -594,7 +595,7 @@ func TestConv_OneLayerFilter2x2WithPadding1(t *testing.T) {
 		i37*d19 + i38*d20 + i39*d21 + 0.0*d22 +
 		0.0*d23 + 0.0*d24 + 0.0*d25 + 0.0*d26
 
-	assert.Equal(t, &data.Data{
+	expected := &data.Data{
 		Dims: []int{2, 2, 3},
 		Data: []float64{
 			gw11, gw12,
@@ -606,5 +607,10 @@ func TestConv_OneLayerFilter2x2WithPadding1(t *testing.T) {
 			gw31, gw32,
 			gw33, gw34,
 		},
-	}, conv.wGrads)
+	}
+
+	floats.Round(expected.Data, 100000)
+	floats.Round(conv.wGrads.Data, 100000)
+
+	assert.Equal(t, expected, conv.wGrads)
 }
