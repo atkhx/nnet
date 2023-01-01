@@ -1,26 +1,39 @@
 package executor
 
-import (
-	"sync"
-)
+const maxRoutinesActive = 32
 
 var (
-	mu = sync.Mutex{}
-	wg = sync.WaitGroup{}
+	execFn func(int)
+
+	iChan chan int
+	oChan chan int
 )
 
-func RunParallel(count int, fn func(n int)) {
-	//for n := 0; n < count; n++ {
-	//	fn(n)
-	//}
-	mu.Lock()
-	wg.Add(count)
-	for n := 0; n < count; n++ {
-		go func(n int) {
-			fn(n)
-			wg.Done()
-		}(n)
+func init() {
+	iChan = make(chan int, maxRoutinesActive)
+	oChan = make(chan int, maxRoutinesActive)
+	for i := 0; i < maxRoutinesActive; i++ {
+		go func() {
+			for {
+				select {
+				case idx := <-iChan:
+					execFn(idx)
+					oChan <- idx
+				}
+			}
+		}()
 	}
-	wg.Wait()
-	mu.Unlock()
+}
+
+func RunParallel(count int, fn func(n int)) {
+	execFn = fn
+	go func() {
+		for i := 0; i < count; i++ {
+			iChan <- i
+		}
+	}()
+
+	for i := 0; i < count; i++ {
+		<-oChan
+	}
 }
