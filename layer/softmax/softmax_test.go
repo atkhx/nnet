@@ -20,11 +20,11 @@ func TestSoftmax_Forward(t *testing.T) {
 		"a": {
 			inputs: &data.Data{
 				Dims: dims,
-				Data: []float64{-1, 7, 3},
+				Data: []float64{-2, 7, 3},
 			},
 			output: &data.Data{
 				Dims: dims,
-				Data: []float64{0.0003293204389638929, 0.9816903928255046, 0.017980286735531543},
+				Data: []float64{0.000121175444171232, 0.9818947940807182, 0.017984030475110442},
 			},
 		},
 		"b": {

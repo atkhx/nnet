@@ -116,7 +116,7 @@ func TestConv_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 		d13, d14,
 	})
 
-	igrad := conv.Backward(deltas)
+	actualIGrads := conv.Backward(deltas)
 
 	// weight rotated
 	//wr := []float64{
@@ -167,7 +167,7 @@ func TestConv_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 	ig29 := w24*d14 + w23*0.0 + w22*0.0 + w21*0.0
 	ig39 := w34*d14 + w33*0.0 + w32*0.0 + w31*0.0
 
-	assert.Equal(t, &data.Data{
+	expectedIGrad := &data.Data{
 		Dims: []int{3, 3, 3},
 		Data: []float64{
 			ig11, ig12, ig13,
@@ -182,9 +182,14 @@ func TestConv_OneLayerFilter2x2WithoutPadding(t *testing.T) {
 			ig34, ig35, ig36,
 			ig37, ig38, ig39,
 		},
-	}, igrad)
+	}
 
-	assert.Equal(t, igrad, conv.iGrads)
+	floats.Round(expectedIGrad.Data, 100000)
+	floats.Round(actualIGrads.Data, 100000)
+
+	assert.Equal(t, expectedIGrad, actualIGrads)
+
+	assert.Equal(t, actualIGrads, conv.iGrads)
 
 	assert.Equal(t, &data.Data{
 		Dims: []int{1, 1, 1},
@@ -403,7 +408,7 @@ func TestConv_OneLayerFilter2x2WithPadding1(t *testing.T) {
 		d23, d24, d25, d26,
 	})
 
-	igrad := conv.Backward(deltas)
+	actualIGrads := conv.Backward(deltas)
 
 	// weight rotated
 	//wr := []float64{
@@ -469,7 +474,7 @@ func TestConv_OneLayerFilter2x2WithPadding1(t *testing.T) {
 	ig29 := d21*w24 + d22*w23 + d25*w22 + d26*w21
 	ig39 := d21*w34 + d22*w33 + d25*w32 + d26*w31
 
-	assert.Equal(t, &data.Data{
+	expectedIGrads := &data.Data{
 		Dims: []int{3, 3, 3},
 		Data: []float64{ // 6
 			ig11, ig12, ig13,
@@ -484,7 +489,12 @@ func TestConv_OneLayerFilter2x2WithPadding1(t *testing.T) {
 			ig34, ig35, ig36,
 			ig37, ig38, ig39,
 		},
-	}, igrad)
+	}
+
+	floats.Round(expectedIGrads.Data, 100000)
+	floats.Round(actualIGrads.Data, 100000)
+
+	assert.Equal(t, expectedIGrads, actualIGrads)
 
 	assert.Equal(t, &data.Data{
 		Dims: []int{1, 1, 1},

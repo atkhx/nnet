@@ -1,11 +1,16 @@
-.PHONY: test bench
+.PHONY: test
 test:
-	go test ./... && go test --tags=noasm ./...
+	go test ./...
 
+.PHONY: test-noasm
+test-noasm:
+	go test --tags=noasm ./...
+
+.PHONY: bench
 bench:
-	clear && \
-	echo "--- bench ---" && \
 	go test ./... -bench . -run ^$ | grep -E 'ns/op' && \
-	echo "--- bench noasm ---" && \
+
+.PHONY: bench
+bench-noasm:
 	go test --tags=noasm ./... -bench . -run ^$ | grep -E 'ns/op'
 
