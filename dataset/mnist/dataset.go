@@ -14,9 +14,10 @@ func New(imagesFile *fileImages, labelsFile *fileLabels) (*dataset, error) {
 		return nil, errors.New("images count <> labels count")
 	}
 
+	labels := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 	return &dataset{
-		labels:      []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
-		targets:     data.MustCompileOneHotVectors(10),
+		labels:      labels,
+		targets:     data.MustCompileOneHotVectors(len(labels)),
 		imagesFile:  imagesFile,
 		labelsFile:  labelsFile,
 		imagesCount: imagesFile.GetImagesCount(),

@@ -6,6 +6,7 @@ func applyOptions(layer *Conv, options ...Option) {
 	}
 }
 
+//nolint:gomnd
 var defaults = []Option{
 	FilterSize(3),
 	FiltersCount(1),

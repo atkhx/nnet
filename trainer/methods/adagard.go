@@ -20,6 +20,6 @@ func (t *adagard) Init(weightsCount int) {
 }
 
 func (t *adagard) GetDelta(k int, gradient float64) float64 {
-	t.gsum[k] = t.gsum[k] + gradient*gradient
+	t.gsum[k] += gradient * gradient
 	return -t.learning / math.Sqrt(t.gsum[k]+t.eps) * gradient
 }

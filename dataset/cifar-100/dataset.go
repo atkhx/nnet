@@ -2,14 +2,14 @@ package cifar_100
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/atkhx/nnet/data"
 	"github.com/pkg/errors"
 )
 
 func Open(filename string, rgb bool) (*dataset, error) {
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -18,6 +18,7 @@ func Open(filename string, rgb bool) (*dataset, error) {
 
 	var images []float64
 
+	//nolint:gomnd
 	if rgb {
 		images = make([]float64, imagesCount*ImageSizeRGB)
 		for i := 0; i < imagesCount; i++ {
@@ -53,7 +54,7 @@ func Open(filename string, rgb bool) (*dataset, error) {
 	res := &dataset{
 		labels:       Labels,
 		classes:      Classes,
-		targets:      data.MustCompileOneHotVectors(100),
+		targets:      data.MustCompileOneHotVectors(len(Labels)),
 		images:       images,
 		samplesCount: imagesCount,
 		labelsIdx:    labelsIdx,
@@ -114,6 +115,7 @@ func (d *dataset) ReadSample(index int) (input, target *data.Data, err error) {
 
 	input = &data.Data{}
 
+	//nolint:gomnd
 	if d.rgb {
 		input.Init3DWithData(ImageWidth, ImageHeight, 3, d.images[index*ImageSizeRGB:(index+1)*ImageSizeRGB])
 	} else {

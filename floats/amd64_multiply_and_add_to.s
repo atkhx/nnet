@@ -30,8 +30,6 @@ do_double:
         MULPD   X4, X0
         MULPD   X4, X2
 
-//        ADDPD     (R11), X0
-//        ADDPD   16(R11), X2
         ADDPD   X6, X0
         ADDPD   X8, X2
 

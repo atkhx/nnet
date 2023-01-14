@@ -6,6 +6,7 @@ func applyOptions(layer *MaxPool, options ...Option) {
 	}
 }
 
+//nolint:gomnd
 var defaults = []Option{
 	FilterSize(2),
 	Stride(2),

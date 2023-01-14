@@ -50,6 +50,7 @@ type Conv struct {
 }
 
 func (l *Conv) InitDataSizes(iw, ih, id int) (int, int, int) {
+	//nolint:gomnd
 	l.iWidth, l.iHeight, l.iDepth = iw+2*l.FPadding, ih+2*l.FPadding, id
 
 	l.oWidth = (iw-l.FWidth+2*l.FPadding)/l.FStride + 1
@@ -127,11 +128,11 @@ func (l *Conv) Forward(inputs *data.Data) *data.Data {
 
 					oCoord := 0
 					for iCoord := ixo; iCoord < ixo+l.oHiW; iCoord += l.iWidth {
-						//output := output[oCoord : oCoord+l.oWidth]
-						//inputs := inputs[iCoord : iCoord+l.oWidth]
-						//for ic, iv := range inputs {
+						// output := output[oCoord : oCoord+l.oWidth]
+						// inputs := inputs[iCoord : iCoord+l.oWidth]
+						// for ic, iv := range inputs {
 						//	output[ic] += iv * weight
-						//}
+						// }
 						floats.MultiplyAndAddTo(
 							output[oCoord:oCoord+l.oWidth],
 							inputs[iCoord:iCoord+l.oWidth],
@@ -177,10 +178,10 @@ func (l *Conv) Backward(deltas *data.Data) *data.Data {
 						iGrads := iGrads[iCoord : iCoord+l.oWidth]
 						deltas := deltas[oCoord : oCoord+l.oWidth]
 
-						//for dc, delta := range deltas {
+						// for dc, delta := range deltas {
 						//	iGrads[dc] += delta * weight
 						//	wgradv += inputs[dc] * delta
-						//}
+						// }
 
 						floats.MultiplyAndAddTo(iGrads, deltas, weight)
 						wgradv += floats.Dot(inputs, deltas)

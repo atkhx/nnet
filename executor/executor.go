@@ -14,12 +14,9 @@ func init() {
 	oChan = make(chan int, maxRoutinesActive)
 	for i := 0; i < maxRoutinesActive; i++ {
 		go func() {
-			for {
-				select {
-				case idx := <-iChan:
-					execFn(idx)
-					oChan <- idx
-				}
+			for idx := range iChan {
+				execFn(idx)
+				oChan <- idx
 			}
 		}()
 	}

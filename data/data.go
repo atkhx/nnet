@@ -160,8 +160,8 @@ func (m *Data) AddPadding(padding int) *Data {
 	m.ExtractDimensions(&ow, &oh, &od)
 
 	pd = od
-	pw = ow + 2*padding
-	ph = oh + 2*padding
+	pw = ow + 2*padding //nolint:gomnd
+	ph = oh + 2*padding //nolint:gomnd
 
 	res := make([]float64, pw*ph*pd)
 
@@ -174,10 +174,6 @@ func (m *Data) AddPadding(padding int) *Data {
 				res[z*phpw+y*pw+padding:z*phpw+y*pw+padding+ow],
 				m.Data[z*ohow+(y-padding)*ow:z*ohow+(y-padding)*ow+ow],
 			)
-			//copy(
-			//	res[z*ph*pw+y*pw+padding:z*ph*pw+y*pw+padding+ow],
-			//	m.Data[z*oh*ow+(y-padding)*ow:z*oh*ow+(y-padding)*ow+ow],
-			//)
 		}
 	}
 
@@ -197,8 +193,8 @@ func (m *Data) RemovePadding(padding int) *Data {
 	m.ExtractDimensions(&ow, &oh, &od)
 
 	pd = od
-	pw = ow - 2*padding
-	ph = oh - 2*padding
+	pw = ow - 2*padding //nolint:gomnd
+	ph = oh - 2*padding //nolint:gomnd
 
 	res := make([]float64, pw*ph*pd)
 

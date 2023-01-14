@@ -1,7 +1,7 @@
 package mnist
 
 import (
-	"io/ioutil"
+	"os"
 )
 
 const (
@@ -25,7 +25,7 @@ type fileLabels struct {
 }
 
 func (f *fileLabels) open(filename string) error {
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}

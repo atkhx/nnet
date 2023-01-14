@@ -12,6 +12,7 @@ func NewRegression() *Regression {
 
 type Regression struct{}
 
+//nolint:gomnd
 func (c *Regression) GetError(target, result []float64) (res float64) {
 	for i := 0; i < len(target); i++ {
 		res += math.Pow(result[i]-target[i], 2)

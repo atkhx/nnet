@@ -1,7 +1,7 @@
 package mnist
 
 import (
-	"io/ioutil"
+	"os"
 )
 
 const (
@@ -25,13 +25,14 @@ type fileImages struct {
 }
 
 func (f *fileImages) open(filename string) error {
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
 
 	d := make([]float64, len(b))
 	for i := 0; i < len(d); i++ {
+		//nolint:gomnd
 		d[i] = float64(b[i]) / 255.0
 	}
 
@@ -45,5 +46,6 @@ func (f *fileImages) GetImagesCount() int {
 }
 
 func (f *fileImages) ReadImage(index int) ([]float64, error) {
-	return f.data[int(imagesFileOffset+int64(index*imagesFileChunk)):int(imagesFileOffset+int64(index*imagesFileChunk)+imagesFileChunk)], nil
+	imageOffset := int(imagesFileOffset + int64(index*imagesFileChunk))
+	return f.data[imageOffset : imageOffset+imagesFileChunk], nil
 }

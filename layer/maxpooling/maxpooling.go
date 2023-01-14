@@ -57,6 +57,7 @@ func (l *MaxPool) InitDataSizes(w, h, d int) (int, int, int) {
 	return l.oWidth, l.oHeight, l.oDepth
 }
 
+//nolint:gocognit
 func (l *MaxPool) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	executor.RunParallel(l.oDepth, func(oz int) {
@@ -67,7 +68,6 @@ func (l *MaxPool) Forward(inputs *data.Data) *data.Data {
 
 		for oy := 0; oy < l.oHeight; oy++ {
 			for ox := 0; ox < l.oWidth; ox++ {
-
 				iy, n := oy*l.FStride-l.FPadding, true
 
 				for fy := 0; fy < wH; fy++ {

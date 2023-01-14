@@ -19,6 +19,7 @@ func Fill(dst []float64, value float64) {
 
 func FillRandom(dst []float64, min, max float64) {
 	for i := range dst {
+		//nolint:gosec
 		dst[i] = min + (max-min)*rand.Float64()
 	}
 }
