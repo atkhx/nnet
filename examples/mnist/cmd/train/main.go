@@ -8,17 +8,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
-
-	"github.com/atkhx/nnet/examples/mnist/pkg"
-
-	"github.com/atkhx/nnet/loss"
 
 	"github.com/pkg/errors"
 
-	"github.com/atkhx/nnet/dataset"
 	"github.com/atkhx/nnet/dataset/mnist"
+	"github.com/atkhx/nnet/examples/mnist/pkg"
+	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/net"
 	"github.com/atkhx/nnet/trainer"
 	"github.com/atkhx/nnet/trainer/methods"
@@ -33,18 +29,12 @@ const (
 var (
 	datasetPath string
 	nnetCfgFile string
-
-	imagesFileName string
-	labelsFileName string
 )
 
 func init() {
 	flag.StringVar(&datasetPath, "d", "./examples/mnist/data/", "path to dataset files")
 	flag.StringVar(&nnetCfgFile, "c", "./examples/mnist/config.json", "convNet config file")
 	flag.Parse()
-
-	imagesFileName = fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), "train-images-idx3-ubyte")
-	labelsFileName = fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), "train-labels-idx1-ubyte")
 }
 
 func main() {
@@ -77,7 +67,7 @@ func main() {
 	}
 
 	fmt.Println("load dataset")
-	mnistDataset, err := createDataset(imagesFileName, labelsFileName)
+	mnistDataset, err := mnist.CreateTrainingDataset(datasetPath)
 	if err != nil {
 		return
 	}
@@ -195,25 +185,4 @@ func saveConvNet(
 		return errors.Wrap(err, "write convNet config failed")
 	}
 	return nil
-}
-
-func createDataset(
-	imagesFileName string,
-	labelsFileName string,
-) (dataset.Dataset, error) {
-	imagesFile, err := mnist.OpenImagesFile(imagesFileName)
-	if err != nil {
-		return nil, errors.Wrap(err, "open images file failed")
-	}
-
-	labelsFile, err := mnist.OpenLabelsFile(labelsFileName)
-	if err != nil {
-		return nil, errors.Wrap(err, "open labels file failed")
-	}
-
-	result, err := mnist.New(imagesFile, labelsFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "create dataset failed")
-	}
-	return result, nil
 }

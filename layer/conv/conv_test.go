@@ -1,11 +1,12 @@
 package conv
 
 import (
-	"github.com/atkhx/nnet/floats"
 	"testing"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/floats"
 )
 
 func BenchmarkConv_Forward(b *testing.B) {

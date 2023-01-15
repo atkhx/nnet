@@ -4,8 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func TestSoftmax_Forward(t *testing.T) {

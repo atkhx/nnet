@@ -3,10 +3,9 @@ package fc
 import (
 	"math"
 
-	"github.com/atkhx/nnet/floats"
-
 	"github.com/atkhx/nnet/data"
 	"github.com/atkhx/nnet/executor"
+	"github.com/atkhx/nnet/floats"
 )
 
 func New(options ...Option) *FC {

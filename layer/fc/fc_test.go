@@ -1,11 +1,12 @@
 package fc
 
 import (
-	"github.com/atkhx/nnet/floats"
 	"testing"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/floats"
 )
 
 func TestFC_InitDataSizes(t *testing.T) {

@@ -3,8 +3,9 @@ package loss
 import (
 	"testing"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func TestRegression_GetDeltas(t *testing.T) {
