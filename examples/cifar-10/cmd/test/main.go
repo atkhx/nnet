@@ -12,8 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/atkhx/nnet/dataset/mnist"
-	"github.com/atkhx/nnet/examples/mnist/pkg"
+	cifar_10 "github.com/atkhx/nnet/dataset/cifar-10"
+	"github.com/atkhx/nnet/examples/cifar-10/pkg"
 	"github.com/atkhx/nnet/loss"
 )
 
@@ -23,8 +23,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&datasetPath, "d", "./examples/mnist/data/", "path to dataset files")
-	flag.StringVar(&nnetCfgFile, "c", "./examples/mnist/config.json", "convNet config file")
+	flag.StringVar(&datasetPath, "d", "./examples/cifar-10/data/", "path to dataset files")
+	flag.StringVar(&nnetCfgFile, "c", "./examples/cifar-10/config.json", "convNet config file")
 	flag.Parse()
 }
 
@@ -61,7 +61,7 @@ func main() {
 	}
 
 	fmt.Println("load dataset")
-	dataset, err := mnist.CreateTestingDataset(datasetPath)
+	dataset, err := cifar_10.CreateTestingDataset(datasetPath)
 	if err != nil {
 		return
 	}

@@ -3,6 +3,7 @@ package cifar_10
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -31,6 +32,31 @@ var labels = []string{
 	"horse",
 	"ship",
 	"truck",
+}
+
+const (
+	TrainImagesFileName = "train_bach.bin"
+	TestImagesFileName  = "test_batch.bin"
+)
+
+func CreateTrainingDataset(datasetPath string) (*dataset, error) {
+	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainImagesFileName)
+
+	result, err := Open(imagesFileName, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't open cifar-10 training file")
+	}
+	return result, nil
+}
+
+func CreateTestingDataset(datasetPath string) (*dataset, error) {
+	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TestImagesFileName)
+
+	result, err := Open(imagesFileName, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't open cifar-10 testing file")
+	}
+	return result, nil
 }
 
 func Open(filename string, rgb bool) (*dataset, error) {
