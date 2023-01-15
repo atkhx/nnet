@@ -3,9 +3,10 @@ package activation
 import (
 	"testing"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func BenchmarkRelu_Forward(b *testing.B) {

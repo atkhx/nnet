@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/pkg/errors"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func Open(filename string, rgb bool) (*dataset, error) {

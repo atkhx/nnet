@@ -7,6 +7,10 @@ lint:
 	golangci-lint cache clean
 	golangci-lint run ./... -v --timeout 120s
 
+.PHONY: imports
+imports:
+	@goimports -w -local github.com/atkhx/nnet $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
 .PHONY: test-amd64
 test-amd64:
 	go test --tags=amd64 ./...

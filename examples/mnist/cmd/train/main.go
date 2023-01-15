@@ -10,13 +10,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/atkhx/nnet/examples/mnist/pkg"
-
-	"github.com/atkhx/nnet/loss"
-
 	"github.com/pkg/errors"
 
 	"github.com/atkhx/nnet/dataset/mnist"
+	"github.com/atkhx/nnet/examples/mnist/pkg"
+	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/net"
 	"github.com/atkhx/nnet/trainer"
 	"github.com/atkhx/nnet/trainer/methods"

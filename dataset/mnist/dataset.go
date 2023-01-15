@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/atkhx/nnet/data"
+
 	"github.com/pkg/errors"
 )
 

@@ -1,9 +1,10 @@
 package floats
 
 import (
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFill(t *testing.T) {

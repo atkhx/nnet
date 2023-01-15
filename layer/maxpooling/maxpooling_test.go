@@ -3,8 +3,9 @@ package maxpooling
 import (
 	"testing"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/atkhx/nnet/data"
 )
 
 func TestMaxPooling_Forward(t *testing.T) {
