@@ -2,7 +2,7 @@ package mnist
 
 import (
 	"fmt"
-	"log"
+	"strings"
 
 	"github.com/atkhx/nnet/data"
 	"github.com/pkg/errors"
@@ -10,13 +10,52 @@ import (
 
 var ErrorIndexOutOfRange = errors.New("index out of range")
 
+func CreateTrainingDataset(datasetPath string) (*dataset, error) {
+	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainImagesFileName)
+	labelsFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainLabelsFileName)
+
+	imagesFile, err := OpenImagesFile(imagesFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "open images file failed")
+	}
+
+	labelsFile, err := OpenLabelsFile(labelsFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "open labels file failed")
+	}
+
+	result, err := New(imagesFile, labelsFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "create dataset failed")
+	}
+	return result, nil
+}
+
+func CreateTestingDataset(datasetPath string) (*dataset, error) {
+	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainImagesFileName)
+	labelsFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainLabelsFileName)
+
+	imagesFile, err := OpenImagesFile(imagesFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "open images file failed")
+	}
+
+	labelsFile, err := OpenLabelsFile(labelsFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "open labels file failed")
+	}
+
+	result, err := New(imagesFile, labelsFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "create dataset failed")
+	}
+	return result, nil
+}
+
 func New(imagesFile *fileImages, labelsFile *fileLabels) (*dataset, error) {
 	if imagesFile.GetImagesCount() != labelsFile.GetImagesCount() {
 		return nil, errors.New("images count not equals labels count")
 	}
-
-	log.Println("images count", imagesFile.GetImagesCount())
-	log.Println("labels count", labelsFile.GetImagesCount())
 
 	return &dataset{
 		labels:      labels,
