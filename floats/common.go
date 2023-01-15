@@ -47,6 +47,17 @@ func Add(src ...[]float64) (dst []float64) {
 	return
 }
 
+func GetMaxIndex(data []float64) (index int) {
+	var value float64
+	for i := 0; i < len(data); i++ {
+		if i == 0 || value < data[i] {
+			value = data[i]
+			index = i
+		}
+	}
+	return
+}
+
 func GetMaxValue(data []float64) (max float64) {
 	for i := 0; i < len(data); i++ {
 		if i == 0 || max < data[i] {

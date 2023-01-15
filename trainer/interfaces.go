@@ -1,4 +1,3 @@
-//go:generate mockgen -package=$GOPACKAGE -source=$GOFILE -destination=interfaces_mocks.go
 package trainer
 
 import (
@@ -14,15 +13,16 @@ const (
 	l2Decay = 0.001
 )
 
+type Trainer interface {
+	Forward(inputs, target *data.Data) *data.Data
+	UpdateWeights()
+}
+
 type Net interface {
 	Forward(inputs *data.Data) (output *data.Data)
 	Backward(deltas *data.Data) (gradient *data.Data)
 	GetLayersCount() int
 	GetLayer(index int) nnet.Layer
-}
-
-type Loss interface {
-	GetDeltas(target, output *data.Data) (res *data.Data)
 }
 
 type TrainableLayer interface {

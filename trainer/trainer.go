@@ -5,14 +5,13 @@ import (
 	"github.com/atkhx/nnet/data"
 )
 
-func New(net Net, loss Loss, method Method, batchSize int) *trainer {
+func New(net Net, method Method, batchSize int) Trainer {
 	if batchSize < 1 {
 		batchSize = 1
 	}
 
 	res := &trainer{
 		net:    net,
-		loss:   loss,
 		method: method,
 
 		batchSize: batchSize,
@@ -24,8 +23,9 @@ func New(net Net, loss Loss, method Method, batchSize int) *trainer {
 }
 
 type trainer struct {
-	net  Net
-	loss Loss
+	Trainer
+
+	net Net
 
 	batchSize  int
 	batchIndex int
@@ -49,12 +49,20 @@ func (t *trainer) getWeightsCount() (weightsCount int) {
 
 func (t *trainer) Forward(inputs, target *data.Data) *data.Data {
 	output := t.net.Forward(inputs).Copy()
-	deltas := t.loss.GetDeltas(target, output)
+	deltas := t.getDeltas(target, output)
 
 	t.net.Backward(deltas)
 	t.batchIndex++
 
 	return output
+}
+
+func (t *trainer) getDeltas(target, output *data.Data) (deltas *data.Data) {
+	deltas = output.Copy()
+	for i, v := range target.Data {
+		deltas.Data[i] -= v
+	}
+	return
 }
 
 func (t *trainer) UpdateWeights() {

@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	imagesFileChunk  = ImageWidth * ImageHeight
+	imagesFileChunk  = ImageSize
 	imagesFileOffset = 4 * 4
 )
 

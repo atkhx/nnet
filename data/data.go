@@ -71,6 +71,10 @@ func (m *Data) Add(src ...[]float64) {
 	floats.AddTo(m.Data, src...)
 }
 
+func (m *Data) GetMaxIndex() int {
+	return floats.GetMaxIndex(m.Data)
+}
+
 func (m *Data) GetMaxValue() float64 {
 	return floats.GetMaxValue(m.Data)
 }

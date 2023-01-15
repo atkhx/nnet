@@ -2,6 +2,7 @@ package mnist
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/atkhx/nnet/data"
 	"github.com/pkg/errors"
@@ -11,10 +12,12 @@ var ErrorIndexOutOfRange = errors.New("index out of range")
 
 func New(imagesFile *fileImages, labelsFile *fileLabels) (*dataset, error) {
 	if imagesFile.GetImagesCount() != labelsFile.GetImagesCount() {
-		return nil, errors.New("images count <> labels count")
+		return nil, errors.New("images count not equals labels count")
 	}
 
-	labels := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+	log.Println("images count", imagesFile.GetImagesCount())
+	log.Println("labels count", labelsFile.GetImagesCount())
+
 	return &dataset{
 		labels:      labels,
 		targets:     data.MustCompileOneHotVectors(len(labels)),
