@@ -21,6 +21,9 @@ jobs:
       with:
         go-version: 1.19
 
+    - name: Lint
+      run: golangci-lint cache clean && golangci-lint run ./... -v --timeout 120s
+
     - name: Test noasm
       run: go test --tags=noasm ./...
 
