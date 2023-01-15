@@ -26,19 +26,16 @@ jobs:
         curl -sSL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.50.1
 
     - name: Install dependencies
-      run: |
-        go mod download
+      run: make vendors
 
-    - name: Lint
-      run: |
-        golangci-lint cache clean
-        golangci-lint run ./... -v --timeout 120s
+    - name: Run fmt
+      run: make fmt
 
-    - name: Test noasm
-      run: go test --tags=noasm ./...
+    - name: Run lint
+      run: make lint
 
-    - name: Test amd64
-      run: go test --tags=amd64 ./...
+    - name: Run test-noasm
+      run: make test-noasm
 
-
-
+    - name: Run test-amd64
+      run: make test-amd64

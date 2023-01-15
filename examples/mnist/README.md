@@ -6,7 +6,7 @@ Original dataset you could find on http://yann.lecun.com/exdb/mnist/
 
 ### Prepare dataset
 
-Download dataset files to `./data` path
+Download dataset files to `./data` path with command `make dataset`.
 
 ```bash
 make dataset
@@ -14,9 +14,9 @@ make dataset
 
 ### Prepare your neural network config
 
-You could find some default configuration for convolutional neural network in `./pkg/net.go`.
+You could find and change default configuration for convolutional neural network in `./pkg/net.go`.
 
-**Important!** If you decide to change network configuration you must delete the previously trained `./config.json` file.
+**Important!** If you want to change configuration you must delete the previously trained `./config.json` file.
 
 Otherwise, you will see nice panic in output.
 
