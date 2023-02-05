@@ -33,8 +33,8 @@ func CreateTrainingDataset(datasetPath string) (*dataset, error) {
 }
 
 func CreateTestingDataset(datasetPath string) (*dataset, error) {
-	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainImagesFileName)
-	labelsFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainLabelsFileName)
+	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TestImagesFileName)
+	labelsFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TestLabelsFileName)
 
 	imagesFile, err := OpenImagesFile(imagesFileName)
 	if err != nil {

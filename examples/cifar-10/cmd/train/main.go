@@ -173,15 +173,7 @@ func saveConvNet(
 		return errors.Wrap(err, "marshal convNet config failed")
 	}
 
-	f, err := os.OpenFile(configFilename, os.O_RDWR|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		return errors.Wrap(err, "create file for convNet config failed")
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	if _, err = f.Write(convNetBytes); err != nil {
+	if err := os.WriteFile(configFilename, convNetBytes, os.ModePerm); err != nil {
 		return errors.Wrap(err, "write convNet config failed")
 	}
 	return nil
