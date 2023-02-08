@@ -15,6 +15,7 @@ const (
 
 type Trainer interface {
 	Forward(inputs, target *data.Data) *data.Data
+	ForwardFn(forwardFn func())
 	UpdateWeights()
 }
 

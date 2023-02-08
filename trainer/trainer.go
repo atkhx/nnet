@@ -57,6 +57,11 @@ func (t *trainer) Forward(inputs, target *data.Data) *data.Data {
 	return output
 }
 
+func (t *trainer) ForwardFn(forwardFn func()) {
+	forwardFn()
+	t.batchIndex++
+}
+
 func (t *trainer) getDeltas(target, output *data.Data) (deltas *data.Data) {
 	deltas = output.Copy()
 	for i, v := range target.Data {
