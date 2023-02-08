@@ -35,8 +35,8 @@ var labels = []string{
 }
 
 const (
-	TrainImagesFileName = "train_bach.bin"
-	TestImagesFileName  = "test_batch.bin"
+	TrainImagesFileName = "cifar10-train-data.bin"
+	TestImagesFileName  = "cifar10-test-data.bin"
 )
 
 func CreateTrainingDataset(datasetPath string) (*dataset, error) {
