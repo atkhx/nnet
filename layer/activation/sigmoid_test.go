@@ -46,14 +46,14 @@ func TestSigmoid_Forward(t *testing.T) {
 	defer ctrl.Finish()
 
 	layer := NewSigmoid()
-	layer.InitDataSizes(2, 1, 1)
+	layer.InitDataSizes(3, 1, 1)
 
-	inputs := data.NewVector(0.7, -0.7)
+	inputs := data.NewVector(-1, 0, 1)
 	output := layer.Forward(inputs)
 
 	expected := &data.Data{
-		Dims: []int{2, 1, 1},
-		Data: []float64{0.6681877721681662, 0.3318122278318339},
+		Dims: []int{3, 1, 1},
+		Data: []float64{0.2689414213699951, 0.5, 0.7310585786300049},
 	}
 
 	assert.Equal(t, expected, output)

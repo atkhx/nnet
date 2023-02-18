@@ -17,7 +17,6 @@ import (
 	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/net"
 	"github.com/atkhx/nnet/trainer"
-	"github.com/atkhx/nnet/trainer/methods"
 )
 
 const (
@@ -73,13 +72,7 @@ func main() {
 	}
 
 	fmt.Println("create trainer")
-	netTrainer := trainer.New(
-		convNet,
-		//methods.Adadelta(trainer.Ro, trainer.Eps),
-		methods.Adagard(learningRate, trainer.Eps),
-		//methods.Nesterov(0.01, 0.9),
-		batchSize,
-	)
+	netTrainer := trainer.New(convNet, trainer.WithBatchSize(batchSize))
 
 	lossFunction := loss.NewClassification()
 

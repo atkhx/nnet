@@ -5,17 +5,10 @@ import (
 	"github.com/atkhx/nnet/data"
 )
 
-func New(net Net, method Method, batchSize int) Trainer {
-	if batchSize < 1 {
-		batchSize = 1
-	}
-
-	res := &trainer{
-		net:    net,
-		method: method,
-
-		batchSize: batchSize,
-	}
+func New(net Net, opts ...Option) Trainer {
+	res := &trainer{net: net}
+	applyOptions(res, defaults...)
+	applyOptions(res, opts...)
 
 	res.batchRate = 1 / float64(res.batchSize)
 	res.method.Init(res.getWeightsCount())
@@ -30,6 +23,9 @@ type trainer struct {
 	batchSize  int
 	batchIndex int
 	batchRate  float64
+
+	l1Decay float64
+	l2Decay float64
 
 	method Method
 }
@@ -96,12 +92,12 @@ func (t *trainer) UpdateWeights() {
 
 func (t *trainer) updateWeights(offset int, w, g *data.Data) {
 	for j := 0; j < len(w.Data); j++ {
-		l1grad := l1Decay
+		l1grad := t.l1Decay
 		if w.Data[j] <= 0 {
 			l1grad = -l1grad
 		}
 
-		l2grad := l2Decay * w.Data[j]
+		l2grad := t.l2Decay * w.Data[j]
 		gradient := (l2grad + l1grad + g.Data[j]) * t.batchRate
 
 		w.Data[j] += t.method.GetDelta(offset+j, gradient)

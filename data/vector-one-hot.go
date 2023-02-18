@@ -50,3 +50,11 @@ func MustCompileOneHotVectors(count int) []*Data {
 	}
 	return r
 }
+
+func MustCompileOneHotVector(index, count int) *Data {
+	res, err := NewOneHotVector(index, count)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
