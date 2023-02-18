@@ -8,9 +8,6 @@ import (
 const (
 	Ro  = 0.95
 	Eps = 0.000001
-
-	l1Decay = 0.001
-	l2Decay = 0.001
 )
 
 type Trainer interface {
