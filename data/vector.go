@@ -8,6 +8,14 @@ func NewVector(data ...float64) *Data {
 	return res
 }
 
+func NewVectorFloats[T int | byte](data ...T) *Data {
+	floatsData := make([]float64, len(data))
+	for i, v := range data {
+		floatsData[i] = float64(v)
+	}
+	return NewVector(floatsData...)
+}
+
 func (m *Data) InitVector(w int) {
 	m.Dims = []int{w, 1, 1}
 	m.Data = make([]float64, w)
