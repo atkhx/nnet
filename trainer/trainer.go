@@ -5,8 +5,8 @@ import (
 	"github.com/atkhx/nnet/data"
 )
 
-func New(net Net, opts ...Option) Trainer {
-	res := &trainer{net: net}
+func New(net Net, loss LossFunc, opts ...Option) Trainer {
+	res := &trainer{net: net, lossFunc: loss}
 	applyOptions(res, defaults...)
 	applyOptions(res, opts...)
 
@@ -20,6 +20,9 @@ type trainer struct {
 
 	net Net
 
+	lossFunc  LossFunc
+	lossValue float64
+
 	batchSize  int
 	batchIndex int
 	batchRate  float64
@@ -28,6 +31,14 @@ type trainer struct {
 	l2Decay float64
 
 	method Method
+}
+
+func (t *trainer) GetLossFunc() LossFunc {
+	return t.lossFunc
+}
+
+func (t *trainer) GetLossValue() float64 {
+	return t.lossValue
 }
 
 func (t *trainer) getWeightsCount() (weightsCount int) {
@@ -44,26 +55,23 @@ func (t *trainer) getWeightsCount() (weightsCount int) {
 }
 
 func (t *trainer) Forward(inputs, target *data.Data) *data.Data {
+	// we copy output for return, because
+	// firstly it's refers to inner layer property output
+	// and could be changed on next Forward (or Backward, who knows)
+
 	output := t.net.Forward(inputs).Copy()
-	deltas := t.getDeltas(target, output)
+	deltas := t.lossFunc.GetDeltas(target, output)
+
+	t.lossValue = t.lossFunc.GetError(target.Data, output.Data)
 
 	t.net.Backward(deltas)
 	t.batchIndex++
-
 	return output
 }
 
 func (t *trainer) ForwardFn(forwardFn func()) {
 	forwardFn()
 	t.batchIndex++
-}
-
-func (t *trainer) getDeltas(target, output *data.Data) (deltas *data.Data) {
-	deltas = output.Copy()
-	for i, v := range target.Data {
-		deltas.Data[i] -= v
-	}
-	return
 }
 
 func (t *trainer) UpdateWeights() {

@@ -52,6 +52,18 @@ func (l *Softmax) GetOutput() *data.Data {
 	return l.output
 }
 
+// Backward - honest implementation, which requires hones cross-entropy in loss.Classification.
 func (l *Softmax) Backward(deltas *data.Data) *data.Data {
+	iGrads := deltas.Copy()
+
+	for i, o := range l.output.Data {
+		iGrads.Data[i] *= o * (1 - o)
+	}
+
+	return iGrads
+}
+
+// BackwardCheat - quick implementation, which could work with cheat implementation in loss.Classification.
+func (l *Softmax) BackwardCheat(deltas *data.Data) *data.Data {
 	return deltas.Copy()
 }
