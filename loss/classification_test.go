@@ -7,9 +7,52 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/floats"
 )
 
 func TestClassification_GetDeltas(t *testing.T) {
+	loss := NewClassification()
+
+	type testCase struct {
+		target   *data.Data
+		output   *data.Data
+		expected *data.Data
+	}
+	testCases := map[string]testCase{
+		"PositiveOutput": {
+			target: data.NewVector(0.0, 1.0, 0.0),
+			output: data.NewVector(0.5, 0.6, 0.3),
+			// -(t / o) + ((1 - t) / (1 - o))
+			expected: data.NewVector(
+				1/0.5,    // -0.0/0.5+((1-0.0)/(1-0.5)),
+				-1.0/0.6, // -1.0/0.6+((1-1)/(1-0.6)),
+				1/0.7,    // -0.0/0.3+((1-0)/(1-0.3)),
+			),
+		},
+		"NegativeOutput": {
+			target: data.NewVector(0.0, 1.0, 0.0),
+			output: data.NewVector(1.4, -0.7, 0.3),
+			// -(t / o) + ((1 - t) / (1 - o))
+			expected: data.NewVector(
+				-1/0.4, // -0.0/1.4+((1-0.0)/(1-1.4)),
+				1/0.7,  // -1.0/-0.7+((1-1.0)/(1+0.7)),
+				1/0.7,  // -0.0/0.3+((1-0.0)/(1-0.3)),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := loss.GetDeltas(tc.target, tc.output)
+
+			floats.Round(tc.expected.Data, 10000)
+			floats.Round(actual.Data, 10000)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestClassification_GetDeltasCheat(t *testing.T) {
 	loss := NewClassification()
 
 	type testCase struct {
@@ -32,7 +75,7 @@ func TestClassification_GetDeltas(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, loss.GetDeltas(tc.target, tc.output))
+			assert.Equal(t, tc.expected, loss.GetDeltasCheat(tc.target, tc.output))
 		})
 	}
 }

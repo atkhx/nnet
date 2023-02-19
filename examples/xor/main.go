@@ -32,7 +32,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	netTrainer := trainer.New(nn)
+	netTrainer := trainer.New(nn, loss.NewRegression())
 
 	samples := []Sample{
 		{
@@ -53,15 +53,13 @@ func main() {
 		},
 	}
 
-	lossFunction := loss.NewRegression()
-
 	for e := 0; e < 10000; e++ {
 		var avgLoss float64
 		for _, sample := range samples {
-			output := netTrainer.Forward(sample.Input, sample.Target)
-			avgLoss += lossFunction.GetError(sample.Target.Data, output.Data)
-
+			netTrainer.Forward(sample.Input, sample.Target)
 			netTrainer.UpdateWeights()
+
+			avgLoss += netTrainer.GetLossValue()
 		}
 		fmt.Println("avgLoss:", avgLoss/float64(len(samples)))
 	}

@@ -14,6 +14,8 @@ type Trainer interface {
 	Forward(inputs, target *data.Data) *data.Data
 	ForwardFn(forwardFn func())
 	UpdateWeights()
+	GetLossFunc() LossFunc
+	GetLossValue() float64
 }
 
 type Net interface {
@@ -21,6 +23,11 @@ type Net interface {
 	Backward(deltas *data.Data) (gradient *data.Data)
 	GetLayersCount() int
 	GetLayer(index int) nnet.Layer
+}
+
+type LossFunc interface {
+	GetError(target, result []float64) (res float64)
+	GetDeltas(target, output *data.Data) (deltas *data.Data)
 }
 
 type TrainableLayer interface {

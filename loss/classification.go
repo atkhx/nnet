@@ -27,7 +27,22 @@ func (c *Classification) GetError(target, output []float64) float64 {
 	return 0
 }
 
+// GetDeltas - honest implementation of cross-entropy derivative.
+// Works with honest implementation of softmax layer.
+// https://deepnotes.io/softmax-crossentropy
 func (c *Classification) GetDeltas(target, output *data.Data) (deltas *data.Data) {
+	deltas = output.CopyZero()
+	for i, t := range target.Data {
+		o := output.Data[i]
+		deltas.Data[i] = -(t / o) + ((1 - t) / (1 - o))
+	}
+	return
+}
+
+// GetDeltasCheat - quick implementation of derivative cross-entropy + softmax.
+// Works only with softmax.BackwardCheat implementation.
+// todo use quick functions by options in layers or special block.
+func (c *Classification) GetDeltasCheat(target, output *data.Data) (deltas *data.Data) {
 	deltas = output.Copy()
 	for i, v := range target.Data {
 		deltas.Data[i] -= v
