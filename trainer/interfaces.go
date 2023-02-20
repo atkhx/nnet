@@ -3,6 +3,7 @@ package trainer
 import (
 	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/loss"
 )
 
 const (
@@ -11,23 +12,16 @@ const (
 )
 
 type Trainer interface {
-	Forward(inputs, target *data.Data) *data.Data
+	Forward(inputs *data.Data, getLoss loss.GetLossFunc) (*data.Data, loss.LossObject)
 	ForwardFn(forwardFn func())
 	UpdateWeights()
-	GetLossFunc() LossFunc
-	GetLossValue() float64
 }
 
 type Net interface {
 	Forward(inputs *data.Data) (output *data.Data)
-	Backward(deltas *data.Data) (gradient *data.Data)
+	Backward(lossGradient *data.Data) (gradient *data.Data)
 	GetLayersCount() int
 	GetLayer(index int) nnet.Layer
-}
-
-type LossFunc interface {
-	GetError(target, result []float64) (res float64)
-	GetDeltas(target, output *data.Data) (deltas *data.Data)
 }
 
 type TrainableLayer interface {

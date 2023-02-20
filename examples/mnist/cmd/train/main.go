@@ -72,7 +72,7 @@ func main() {
 	}
 
 	fmt.Println("create trainer")
-	netTrainer := trainer.New(convNet, loss.NewClassification(), trainer.WithBatchSize(batchSize))
+	netTrainer := trainer.New(convNet, trainer.WithBatchSize(batchSize))
 
 	var sampleIndex int
 	defer func() {
@@ -117,7 +117,7 @@ func main() {
 					return
 				}
 
-				output := netTrainer.Forward(input, target)
+				output, lossObject := netTrainer.Forward(input, loss.NewClassificationLossFunc(target))
 				netTrainer.UpdateWeights()
 
 				outputIndex := output.GetMaxIndex()
@@ -128,8 +128,9 @@ func main() {
 					totalSuccess++
 				}
 
-				lossSum += netTrainer.GetLossValue()
-				totalLossSum += netTrainer.GetLossValue()
+				loss := lossObject.GetError()
+				lossSum += loss
+				totalLossSum += loss
 
 				if sampleIndex%statChunkSize == 0 {
 					fmt.Println()

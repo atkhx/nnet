@@ -3,10 +3,11 @@ package trainer
 
 import (
 	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/loss"
 )
 
-func New(net Net, loss LossFunc, opts ...Option) Trainer {
-	res := &trainer{net: net, lossFunc: loss}
+func New(net Net, opts ...Option) Trainer {
+	res := &trainer{net: net}
 	applyOptions(res, defaults...)
 	applyOptions(res, opts...)
 
@@ -20,9 +21,6 @@ type trainer struct {
 
 	net Net
 
-	lossFunc  LossFunc
-	lossValue float64
-
 	batchSize  int
 	batchIndex int
 	batchRate  float64
@@ -31,14 +29,6 @@ type trainer struct {
 	l2Decay float64
 
 	method Method
-}
-
-func (t *trainer) GetLossFunc() LossFunc {
-	return t.lossFunc
-}
-
-func (t *trainer) GetLossValue() float64 {
-	return t.lossValue
 }
 
 func (t *trainer) getWeightsCount() (weightsCount int) {
@@ -54,19 +44,15 @@ func (t *trainer) getWeightsCount() (weightsCount int) {
 	return
 }
 
-func (t *trainer) Forward(inputs, target *data.Data) *data.Data {
-	// we copy output for return, because
-	// firstly it's refers to inner layer property output
-	// and could be changed on next Forward (or Backward, who knows)
+func (t *trainer) Forward(inputs *data.Data, getLoss loss.GetLossFunc) (*data.Data, loss.LossObject) {
+	output := t.net.Forward(inputs)
 
-	output := t.net.Forward(inputs).Copy()
-	deltas := t.lossFunc.GetDeltas(target, output)
+	lossValue := getLoss(output)
 
-	t.lossValue = t.lossFunc.GetError(target.Data, output.Data)
-
-	t.net.Backward(deltas)
+	t.net.Backward(lossValue.GetGradient())
 	t.batchIndex++
-	return output
+
+	return output.Copy(), lossValue
 }
 
 func (t *trainer) ForwardFn(forwardFn func()) {

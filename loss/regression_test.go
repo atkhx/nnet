@@ -8,9 +8,7 @@ import (
 	"github.com/atkhx/nnet/data"
 )
 
-func TestRegression_GetDeltas(t *testing.T) {
-	loss := NewRegression()
-
+func TestRegression_GetGradient(t *testing.T) {
 	type testCase struct {
 		target   *data.Data
 		output   *data.Data
@@ -31,33 +29,31 @@ func TestRegression_GetDeltas(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, loss.GetDeltas(tc.target, tc.output))
+			assert.Equal(t, tc.expected, NewRegressionLossFunc(tc.target)(tc.output).GetGradient())
 		})
 	}
 }
 
 func TestRegression_GetError(t *testing.T) {
-	loss := NewRegression()
-
 	type testCase struct {
-		target   []float64
-		result   []float64
+		target   *data.Data
+		output   *data.Data
 		expected float64
 	}
 	testCases := map[string]testCase{
 		"a": {
-			target:   []float64{0.5, 1.0, 0.7},
-			result:   []float64{0.5, 0.7, 0.3},
+			target:   data.NewVector(0.5, 1.0, 0.7),
+			output:   data.NewVector(0.5, 0.7, 0.3),
 			expected: 0.125,
 		},
 		"b": {
-			target:   []float64{0.0, 0.0, 1.0},
-			result:   []float64{0.5, 0.7, 0.3},
+			target:   data.NewVector(0.0, 0.0, 1.0),
+			output:   data.NewVector(0.5, 0.7, 0.3),
 			expected: 0.615,
 		},
 		"c": {
-			target:   []float64{1.0, 0.2, 0.1},
-			result:   []float64{0.5, 0.7, 0.3},
+			target:   data.NewVector(1.0, 0.2, 0.1),
+			output:   data.NewVector(0.5, 0.7, 0.3),
 			expected: 0.26999999999999996,
 		},
 	}
@@ -65,7 +61,7 @@ func TestRegression_GetError(t *testing.T) {
 	for name, tc := range testCases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, loss.GetError(tc.target, tc.result))
+			assert.Equal(t, tc.expected, NewRegressionLossFunc(tc.target)(tc.output).GetError())
 		})
 	}
 }

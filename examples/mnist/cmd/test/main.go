@@ -66,8 +66,6 @@ func main() {
 		return
 	}
 
-	lossFunction := loss.NewClassification()
-
 	lossSum := 0.0
 	success := 0
 	statChunkSize := 1000
@@ -113,7 +111,7 @@ func main() {
 				totalSuccess++
 			}
 
-			lossVal := lossFunction.GetError(target.Data, output.Data)
+			lossVal := loss.NewClassificationLossFunc(target)(output).GetError()
 			lossSum += lossVal
 			totalLossSum += lossVal
 

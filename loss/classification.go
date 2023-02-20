@@ -8,44 +8,38 @@ import (
 
 const minimalNonZeroFloat = 0.000000000000000000001
 
-func NewClassification() *Classification {
-	return &Classification{}
+func NewClassificationLossFunc(target *data.Data) GetLossFunc {
+	return func(output *data.Data) LossObject {
+		return &Classification{
+			Target: target,
+			Output: output,
+		}
+	}
 }
 
-type Classification struct{}
+type Classification struct {
+	Target *data.Data
+	Output *data.Data
+}
 
-func (c *Classification) GetError(target, output []float64) float64 {
-	for i := 0; i < len(target); i++ {
-		if target[i] == 1 {
-			if output[i] == 0 {
+func (c *Classification) GetError() float64 {
+	for i := 0; i < len(c.Target.Data); i++ {
+		if c.Target.Data[i] == 1 {
+			if c.Output.Data[i] == 0 {
 				return -math.Log(minimalNonZeroFloat)
 			} else {
-				return -math.Log(output[i])
+				return -math.Log(c.Output.Data[i])
 			}
 		}
 	}
 	return 0
 }
 
-// GetDeltas - honest implementation of cross-entropy derivative.
-// Works with honest implementation of softmax layer.
-// https://deepnotes.io/softmax-crossentropy
-func (c *Classification) GetDeltas(target, output *data.Data) (deltas *data.Data) {
-	deltas = output.CopyZero()
-	for i, t := range target.Data {
-		o := output.Data[i]
-		deltas.Data[i] = -(t / o) + ((1 - t) / (1 - o))
-	}
-	return
-}
-
-// GetDeltasCheat - quick implementation of derivative cross-entropy + softmax.
-// Works only with softmax.BackwardCheat implementation.
-// todo use quick functions by options in layers or special block.
-func (c *Classification) GetDeltasCheat(target, output *data.Data) (deltas *data.Data) {
-	deltas = output.Copy()
-	for i, v := range target.Data {
-		deltas.Data[i] -= v
+func (c *Classification) GetGradient() (lossGradient *data.Data) {
+	lossGradient = c.Output.CopyZero()
+	for i, t := range c.Target.Data {
+		o := c.Output.Data[i]
+		lossGradient.Data[i] = -(t / o) + ((1 - t) / (1 - o))
 	}
 	return
 }

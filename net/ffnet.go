@@ -46,9 +46,8 @@ func (n *FeedForward) Forward(inputs *data.Data) *data.Data {
 	return inputs
 }
 
-func (n *FeedForward) Backward(deltas *data.Data) (gradient *data.Data) {
-	gradient = deltas.Copy()
-
+func (n *FeedForward) Backward(lossGradient *data.Data) (gradient *data.Data) {
+	gradient = lossGradient
 	for i := len(n.Layers) - 1; i >= 0; i-- {
 		gradient = n.Layers[i].Backward(gradient)
 	}
