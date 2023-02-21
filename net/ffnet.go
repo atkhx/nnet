@@ -25,7 +25,7 @@ type FeedForward struct {
 	Layers Layers
 }
 
-func (n *FeedForward) Init() (err error) {
+func (n *FeedForward) Init() {
 	w, h, d := n.IWidth, n.IHeight, n.IDepth
 
 	log.Printf("input [*]: %d:%d:%d, %T", w, h, d, n)
@@ -35,8 +35,6 @@ func (n *FeedForward) Init() (err error) {
 	}
 
 	n.OWidth, n.OHeight, n.ODepth = w, h, d
-
-	return
 }
 
 func (n *FeedForward) Forward(inputs *data.Data) *data.Data {

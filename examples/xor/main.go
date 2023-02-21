@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 
 	"github.com/atkhx/nnet/data"
@@ -28,9 +27,7 @@ func main() {
 		activation.NewSigmoid(),
 	})
 
-	if err := nn.Init(); err != nil {
-		log.Fatalln(err)
-	}
+	nn.Init()
 
 	netTrainer := trainer.New(nn)
 

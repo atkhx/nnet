@@ -105,3 +105,27 @@ func MultiplyAndAdd(src []float64, k float64) (dst []float64) {
 
 	return dst
 }
+
+func CumulativeSum(src []float64) []float64 {
+	res := make([]float64, len(src))
+	copy(res, src)
+
+	for i := 1; i < len(res); i++ {
+		res[i] += res[i-1]
+	}
+	return res
+}
+
+//nolint:gosec
+func Multinomial(distribution []float64) (r int) {
+	d := CumulativeSum(distribution)
+	f := rand.Float64() * d[len(d)-1]
+
+	for i := 0; i < len(d); i++ {
+		if f <= d[i] {
+			return i
+		}
+	}
+
+	return len(d) - 1
+}

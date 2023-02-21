@@ -48,9 +48,7 @@ func main() {
 
 	fmt.Println("create convNet")
 	convNet := pkg.CreateConvNet()
-	if err = convNet.Init(); err != nil {
-		return
-	}
+	convNet.Init()
 
 	fmt.Println("load convNet pretrain config from", nnetCfgFile)
 	pretrainedConfig, err := os.ReadFile(nnetCfgFile)

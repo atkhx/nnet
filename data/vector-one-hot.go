@@ -58,3 +58,12 @@ func MustCompileOneHotVector(index, count int) *Data {
 	}
 	return res
 }
+
+func MustCompileMultiOneHotsMatrix(count int, indexes ...int) *Data {
+	res := &Data{}
+	res.InitMatrix(count, len(indexes))
+	for i := 0; i < len(indexes); i++ {
+		res.Data[i*count+indexes[i]] = 1
+	}
+	return res
+}
