@@ -44,9 +44,16 @@ func (m *Matrix) gradRowFloats(rowIndex int) []float64 {
 	return m.Grad[rowOffset : rowOffset+colsCount]
 }
 
-func (m *Matrix) Transpose() *Matrix {
-	// todo backward for transpose
-	return NewMatrix(MatrixTranspose(m.Dims[0], m.Dims[1], m.Data))
+func (m *Matrix) Transpose() (outMatrix *Matrix) {
+	outMatrix = NewMatrix(MatrixTranspose(m.Dims[0], m.Dims[1], m.Data))
+	outMatrix.From = NewSource(func() {
+		m.initGrad()
+		oGT := NewMatrix(outMatrix.Dims[0], outMatrix.Dims[1], outMatrix.Grad).Transpose()
+		for i, v := range oGT.Data {
+			m.Grad[i] += v
+		}
+	}, m)
+	return
 }
 
 func (m *Matrix) MatrixMultiply(b *Matrix) (outMatrix *Matrix) {
@@ -155,6 +162,10 @@ func (m *Matrix) Relu() (outMatrix *Matrix) {
 }
 
 func (m *Matrix) Regression(targets *Matrix) (outMatrix *Matrix) {
+	if m.Dims != targets.Dims {
+		panic(fmt.Sprintf("invalid targets dimensions: expected %v, actual %v", m.Dims, targets.Dims))
+	}
+
 	r := 0.0
 	for i, t := range targets.Data {
 		r += math.Pow(m.Data[i]-t, 2)
