@@ -1,6 +1,9 @@
 package data
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 func MatrixColFloats(aColsCount, aRowsCount, colIndex int, a []float64) []float64 {
 	res := make([]float64, aRowsCount)
@@ -87,4 +90,27 @@ func MatrixTranspose(
 		}
 	}
 	return
+}
+
+func CumulativeSum(src []float64) []float64 {
+	res := make([]float64, len(src))
+	copy(res, src)
+
+	for i := 1; i < len(res); i++ {
+		res[i] += res[i-1]
+	}
+	return res
+}
+
+func Multinomial(distribution []float64) (r int) {
+	d := CumulativeSum(distribution)
+	f := rand.Float64() * d[len(d)-1]
+
+	for i := 0; i < len(d); i++ {
+		if f <= d[i] {
+			return i
+		}
+	}
+
+	return len(d) - 1
 }
