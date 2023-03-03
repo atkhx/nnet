@@ -8,6 +8,7 @@ func New(options ...Option) *MaxPool {
 	layer := &MaxPool{}
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
+
 	return layer
 }
 
@@ -25,8 +26,10 @@ type MaxPool struct {
 
 //nolint:gocognit
 func (l *MaxPool) Forward(inputs *data.Matrix) *data.Matrix {
+	//l.iDepth = inputs.ChanCount
+	//
 	l.inputs = inputs
-	l.output = data.NewMatrix(l.oWidth, l.oHeight*l.oDepth, make([]float64, l.oWidth*l.oHeight*l.oDepth))
+	l.output = data.NewMatrix(l.oWidth, l.oHeight, l.oDepth, make([]float64, l.oWidth*l.oHeight*l.oDepth))
 
 	oSquare := l.oWidth * l.oHeight
 	iSquare := l.iWidth * l.iHeight
@@ -66,7 +69,6 @@ func (l *MaxPool) Forward(inputs *data.Matrix) *data.Matrix {
 	}
 
 	l.output.From = data.NewSource(func() {
-		l.inputs.InitGrad()
 		for oz := 0; oz < l.oDepth; oz++ {
 			offset := oz * oSquare
 			for i := offset; i < offset+oSquare; i++ {

@@ -31,6 +31,28 @@ func TestMatrixTranspose(t *testing.T) {
 			rRowCount: 2,
 			r:         []float64{17, 18},
 		},
+		"10x2": {
+			aColCount: 10,
+			aRowCount: 2,
+			a: []float64{
+				1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
+				2, 3, 4, 5, 6, 7, 8, 9, 0, 11,
+			},
+			rColCount: 2,
+			rRowCount: 10,
+			r: []float64{
+				1, 2,
+				2, 3,
+				3, 4,
+				4, 5,
+				5, 6,
+				6, 7,
+				7, 8,
+				8, 9,
+				9, 0,
+				0, 11,
+			},
+		},
 		"2x3": {
 			aColCount: 2,
 			aRowCount: 3,
@@ -124,6 +146,64 @@ func TestMatrixAddRowVector(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, MatrixAddRowVector(tc.aColsCount, tc.aRowsCount, tc.matrix, tc.vector))
+		})
+	}
+}
+
+func TestMatrixRotate180(t *testing.T) {
+	type testCase struct {
+		iw, ih int
+		a      []float64
+		ow, oh int
+		b      []float64
+	}
+	testCases := map[string]testCase{
+		"1x1": {
+			iw: 1,
+			ih: 1,
+			a:  []float64{1},
+			ow: 1,
+			oh: 1,
+			b:  []float64{1},
+		},
+		"2x2": {
+			iw: 2,
+			ih: 2,
+			a: []float64{
+				1, 2,
+				3, 4,
+			},
+			ow: 2,
+			oh: 2,
+			b: []float64{
+				4, 3,
+				2, 1,
+			},
+		},
+		"3x3": {
+			iw: 3,
+			ih: 3,
+			a: []float64{
+				1, 2, 3,
+				4, 5, 6,
+				7, 8, 9,
+			},
+			ow: 3,
+			oh: 3,
+			b: []float64{
+				9, 8, 7,
+				6, 5, 4,
+				3, 2, 1,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actualW, actualH, actualB := MatrixRotate180(tc.iw, tc.ih, tc.a)
+			assert.Equal(t, tc.ow, actualW)
+			assert.Equal(t, tc.oh, actualH)
+			assert.Equal(t, tc.b, actualB)
 		})
 	}
 }

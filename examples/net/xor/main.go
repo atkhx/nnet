@@ -22,14 +22,14 @@ func main() {
 	statChunk := 1000
 	epochs := 10000
 
-	inputs := data.NewMatrix(inputSize, batchSize, []float64{
+	inputs := data.NewMatrix(inputSize, batchSize, 1, []float64{
 		0, 0,
 		1, 0,
 		0, 1,
 		1, 1,
 	})
 
-	targets := data.NewMatrix(1, batchSize, []float64{
+	targets := data.NewMatrix(1, batchSize, 1, []float64{
 		0,
 		1,
 		1,

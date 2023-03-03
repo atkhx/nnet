@@ -12,10 +12,11 @@ func New(options ...Option) *FC {
 	layer.Weights = data.NewMatrixRandom(
 		layer.layerSize,
 		layer.inputSize,
+		1,
 	)
 
 	if layer.WithBiases {
-		layer.Biases = data.NewMatrixRandom(layer.layerSize, 1)
+		layer.Biases = data.NewMatrixRandom(layer.layerSize, 1, 1)
 	}
 
 	return layer
@@ -35,8 +36,12 @@ type FC struct {
 }
 
 func (l *FC) Forward(inputs *data.Matrix) *data.Matrix {
+	//fmt.Println("-------")
+	//fmt.Println("fc layer")
+	//fmt.Println("inputs", inputs.GetDims())
 	l.inputs = inputs
 	l.output = l.inputs.MatrixMultiply(l.Weights)
+	//fmt.Println("output", l.output.GetDims())
 
 	if l.WithBiases {
 		l.output = l.output.AddRowVector(l.Biases)

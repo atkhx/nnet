@@ -3,36 +3,38 @@ package data
 import (
 	"fmt"
 	"math"
-	"math/rand"
 )
 
-func NewMatrixRandom(cols, rows int) *Matrix {
-	data := make([]float64, cols*rows)
-	for i := range data {
-		data[i] = rand.Float64()
-	}
-	return NewMatrix(cols, rows, data)
+func NewMatrixRandom(colsCount, rowsCount, chanCount int) *Matrix {
+	return NewMatrix(colsCount, rowsCount, chanCount, MakeRandom(colsCount*rowsCount*chanCount))
 }
 
-func NewMatrix(cols, rows int, data []float64) *Matrix {
-	if len(data) != cols*rows {
-		panic(fmt.Sprintf("invalid dimensions: data length %d, cols*rows %d", len(data), cols*rows))
+func NewMatrix(colsCount, rowsCount, chanCount int, data []float64) *Matrix {
+	if len(data) != colsCount*rowsCount*chanCount {
+		panic(fmt.Sprintf("invalid dimensions: data length %d, colsCount*rowsCount*chan %d", len(data), colsCount*rowsCount*chanCount))
 	}
 
 	return &Matrix{
-		Dims: [2]int{cols, rows},
+		ColsCount: colsCount,
+		RowsCount: rowsCount,
+		ChanCount: chanCount,
+
 		Data: data,
+		Grad: make([]float64, len(data)),
 	}
 }
 
-func NewMatrixResult(cols, rows int, data []float64, from *Source) (outMatrix *Matrix) {
-	outMatrix = NewMatrix(cols, rows, data)
+func NewMatrixResult(colsCount, rowsCount, chanCount int, data []float64, from *Source) (outMatrix *Matrix) {
+	outMatrix = NewMatrix(colsCount, rowsCount, chanCount, data)
 	outMatrix.From = from
 	return
 }
 
 type Matrix struct {
-	Dims [2]int
+	ColsCount int
+	RowsCount int
+	ChanCount int
+
 	Data []float64
 	Grad []float64
 	From *Source
@@ -41,126 +43,275 @@ type Matrix struct {
 }
 
 func (m *Matrix) GradsMatrix() *Matrix {
-	return NewMatrix(m.Dims[0], m.Dims[1], m.Grad)
+	return NewMatrix(m.ColsCount, m.RowsCount, m.ChanCount, m.Grad)
 }
 
 func (m *Matrix) gradRowFloats(rowIndex int) []float64 {
-	colsCount := m.Dims[0]
+	colsCount := m.ColsCount
 	rowOffset := rowIndex * colsCount
 
 	return m.Grad[rowOffset : rowOffset+colsCount]
 }
 
+func (m *Matrix) col(colIndex, chanIndex int) []float64 {
+	return MatrixColFloatsChan(
+		m.ColsCount,
+		m.RowsCount,
+		colIndex,
+		chanIndex,
+		m.Data,
+	)
+}
+
+func (m *Matrix) colGrads(colIndex, chanIndex int) []float64 {
+	return MatrixColFloatsChan(
+		m.ColsCount,
+		m.RowsCount,
+		colIndex,
+		chanIndex,
+		m.Grad,
+	)
+}
+
+func (m *Matrix) row(rowIndex, chanIndex int) []float64 {
+	return MatrixRowFloatsChan(
+		m.ColsCount,
+		m.RowsCount,
+		rowIndex,
+		chanIndex,
+		m.Data,
+	)
+}
+
+func (m *Matrix) rowGrads(rowIndex, chanIndex int) []float64 {
+	return MatrixRowFloatsChan(
+		m.ColsCount,
+		m.RowsCount,
+		rowIndex,
+		chanIndex,
+		m.Grad,
+	)
+}
+
 func (m *Matrix) Transpose() (outMatrix *Matrix) {
-	outMatrix = NewMatrix(MatrixTranspose(m.Dims[0], m.Dims[1], m.Data))
+	if m.ChanCount > 1 {
+		panic("transpose not implemented for multy-channel matrix")
+	}
+
+	r, c, d := MatrixTranspose(m.ColsCount, m.RowsCount, m.Data)
+
+	outMatrix = NewMatrix(r, c, m.ChanCount, d)
 	outMatrix.From = NewSource(func() {
-		m.InitGrad()
-		oGT := NewMatrix(outMatrix.Dims[0], outMatrix.Dims[1], outMatrix.Grad).Transpose()
-		for i, v := range oGT.Data {
-			m.Grad[i] += v
-		}
+		AddTo(m.Grad, NewMatrix(
+			outMatrix.ColsCount,
+			outMatrix.RowsCount,
+			outMatrix.ChanCount,
+			outMatrix.Grad,
+		).Transpose().Data)
 	}, m)
 	return
 }
 
+func (m *Matrix) Flat() (outMatrix *Matrix) {
+	return NewMatrixResult(len(m.Data), 1, 1, CopyWithData(m.Data), NewSource(func() {
+		AddTo(m.Grad, outMatrix.Grad)
+	}, m))
+}
+
+func (m *Matrix) Conv(
+	imageWidth, imageHeight, filterSize, padding, stride int,
+	filters *Matrix,
+	biases *Matrix,
+) (outMatrix *Matrix) {
+	imagesCount := m.ChanCount
+	filtersCount := filters.ChanCount
+	channels := m.RowsCount
+
+	outImageWidth := (imageWidth-filterSize+2*padding)/stride + 1
+	outImageHeight := (imageHeight-filterSize+2*padding)/stride + 1
+
+	outputSquare := outImageWidth * outImageHeight
+
+	data := []float64{}
+
+	iSquare := imageWidth * imageHeight
+	fSquare := filterSize * filterSize
+	iCube := iSquare * channels
+	fCube := fSquare * channels
+
+	for imageIndex := 0; imageIndex < imagesCount; imageIndex++ {
+		for filterIndex := 0; filterIndex < filtersCount; filterIndex++ {
+
+			image := m.Data[imageIndex*iCube : (imageIndex+1)*iCube]
+			filter := filters.Data[filterIndex*fCube : (filterIndex+1)*fCube]
+
+			_, _, featureMap := Conv2D(
+				imageWidth, imageHeight, image, // image
+				filterSize, filterSize, filter, // filter
+				channels,
+				padding,
+				stride,
+			)
+
+			AddScalarTo(featureMap, biases.Data[filterIndex])
+			data = append(data, featureMap...)
+		}
+	}
+
+	return NewMatrixResult(
+		outputSquare,
+		filtersCount,
+		imagesCount,
+		data,
+		NewSource(func() {
+			backpropConv(
+				outImageWidth, outImageHeight, outMatrix.Grad,
+				imageWidth, imageHeight, m.Data, m.Grad,
+				filterSize, filters.Data, filters.Grad, biases.Grad,
+				channels,
+				imagesCount,
+				filtersCount,
+				padding,
+			)
+		}, m, filters, biases),
+	)
+}
+
+func backpropConv(
+	oW, oH int, deltas []float64,
+	iW, iH int, inputs, iGrads []float64,
+	filterSize int, filter, wGrads, bGrads []float64,
+	channels,
+	imagesCount,
+	filtersCount,
+	padding int,
+) {
+	_, _, filter = Rotate180(filterSize, filterSize, filtersCount*channels, filter)
+
+	deltasPad, oWPadd, oHPadd := AddPadding(deltas, oW, oH, filtersCount, 2-padding)
+
+	offsetPad := 0
+	offset := 0
+
+	oSquarePad := oWPadd * oHPadd
+	iSquare := iW * iH
+	oSquare := oW * oH
+
+	fCube := filterSize * filterSize * channels
+	iCube := iW * iH * channels
+
+	//oCube := oSquarePad * channels
+	for imageIndex := 0; imageIndex < imagesCount; imageIndex++ {
+		for filterIndex := 0; filterIndex < filtersCount; filterIndex++ {
+			deltasPad := deltasPad[offsetPad : offsetPad+oSquarePad]
+			offsetPad += oSquarePad
+
+			deltas := deltas[offset : offset+oSquare]
+			offset += oSquare
+
+			bGrads[filterIndex] += Sum(deltas)
+
+			filter := filter[filterIndex*fCube : (filterIndex+1)*fCube]
+			wGrads := wGrads[filterIndex*fCube : (filterIndex+1)*fCube]
+			iGrads := iGrads[imageIndex*iCube : (imageIndex+1)*iCube]
+			inputs := inputs[imageIndex*iCube : (imageIndex+1)*iCube]
+
+			wCoord := 0
+			for izo := 0; izo < channels; izo++ {
+				for iyo := 0; iyo < filterSize; iyo++ {
+					for ixo := 0; ixo < filterSize; ixo++ {
+
+						weight := filter[wCoord]
+						wgradv := wGrads[wCoord]
+
+						for row := 0; row < iH-filterSize; row++ {
+							deltasPad := deltasPad[(iyo+row)*oWPadd+ixo : (iyo+row)*oWPadd+ixo+iW]
+							iGrads := iGrads[izo*iSquare+(iyo+row)*iW : izo*iSquare+(iyo+row)*iW+iW]
+
+							for dc, delta := range deltasPad {
+								iGrads[dc] += delta * weight
+							}
+						}
+
+						for row := 0; row < oH-filterSize; row++ {
+							inputs := inputs[izo*iSquare+(iyo+row)*iW+ixo : izo*iSquare+(iyo+row)*iW+ixo+oW]
+							deltas := deltas[(iyo+row)*oW+ixo : (iyo+row)*oW+ixo+oW]
+
+							for dc, delta := range deltas {
+								wgradv += inputs[dc] * delta
+							}
+						}
+
+						wGrads[wCoord] += wgradv
+						wCoord++
+					}
+				}
+			}
+		}
+	}
+}
+
+const ReplaceMe = 1
+
 func (m *Matrix) MatrixMultiply(b *Matrix) (outMatrix *Matrix) {
-	rColsCount, rRowsCount, rData := MatrixMultiply(m.Dims[0], m.Dims[1], m.Data, b.Dims[0], b.Dims[1], b.Data)
+	rColsCount, rRowsCount, rData := MatrixMultiply(
+		m.ColsCount, m.RowsCount, m.Data,
+		b.ColsCount, b.RowsCount, b.Data,
+	)
 
-	return NewMatrixResult(rColsCount, rRowsCount, rData, NewSource(func() {
-		m.InitGrad()
-		b.InitGrad()
+	return NewMatrixResult(rColsCount, rRowsCount, ReplaceMe, rData, NewSource(func() {
+		oG := NewMatrix(
+			outMatrix.ColsCount,
+			outMatrix.RowsCount,
+			outMatrix.ChanCount,
+			outMatrix.Grad,
+		)
 
-		oG := NewMatrix(outMatrix.Dims[0], outMatrix.Dims[1], outMatrix.Grad)
-		bT := b.Transpose()
-		mT := m.Transpose()
-
-		mdg := oG.MatrixMultiply(bT)
-		for i, v := range mdg.Data {
-			m.Grad[i] += v
-		}
-
-		bgd := mT.MatrixMultiply(oG)
-		for i, v := range bgd.Data {
-			b.Grad[i] += v
-		}
+		AddTo(m.Grad, oG.MatrixMultiply(b.Transpose()).Data)
+		AddTo(b.Grad, m.Transpose().MatrixMultiply(oG).Data)
 	}, m, b))
 }
 
 func (m *Matrix) AddRowVector(b *Matrix) (outMatrix *Matrix) {
-	if b.Dims[1] > 1 {
-		panic(fmt.Sprintf("bRowsCount > 1: %d", b.Dims[1]))
+	if b.RowsCount > 1 {
+		panic(fmt.Sprintf("bRowsCount > 1: %d", b.RowsCount))
 	}
 
-	out := MatrixAddRowVector(m.Dims[0], m.Dims[1], m.Data, b.Data)
+	out := MatrixAddRowVector(m.ColsCount, m.RowsCount, m.Data, b.Data)
 
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
+	return NewMatrixResult(m.ColsCount, m.RowsCount, ReplaceMe, out, NewSource(func() {
 		// we have outMatrix.Grad
 		// we need to calculate m.Grad and b.Grad
 		// m.Grad = outMatrix.Grad, because outMatrix.Data = m.Data + Vector
 		// b.Grad = [grads.Col(0).Dot(), grads.Col(1).Dot(), ... , grads.Col(n).Dot()]
 
-		m.InitGrad()
-		b.InitGrad()
+		AddTo(m.Grad, outMatrix.Grad)
 
-		// todo addMatrixFunc
-		for i, v := range outMatrix.Grad {
-			m.Grad[i] += v
-		}
-
-		// todo use grad.Transpose().DotRows()
-		for rowIndex := 0; rowIndex < m.Dims[1]; rowIndex++ {
-			gradsRow := MatrixRowFloats(m.Dims[0], rowIndex, outMatrix.Grad)
-			for i, v := range gradsRow {
-				b.Grad[i] += v
-			}
+		for rowIndex := 0; rowIndex < m.RowsCount; rowIndex++ {
+			AddTo(b.Grad, MatrixRowFloats(m.ColsCount, rowIndex, outMatrix.Grad))
 		}
 	}, m, b))
 }
 
 func (m *Matrix) Tanh() (outMatrix *Matrix) {
-	out := make([]float64, len(m.Data))
-	for i, v := range m.Data {
-		out[i] = math.Tanh(v)
-	}
-
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
-		m.InitGrad()
-
-		for i, v := range out {
+	return NewMatrixResult(m.ColsCount, m.RowsCount, m.ChanCount, Tanh(m.Data), NewSource(func() {
+		for i, v := range outMatrix.Data {
 			m.Grad[i] += outMatrix.Grad[i] * (1 - v*v)
 		}
 	}, m))
 }
 
 func (m *Matrix) Sigmoid() (outMatrix *Matrix) {
-	out := make([]float64, len(m.Data))
-	for i, v := range m.Data {
-		out[i] = 1 / (1 + math.Exp(-v))
-	}
-
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
-		m.InitGrad()
-
-		for i, v := range out {
+	return NewMatrixResult(m.ColsCount, m.RowsCount, m.ChanCount, Sigmoid(m.Data), NewSource(func() {
+		for i, v := range outMatrix.Data {
 			m.Grad[i] += outMatrix.Grad[i] * v * (1 - v)
 		}
 	}, m))
 }
 
 func (m *Matrix) Relu() (outMatrix *Matrix) {
-	out := make([]float64, len(m.Data))
-	copy(out, m.Data)
-
-	for i, v := range out {
-		if v < 0 {
-			out[i] = 0
-		}
-	}
-
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
-		m.InitGrad()
-
-		for i, v := range out {
+	return NewMatrixResult(m.ColsCount, m.RowsCount, m.ChanCount, Relu(m.Data), NewSource(func() {
+		for i, v := range outMatrix.Data {
 			if v > 0 {
 				m.Grad[i] += outMatrix.Grad[i]
 			}
@@ -168,9 +319,20 @@ func (m *Matrix) Relu() (outMatrix *Matrix) {
 	}, m))
 }
 
+func (m *Matrix) IsDimensionsEqual(t *Matrix) bool {
+	return true &&
+		m.ColsCount == t.ColsCount &&
+		m.RowsCount == t.RowsCount &&
+		m.ChanCount == t.ChanCount
+}
+
 func (m *Matrix) Regression(targets *Matrix) (outMatrix *Matrix) {
-	if m.Dims != targets.Dims {
-		panic(fmt.Sprintf("invalid targets dimensions: expected %v, actual %v", m.Dims, targets.Dims))
+	if !m.IsDimensionsEqual(targets) {
+		panic(fmt.Sprintf(
+			"invalid targets dimensions: expected %v, actual %v",
+			[3]int{m.ColsCount, m.RowsCount, m.ChanCount},
+			[3]int{targets.ColsCount, targets.RowsCount, targets.ChanCount},
+		))
 	}
 
 	r := 0.0
@@ -179,9 +341,7 @@ func (m *Matrix) Regression(targets *Matrix) (outMatrix *Matrix) {
 	}
 	r *= 0.5
 
-	return NewMatrixResult(1, 1, []float64{r}, NewSource(func() {
-		m.InitGrad()
-
+	return NewMatrixResult(1, 1, ReplaceMe, []float64{r}, NewSource(func() {
 		for i, t := range targets.Data {
 			m.Grad[i] += m.Data[i] - t
 		}
@@ -190,110 +350,74 @@ func (m *Matrix) Regression(targets *Matrix) (outMatrix *Matrix) {
 
 const minimalNonZeroFloat = 0.000000000000000000001
 
-func (m *Matrix) SumByRows() (outMatrix *Matrix) {
-	out := make([]float64, m.Dims[1])
-	for row := 0; row < m.Dims[1]; row++ {
-		for col := 0; col < m.Dims[0]; col++ {
-			out[row] += m.Data[row*m.Dims[0]+col]
-		}
-	}
-
-	return NewMatrix(1, m.Dims[1], out)
-}
-
 func (m *Matrix) Classification(targets *Matrix) (outMatrix *Matrix) {
-	if m.Dims != targets.Dims {
-		panic(fmt.Sprintf("invalid targets dimensions: expected %v, actual %v", m.Dims, targets.Dims))
+	if !m.IsDimensionsEqual(targets) {
+		panic(fmt.Sprintf(
+			"invalid targets dimensions: expected %v, actual %v",
+			[3]int{m.ColsCount, m.RowsCount, m.ChanCount},
+			[3]int{targets.ColsCount, targets.RowsCount, targets.ChanCount},
+		))
 	}
 
-	byClassesVal := make([]float64, m.Dims[1])
-	for rowIndex := 0; rowIndex < m.Dims[1]; rowIndex++ {
-		row := MatrixRowFloats(m.Dims[0], rowIndex, targets.Data)
+	byClassesVal := make([]float64, m.RowsCount)
+	for rowIndex := 0; rowIndex < m.RowsCount; rowIndex++ {
+		row := MatrixRowFloats(m.ColsCount, rowIndex, targets.Data)
 
 		for i, t := range row {
 			if t == 1 {
-				byClassesVal[rowIndex] = -math.Log(m.Data[rowIndex*m.Dims[0]+i])
+				if m.Data[rowIndex*m.ColsCount+i] <= 0 {
+					byClassesVal[rowIndex] = -math.Log(minimalNonZeroFloat)
+				} else {
+					byClassesVal[rowIndex] = -math.Log(m.Data[rowIndex*m.ColsCount+i])
+				}
 				break
 			}
 		}
 	}
 
 	// classification loss by each input in batch
-	return NewMatrixResult(1, m.Dims[1], byClassesVal, NewSource(func() {
-		m.InitGrad()
-
-		for row := 0; row < m.Dims[1]; row++ {
-			g := outMatrix.Grad[row]
-			for col := 0; col < m.Dims[0]; col++ {
-				i := row*m.Dims[0] + col
-
-				o := m.Data[i]
-				t := targets.Data[i]
-
-				m.Grad[i] += g * (-(t / o) + ((1 - t) / (1 - o)))
-			}
+	return NewMatrixResult(1, m.RowsCount, ReplaceMe, byClassesVal, NewSource(func() {
+		for i := 0; i < len(targets.Data); i++ {
+			m.Grad[i] += outMatrix.Grad[0] * (m.Data[i] - targets.Data[i])
 		}
+
+		//for row := 0; row < m.RowsCount; row++ {
+		//	g := outMatrix.Grad[row]
+		//	for col := 0; col < m.ColsCount; col++ {
+		//		i := row*m.ColsCount + col
+		//
+		//		o := m.Data[i]
+		//		t := targets.Data[i]
+		//
+		//		m.Grad[i] += g * (-(t / o) + ((1 - t) / (1 - o)))
+		//	}
+		//}
 	}, m))
 }
 
 func (m *Matrix) Sum() (outMatrix *Matrix) {
-	out := 0.0
-	for _, v := range m.Data {
-		out += v
-	}
-
-	return NewMatrixResult(1, 1, []float64{out}, NewSource(func() {
-		m.InitGrad()
-		for i := range m.Grad {
-			m.Grad[i] += outMatrix.Grad[0]
-		}
+	return NewMatrixResult(1, 1, 1, []float64{Sum(m.Data)}, NewSource(func() {
+		AddScalarTo(m.Grad, outMatrix.Grad[0])
 	}, m))
 }
 
 func (m *Matrix) Mean() (outMatrix *Matrix) {
-	out := 0.0
-	for _, v := range m.Data {
-		out += v
-	}
-
-	k := 1 / float64(len(m.Data))
-	return NewMatrixResult(1, 1, []float64{out * k}, NewSource(func() {
-		m.InitGrad()
-		for i := range m.Grad {
-			m.Grad[i] += outMatrix.Grad[0] * k
-		}
+	sum, k := Sum(m.Data), 1/float64(len(m.Data))
+	return NewMatrixResult(1, 1, 1, []float64{sum * k}, NewSource(func() {
+		AddScalarTo(m.Grad, outMatrix.Grad[0]*k)
 	}, m))
 }
 
 func (m *Matrix) Exp() (outMatrix *Matrix) {
-	max := 0.0
-	for i, v := range m.Data {
-		if i == 0 || max < v {
-			max = v
-		}
-	}
-
-	out := make([]float64, len(m.Data))
-	for i, v := range m.Data {
-		out[i] = math.Exp(v - max)
-	}
-
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
-		m.InitGrad()
+	return NewMatrixResult(m.ColsCount, m.RowsCount, m.ChanCount, Exp(m.Data), NewSource(func() {
 		for i := range m.Grad {
-			m.Grad[i] += outMatrix.Grad[i] * out[i]
+			m.Grad[i] += outMatrix.Grad[i] * outMatrix.Data[i]
 		}
 	}, m))
 }
 
 func (m *Matrix) Log() (outMatrix *Matrix) {
-	out := make([]float64, len(m.Data))
-	for i, v := range m.Data {
-		out[i] = math.Log(v)
-	}
-
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
-		m.InitGrad()
+	return NewMatrixResult(m.ColsCount, m.RowsCount, m.ChanCount, Log(m.Data), NewSource(func() {
 		for i := range m.Grad {
 			//m.Grad[i] += outMatrix.Grad[i] * 1 / m.Data[i]
 			m.Grad[i] += outMatrix.Grad[i] / m.Data[i]
@@ -302,80 +426,39 @@ func (m *Matrix) Log() (outMatrix *Matrix) {
 }
 
 func (m *Matrix) Mul(f float64) (outMatrix *Matrix) {
-	out := make([]float64, len(m.Data))
-	copy(out, m.Data)
-
-	for i := range out {
-		out[i] *= f
-	}
-
-	return NewMatrixResult(m.Dims[0], m.Dims[1], out, NewSource(func() {
-		m.InitGrad()
+	return NewMatrixResult(m.ColsCount, m.RowsCount, m.ChanCount, Mul(m.Data, f), NewSource(func() {
 		for i := range m.Grad {
-			m.Grad[i] += -outMatrix.Grad[i] * f
+			m.Grad[i] += outMatrix.Grad[i] * f
 		}
 	}, m))
 }
 
 func (m *Matrix) SoftmaxRows() (outMatrix *Matrix) {
+	exps := Exp(m.Data)
 
-	ex := m.Exp()
+	out := make([]float64, len(m.Data))
+	copy(out, exps)
 
-	out := make([]float64, len(ex.Data))
-	copy(out, ex.Data)
-
-	sumByRows := make([]float64, m.Dims[1])
-	for row := 0; row < ex.Dims[1]; row++ {
-		offset := row * ex.Dims[0]
-
-		//sum, max := 0.0, 0.0
-		//for col := 0; col < m.Dims[0]; col++ {
-		//	if col == 0 || m.Data[offset+col] > max {
-		//		max = m.Data[offset+col]
-		//	}
-		//}
-		//for col := 0; col < m.Dims[0]; col++ {
-		//	out[offset+col] = math.Exp(m.Data[offset+col] - max)
-		//	sum += out[offset+col]
-		//}
-
-		for col := 0; col < ex.Dims[0]; col++ {
-			sumByRows[row] += out[offset+col]
-		}
-
-		for col := 0; col < ex.Dims[0]; col++ {
+	sumByRows := make([]float64, m.RowsCount)
+	for row := 0; row < m.RowsCount; row++ {
+		offset := row * m.ColsCount
+		sumByRows[row] = Sum(out[offset : offset+m.ColsCount])
+		for col := 0; col < m.ColsCount; col++ {
 			out[offset+col] /= sumByRows[row]
 		}
 	}
 
-	outMatrix = NewMatrixResult(ex.Dims[0], ex.Dims[1], out, NewSource(func() {
-		ex.InitGrad()
-		for row := 0; row < ex.Dims[1]; row++ {
-			for col := 0; col < ex.Dims[0]; col++ {
-				i := row*ex.Dims[0] + col
-
-				ex.Grad[i] += outMatrix.Grad[i] / sumByRows[row]
-			}
+	outMatrix = NewMatrixResult(m.ColsCount, m.RowsCount, ReplaceMe, out, NewSource(func() {
+		for i, g := range outMatrix.Grad {
+			m.Grad[i] += exps[i] * g
 		}
-
-		//for i, o := range out {
-		//	ex.Grad[i] += outMatrix.Grad[i] * (o * (1 - o))
-		//}
-	}, ex))
+	}, m))
 
 	return
 }
 
-func (m *Matrix) InitGrad() {
-	if m.Grad == nil {
-		m.Grad = make([]float64, len(m.Data))
-	}
-}
-
 func (m *Matrix) resetGrad() {
-	for i := range m.Grad {
-		m.Grad[i] = 0
-	}
+	Fill(m.Grad, 0)
 
 	m.backwardCalled = false
 	if m.From != nil {
@@ -408,24 +491,10 @@ func (m *Matrix) backward() {
 }
 
 func (m *Matrix) Backward() {
-	m.InitGrad()
-	for i := range m.Grad {
-		m.Grad[i] = 1
-	}
+	Fill(m.Grad, 1)
 	m.backward()
 }
 
-func NewOneHotVectorsMatrix(colsCount int, hots ...int) (outMatrix *Matrix) {
-	rowsCount := len(hots)
-
-	data := make([]float64, 0, colsCount*len(hots))
-
-	for row := 0; row < rowsCount; row++ {
-		vector := make([]float64, colsCount)
-		vector[hots[row]] = 1
-
-		data = append(data, vector...)
-	}
-
-	return NewMatrix(colsCount, rowsCount, data)
+func (m *Matrix) GetDims() []int {
+	return []int{m.ColsCount, m.RowsCount, m.ChanCount}
 }
