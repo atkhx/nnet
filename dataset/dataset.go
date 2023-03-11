@@ -6,10 +6,11 @@ type Dataset interface {
 	GetSamplesCount() int
 
 	GetLabels() []string
-	GetTargets() []*data.Matrix
+	GetTargets() []*data.Data
 
 	GetLabel(index int) (string, error)
-	GetTarget(index int) (*data.Matrix, error)
+	GetTarget(index int) (*data.Data, error)
 
-	ReadSample(index int) (input, target *data.Matrix, err error)
+	ReadSample(index int) (input, target *data.Data, err error)
+	ReadRandomSampleBatch(batchSize int) (input, target *data.Data, err error)
 }

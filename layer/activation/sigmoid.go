@@ -9,19 +9,19 @@ func NewSigmoid() *Sigmoid {
 }
 
 type Sigmoid struct {
-	inputs, output *data.Matrix
+	inputs, output *data.Data
 }
 
-func (l *Sigmoid) Forward(inputs *data.Matrix) *data.Matrix {
+func (l *Sigmoid) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	l.output = l.inputs.Sigmoid()
 	return l.output
 }
 
-func (l *Sigmoid) GetOutput() *data.Matrix {
+func (l *Sigmoid) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Sigmoid) GetInputGradients() *data.Matrix {
-	return l.inputs.GradsMatrix()
+func (l *Sigmoid) GetInputGradients() *data.Volume {
+	return l.inputs.Grad
 }

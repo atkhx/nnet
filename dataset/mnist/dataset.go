@@ -2,6 +2,7 @@ package mnist
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/atkhx/nnet/data"
@@ -69,7 +70,7 @@ func New(imagesFile *fileImages, labelsFile *fileLabels) (*dataset, error) {
 
 type dataset struct {
 	labels  []string
-	targets []*data.Matrix
+	targets []*data.Data
 
 	imagesFile  *fileImages
 	labelsFile  *fileLabels
@@ -91,15 +92,19 @@ func (d *dataset) GetLabel(index int) (string, error) {
 	return "", ErrorIndexOutOfRange
 }
 
-func (d *dataset) GetTargets() []*data.Matrix {
+func (d *dataset) GetTargets() []*data.Data {
 	return d.targets
 }
 
-func (d *dataset) GetTarget(index int) (*data.Matrix, error) {
+func (d *dataset) GetTarget(index int) (*data.Data, error) {
 	if index > -1 && index < len(d.targets) {
 		return d.targets[index], nil
 	}
 	return nil, ErrorIndexOutOfRange
+}
+
+func (d *dataset) GetTargetsByIndexes(index ...int) (*data.Data, error) {
+	return data.NewOneHotVectors(len(d.targets), index...), nil
 }
 
 func (d *dataset) ReadBytes(index int) (image []float64, label byte, err error) {
@@ -117,7 +122,7 @@ func (d *dataset) ReadBytes(index int) (image []float64, label byte, err error) 
 	return
 }
 
-func (d *dataset) ReadSample(index int) (input, target *data.Matrix, err error) {
+func (d *dataset) ReadSample(index int) (input, target *data.Data, err error) {
 	image, label, err := d.ReadBytes(index)
 	if err != nil {
 		return
@@ -129,6 +134,32 @@ func (d *dataset) ReadSample(index int) (input, target *data.Matrix, err error) 
 		return
 	}
 
-	input = data.MatrixFromImages(ImageWidth, ImageHeight, ImageDepth, image)
+	input = data.FromImages(ImageWidth, ImageHeight, ImageDepth, image)
+	return
+}
+
+func (d *dataset) ReadRandomSampleBatch(batchSize int) (input, target *data.Data, err error) {
+	var images [][]float64
+	var labels []int
+
+	for i := 0; i < batchSize; i++ {
+		image, label, e := d.ReadBytes(rand.Intn(d.GetSamplesCount()))
+		if e != nil {
+			err = e
+			return
+		}
+
+		images = append(images, image)
+		labels = append(labels, int(label))
+	}
+
+	input = data.FromImages(ImageWidth, ImageHeight, ImageDepth, images...)
+
+	target, err = d.GetTargetsByIndexes(labels...)
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("get targets failed: %s", err))
+		return
+	}
+
 	return
 }

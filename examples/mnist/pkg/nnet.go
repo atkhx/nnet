@@ -1,11 +1,12 @@
 package pkg
 
 import (
+	"github.com/atkhx/nnet/data"
 	"github.com/atkhx/nnet/dataset/mnist"
 	"github.com/atkhx/nnet/layer/activation"
 	"github.com/atkhx/nnet/layer/conv"
 	"github.com/atkhx/nnet/layer/fc"
-	"github.com/atkhx/nnet/layer/flat"
+	"github.com/atkhx/nnet/layer/reshape"
 	"github.com/atkhx/nnet/layer/softmax"
 	"github.com/atkhx/nnet/net"
 )
@@ -39,7 +40,20 @@ func CreateConvNetTwoLayer() *net.FeedForward {
 			),
 			activation.NewReLu(),
 
-			flat.New(), // todo respect the batches!
+			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
+				return input.Generate(
+					data.WrapVolume(
+						input.Data.W*input.Data.H,
+						input.Data.D,
+						1,
+						data.Copy(input.Data.Data),
+					),
+					func() {
+						input.Grad.Data = data.Copy(outMatrix.Grad.Data)
+					},
+					input,
+				)
+			}),
 
 			fc.New(
 				fc.WithInputSize(24*24*3),
@@ -68,7 +82,20 @@ func CreateConvNetOneLayer() *net.FeedForward {
 			),
 			activation.NewReLu(),
 
-			flat.New(), // todo respect the batches!
+			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
+				return input.Generate(
+					data.WrapVolume(
+						input.Data.W*input.Data.H,
+						input.Data.D,
+						1,
+						data.Copy(input.Data.Data),
+					),
+					func() {
+						input.Grad.Data = data.Copy(outMatrix.Grad.Data)
+					},
+					input,
+				)
+			}),
 
 			fc.New(
 				fc.WithInputSize(26*26*16),
@@ -83,7 +110,6 @@ func CreateConvNetOneLayer() *net.FeedForward {
 func CreateNetFC() *net.FeedForward {
 	return net.New(
 		net.Layers{
-			flat.New(),
 			fc.New(
 				fc.WithInputSize(28*28*1),
 				fc.WithLayerSize(20),
@@ -99,7 +125,20 @@ func CreateNetFC() *net.FeedForward {
 			//activation.NewReLu(),
 			//activation.NewTanh(),
 
-			flat.New(),
+			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
+				return input.Generate(
+					data.WrapVolume(
+						input.Data.W*input.Data.H,
+						input.Data.D,
+						1,
+						data.Copy(input.Data.Data),
+					),
+					func() {
+						input.Grad.Data = data.Copy(outMatrix.Grad.Data)
+					},
+					input,
+				)
+			}),
 
 			softmax.New(),
 		},

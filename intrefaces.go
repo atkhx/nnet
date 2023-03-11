@@ -3,26 +3,22 @@ package nnet
 import "github.com/atkhx/nnet/data"
 
 type Layer interface {
-	Forward(inputs *data.Matrix) (output *data.Matrix)
+	Forward(inputs *data.Data) (output *data.Data)
 }
 
 type WithOutput interface {
-	GetOutput() *data.Matrix
+	GetOutput() *data.Data
 }
 
 type WithWeights interface {
-	GetWeights() *data.Matrix
+	GetWeights() *data.Data
 }
 
 type WithBiases interface {
 	HasBiases() bool
-	GetBiases() *data.Matrix
+	GetBiases() *data.Data
 }
 
 type WithGradients interface {
-	GetInputGradients() *data.Matrix
-}
-
-type WithWeightGradients interface {
-	GetWeightGradients() *data.Matrix
+	GetInputGradients() *data.Volume
 }

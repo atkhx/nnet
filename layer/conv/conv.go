@@ -10,25 +10,22 @@ func New(options ...Option) *Conv {
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
 
-	layer.Filters = data.NewMatrixRandom(
+	layer.Filters = data.NewRandom(
 		layer.FilterSize*layer.FilterSize,
 		layer.inputChannels,
 		layer.FiltersCount,
 	)
 
-	layer.Biases = data.NewMatrixRandom(layer.FiltersCount, 1, 1)
-
-	for i := range layer.Biases.Data {
-		layer.Biases.Data[i] = 0
-	}
+	layer.Biases = data.NewRandom(layer.FiltersCount, 1, 1)
+	layer.Biases.Data.Fill(0)
 
 	return layer
 }
 
 type Conv struct {
-	// Matrix with chanCount = filtersCount
-	Biases       *data.Matrix
-	Filters      *data.Matrix
+	// Data with chanCount = filtersCount
+	Biases       *data.Data
+	Filters      *data.Data
 	FilterSize   int
 	FiltersCount int
 	Padding      int
@@ -38,11 +35,11 @@ type Conv struct {
 	inputHeight   int
 	inputChannels int
 
-	inputs *data.Matrix
-	output *data.Matrix
+	inputs *data.Data
+	output *data.Data
 }
 
-func (l *Conv) Forward(inputs *data.Matrix) *data.Matrix {
+func (l *Conv) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	l.output = inputs.Conv(
 		l.inputWidth,
@@ -57,27 +54,23 @@ func (l *Conv) Forward(inputs *data.Matrix) *data.Matrix {
 	return l.output
 }
 
-func (l *Conv) GetWeights() *data.Matrix {
+func (l *Conv) GetWeights() *data.Data {
 	return l.Filters
 }
 
-func (l *Conv) GetOutput() *data.Matrix {
+func (l *Conv) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Conv) GetInputs() *data.Matrix {
+func (l *Conv) GetInputs() *data.Data {
 	return l.inputs
 }
 
-func (l *Conv) GetInputGradients() *data.Matrix {
-	return l.inputs.GradsMatrix()
+func (l *Conv) GetInputGradients() *data.Volume {
+	return l.inputs.Grad
 }
 
-func (l *Conv) GetWeightGradients() *data.Matrix {
-	return l.Filters.GradsMatrix()
-}
-
-func (l *Conv) GetBiases() *data.Matrix {
+func (l *Conv) GetBiases() *data.Data {
 	return l.Biases
 }
 

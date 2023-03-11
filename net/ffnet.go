@@ -17,7 +17,7 @@ type FeedForward struct {
 	Layers Layers
 }
 
-func (n *FeedForward) Forward(inputs *data.Matrix) *data.Matrix {
+func (n *FeedForward) Forward(inputs *data.Data) *data.Data {
 	for i := 0; i < len(n.Layers); i++ {
 		inputs = n.Layers[i].Forward(inputs)
 	}

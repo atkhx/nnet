@@ -9,19 +9,19 @@ func New() *Softmax {
 }
 
 type Softmax struct {
-	inputs, output *data.Matrix
+	inputs, output *data.Data
 }
 
-func (l *Softmax) Forward(inputs *data.Matrix) *data.Matrix {
+func (l *Softmax) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
-	l.output = inputs.SoftmaxRows()
+	l.output = inputs.Softmax()
 	return l.output
 }
 
-func (l *Softmax) GetOutput() *data.Matrix {
+func (l *Softmax) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Softmax) GetInputGradients() *data.Matrix {
-	return l.inputs.GradsMatrix()
+func (l *Softmax) GetInputGradients() *data.Volume {
+	return l.inputs.Grad
 }

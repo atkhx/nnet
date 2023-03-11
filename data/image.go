@@ -9,7 +9,7 @@ import "fmt"
 
 // we want matrix where image data is separately by channels stretched horizontally
 
-func MatrixFromImages(w, h, d int, images ...[]float64) (outMatrix *Matrix) {
+func FromImages(w, h, d int, images ...[]float64) (outData *Data) {
 	if len(images) < 1 {
 		panic("images data is required")
 	}
@@ -22,5 +22,5 @@ func MatrixFromImages(w, h, d int, images ...[]float64) (outMatrix *Matrix) {
 	for _, image := range images {
 		data = append(data, image...)
 	}
-	return NewMatrix(w*h, d, len(images), data)
+	return NewData(w*h, d, len(images), data)
 }

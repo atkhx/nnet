@@ -15,6 +15,14 @@ var defaults = []Option{
 
 type Option func(layer *MaxPool)
 
+func WithInputSize(width, height, channels int) Option {
+	return func(layer *MaxPool) {
+		layer.iWidth = width
+		layer.iHeight = height
+		layer.iDepth = channels
+	}
+}
+
 func FilterSize(size int) Option {
 	return func(layer *MaxPool) {
 		layer.FWidth = size

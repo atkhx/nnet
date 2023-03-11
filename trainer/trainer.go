@@ -32,23 +32,23 @@ func (t *trainer) getWeightsCount() (weightsCount int) {
 		l := t.net.GetLayer(i)
 
 		if withWeights, ok := l.(nnet.WithWeights); ok {
-			if len(withWeights.GetWeights().Data) == 0 {
+			if withWeights.GetWeights().Data.Len() == 0 {
 				panic("weights len is zero")
 			}
-			weightsCount += len(withWeights.GetWeights().Data)
+			weightsCount += withWeights.GetWeights().Data.Len()
 		}
 
 		if withBiases, ok := l.(nnet.WithBiases); ok && withBiases.HasBiases() {
-			if len(withBiases.GetBiases().Data) == 0 {
+			if withBiases.GetBiases().Data.Len() == 0 {
 				panic("biases len is zero")
 			}
-			weightsCount += len(withBiases.GetBiases().Data)
+			weightsCount += withBiases.GetBiases().Data.Len()
 		}
 	}
 	return
 }
 
-func (t *trainer) Forward(inputs *data.Matrix, getLoss func(output *data.Matrix) *data.Matrix) *data.Matrix {
+func (t *trainer) Forward(inputs *data.Data, getLoss func(output *data.Data) *data.Data) *data.Data {
 	output := t.net.Forward(inputs)
 
 	loss := getLoss(output)
@@ -68,28 +68,28 @@ func (t *trainer) updateWeights() {
 			weights := withWeights.GetWeights()
 			t.updateWeightsWithUsingMethod(k, weights)
 
-			k += len(weights.Data)
+			k += weights.Data.Len()
 		}
 
 		if withBiases, ok := l.(nnet.WithBiases); ok && withBiases.HasBiases() {
 			biases := withBiases.GetBiases()
 			t.updateWeightsWithUsingMethod(k, biases)
 
-			k += len(biases.Data)
+			k += biases.Data.Len()
 		}
 	}
 }
 
-func (t *trainer) updateWeightsWithUsingMethod(offset int, w *data.Matrix) {
-	for j := 0; j < len(w.Data); j++ {
+func (t *trainer) updateWeightsWithUsingMethod(offset int, w *data.Data) {
+	for j := 0; j < w.Data.Len(); j++ {
 		l1grad := t.l1Decay
-		if w.Data[j] <= 0 {
+		if w.Data.Data[j] <= 0 {
 			l1grad = -l1grad
 		}
 
-		l2grad := t.l2Decay * w.Data[j]
-		gradient := l2grad + l1grad + w.Grad[j]
+		l2grad := t.l2Decay * w.Data.Data[j]
+		gradient := l2grad + l1grad + w.Grad.Data[j]
 
-		w.Data[j] += t.method.GetDelta(offset+j, gradient)
+		w.Data.Data[j] += t.method.GetDelta(offset+j, gradient)
 	}
 }

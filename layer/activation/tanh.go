@@ -9,19 +9,19 @@ func NewTanh() *Tanh {
 }
 
 type Tanh struct {
-	inputs, output *data.Matrix
+	inputs, output *data.Data
 }
 
-func (l *Tanh) Forward(inputs *data.Matrix) *data.Matrix {
+func (l *Tanh) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	l.output = l.inputs.Tanh()
 	return l.output
 }
 
-func (l *Tanh) GetOutput() *data.Matrix {
+func (l *Tanh) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *Tanh) GetInputGradients() *data.Matrix {
-	return l.inputs.GradsMatrix()
+func (l *Tanh) GetInputGradients() *data.Volume {
+	return l.inputs.Grad
 }

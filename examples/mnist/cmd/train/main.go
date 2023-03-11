@@ -117,12 +117,12 @@ func main() {
 				//fmt.Println("input", input.GetDims())
 				//fmt.Println("input", input.Data)
 
-				lossObject := netTrainer.Forward(input, func(output *data.Matrix) *data.Matrix {
+				lossObject := netTrainer.Forward(input, func(output *data.Data) *data.Data {
 					loss := output.Classification(target).Mean()
 					return loss
 				})
 
-				loss := lossObject.Data[0]
+				loss := lossObject.Data.Data[0]
 				lossSum += loss
 				totalLossSum += loss
 

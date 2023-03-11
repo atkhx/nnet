@@ -60,13 +60,13 @@ func main() {
 	for j := 0; j < 100; j++ {
 		inputBytes := bytes.Repeat([]byte{'.'}, data.WordLen)
 		for {
-			output := nn.Forward(data2.NewOneHotVectorsMatrix(
+			output := nn.Forward(data2.NewOneHotVectors(
 				data.AlphabetSize, data.Encode(inputBytes)...,
 			))
 
 			//fmt.Println("output", output.Dims, output.Data)
 			//return
-			b := data.Chars[data2.Multinomial(output.Data[(data.WordLen-1)*27:])]
+			b := data.Chars[data2.Multinomial(output.Data.Data[(data.WordLen-1)*27:])]
 			fmt.Print(string(b))
 
 			inputBytes = append(inputBytes, b)

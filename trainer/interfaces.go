@@ -11,12 +11,12 @@ const (
 )
 
 type Trainer interface {
-	Forward(inputs *data.Matrix, getLoss func(output *data.Matrix) *data.Matrix) (loss *data.Matrix)
+	Forward(inputs *data.Data, getLoss func(output *data.Data) *data.Data) (loss *data.Data)
 	updateWeights()
 }
 
 type Net interface {
-	Forward(inputs *data.Matrix) (output *data.Matrix)
+	Forward(inputs *data.Data) (output *data.Data)
 	GetLayersCount() int
 	GetLayer(index int) nnet.Layer
 }

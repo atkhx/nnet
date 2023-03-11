@@ -9,19 +9,19 @@ func NewReLu() *ReLu {
 }
 
 type ReLu struct {
-	inputs, output *data.Matrix
+	inputs, output *data.Data
 }
 
-func (l *ReLu) Forward(inputs *data.Matrix) *data.Matrix {
+func (l *ReLu) Forward(inputs *data.Data) *data.Data {
 	l.inputs = inputs
 	l.output = inputs.Relu()
 	return l.output
 }
 
-func (l *ReLu) GetOutput() *data.Matrix {
+func (l *ReLu) GetOutput() *data.Data {
 	return l.output
 }
 
-func (l *ReLu) GetInputGradients() *data.Matrix {
-	return l.inputs.GradsMatrix()
+func (l *ReLu) GetInputGradients() *data.Volume {
+	return l.inputs.Grad
 }

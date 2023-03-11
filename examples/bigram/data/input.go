@@ -20,8 +20,8 @@ var WordLen = 2
 var Samples []Sample
 
 type Sample struct {
-	Input  *data.Matrix
-	Target *data.Matrix
+	Input  *data.Data
+	Target *data.Data
 }
 
 func init() {
@@ -61,8 +61,8 @@ func init() {
 			targetBytes = targetBytes[1:]
 
 			Samples = append(Samples, Sample{
-				Input:  data.NewOneHotVectorsMatrix(AlphabetSize, Encode(inputBytes)...),
-				Target: data.NewOneHotVectorsMatrix(AlphabetSize, Encode(targetBytes)...),
+				Input:  data.NewOneHotVectors(AlphabetSize, Encode(inputBytes)...),
+				Target: data.NewOneHotVectors(AlphabetSize, Encode(targetBytes)...),
 			})
 		}
 	}

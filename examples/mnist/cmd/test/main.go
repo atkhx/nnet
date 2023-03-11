@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/atkhx/nnet/data"
 	"github.com/atkhx/nnet/dataset/mnist"
 	"github.com/atkhx/nnet/examples/mnist/pkg"
 )
@@ -85,16 +84,6 @@ func main() {
 			trainStopped <- true
 		}()
 
-		getMaxIndex := func(m *data.Matrix) int {
-			maxVal, maxIdx := 0.0, 0
-			for i, v := range m.Data {
-				if i == 0 || maxVal < v {
-					maxVal = v
-					maxIdx = i
-				}
-			}
-			return maxIdx
-		}
 		fmt.Println("convNet testing started")
 		for sampleIndex = 0; sampleIndex < dataset.GetSamplesCount(); sampleIndex++ {
 			select {
@@ -110,15 +99,16 @@ func main() {
 
 			output := convNet.Forward(input)
 
-			outputIndex := getMaxIndex(output)
-			targetIndex := getMaxIndex(target)
+			_, outputIndex := output.Data.GetMax()
+			//outputIndex := getMaxIndex(output)
+			_, targetIndex := target.Data.GetMax()
 
 			if outputIndex == targetIndex {
 				success++
 				totalSuccess++
 			}
 
-			lossVal := output.Classification(target).Mean().Data[0]
+			lossVal := output.Classification(target).Mean().Data.Data[0]
 			lossSum += lossVal
 			totalLossSum += lossVal
 

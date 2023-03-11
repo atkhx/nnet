@@ -104,11 +104,11 @@ func main() {
 
 				sample := data.Samples[sampleIndex]
 
-				lossObject := netTrainer.Forward(sample.Input, func(output *data2.Matrix) *data2.Matrix {
+				lossObject := netTrainer.Forward(sample.Input, func(output *data2.Data) *data2.Data {
 					return output.Classification(sample.Target).Mean()
 				})
 
-				loss := lossObject.Data[0]
+				loss := lossObject.Data.Data[0]
 				lossSum += loss
 				totalLossSum += loss
 

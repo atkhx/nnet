@@ -22,14 +22,14 @@ func main() {
 	statChunk := 1000
 	epochs := 10000
 
-	inputs := data.NewMatrix(inputSize, batchSize, 1, []float64{
+	inputs := data.NewData(inputSize, batchSize, 1, []float64{
 		0, 0,
 		1, 0,
 		0, 1,
 		1, 1,
 	})
 
-	targets := data.NewMatrix(1, batchSize, 1, []float64{
+	targets := data.NewData(1, batchSize, 1, []float64{
 		0,
 		1,
 		1,
@@ -59,7 +59,7 @@ func main() {
 	)
 
 	for e := 0; e < epochs; e++ {
-		loss := nnTrainer.Forward(inputs, func(output *data.Matrix) *data.Matrix {
+		loss := nnTrainer.Forward(inputs, func(output *data.Data) *data.Data {
 			return output.Regression(targets)
 		})
 
