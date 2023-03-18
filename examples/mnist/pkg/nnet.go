@@ -31,14 +31,14 @@ func CreateConvNetTwoLayer() *net.FeedForward {
 				// out: 26 x 26 x 16
 			),
 			activation.NewReLu(),
-
-			conv.New(
-				conv.WithInputSize(26, 26, 16),
-				conv.WithFilterSize(3),
-				conv.WithFiltersCount(3),
-				// out: 24 x 24 x 3
-			),
-			activation.NewReLu(),
+			//
+			//conv.New(
+			//	conv.WithInputSize(26, 26, 16),
+			//	conv.WithFilterSize(3),
+			//	conv.WithFiltersCount(3),
+			//	// out: 24 x 24 x 3
+			//),
+			//activation.NewReLu(),
 
 			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
 				return input.Generate(
@@ -56,12 +56,12 @@ func CreateConvNetTwoLayer() *net.FeedForward {
 			}),
 
 			fc.New(
-				fc.WithInputSize(24*24*3),
+				//fc.WithInputSize(24*24*3),
+				fc.WithInputSize(26*26*3),
 				fc.WithLayerSize(10),
 				fc.WithBiases(true),
 			),
 			softmax.New(),
-			// panic: invalid targets dimensions: expected [11 24], actual [10 1]
 		},
 	)
 }

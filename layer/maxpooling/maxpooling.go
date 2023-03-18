@@ -32,7 +32,7 @@ func (l *MaxPool) Forward(inputs *data.Data) *data.Data {
 
 	imagesCount := inputs.Data.D
 
-	l.output = data.NewData(
+	l.output = data.WrapData(
 		l.oWidth*l.oHeight,
 		l.oDepth,
 		imagesCount,

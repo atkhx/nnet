@@ -82,23 +82,23 @@ func main() {
 	statChunkSize := 1000
 
 	totalLossSum := 0.0
-	totalSuccess := 0
+	//totalSuccess := 0
 
 	trainStopped := make(chan any)
 	go func() {
 		defer func() {
-			fmt.Println()
-			fmt.Println("convNet training stopped")
-			fmt.Println("- samples seen", sampleIndex)
-			fmt.Println("- totalLossSum", totalLossSum)
-			fmt.Println("- totalLossAvg", fmt.Sprintf("%.8f", totalLossSum/float64(sampleIndex)))
-			fmt.Println("- totalSuccess", totalSuccess, "from", dataset.GetSamplesCount())
-			fmt.Println("- success rate", fmt.Sprintf("%.2f%%", 100*float64(totalSuccess)/float64(sampleIndex)))
+			//fmt.Println()
+			//fmt.Println("convNet training stopped")
+			//fmt.Println("- samples seen", sampleIndex)
+			//fmt.Println("- totalLossSum", totalLossSum)
+			//fmt.Println("- totalLossAvg", fmt.Sprintf("%.8f", totalLossSum/float64(sampleIndex)))
+			//fmt.Println("- totalSuccess", totalSuccess, "from", dataset.GetSamplesCount())
+			//fmt.Println("- success rate", fmt.Sprintf("%.2f%%", 100*float64(totalSuccess)/float64(sampleIndex)))
 
 			trainStopped <- true
 		}()
 
-		statChunkSize = 100
+		statChunkSize = 1
 		fmt.Println("convNet training started")
 		for epoch := 0; epoch < epochsCount; epoch++ {
 			for sampleIndex = 0; sampleIndex < dataset.GetSamplesCount(); sampleIndex++ {
@@ -135,6 +135,10 @@ func main() {
 
 					//success = 0
 					lossSum = 0.0
+				}
+
+				if sampleIndex > 10 {
+					return
 				}
 			}
 		}

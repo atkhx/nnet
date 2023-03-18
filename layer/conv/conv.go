@@ -1,6 +1,8 @@
 package conv
 
 import (
+	"math"
+
 	"github.com/atkhx/nnet/data"
 )
 
@@ -10,14 +12,25 @@ func New(options ...Option) *Conv {
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
 
+	//layer.Filters = data.NewRandomMinMax(
+	//	layer.FilterSize*layer.FilterSize,
+	//	layer.inputChannels,
+	//	layer.FiltersCount,
+	//	-1,
+	//	1,
+	//)
+
 	layer.Filters = data.NewRandom(
 		layer.FilterSize*layer.FilterSize,
 		layer.inputChannels,
 		layer.FiltersCount,
 	)
 
-	layer.Biases = data.NewRandom(layer.FiltersCount, 1, 1)
-	layer.Biases.Data.Fill(0)
+	//layer.Filters.Data.MulScalar(0.01)
+
+	layer.Filters.Data.MulScalar(data.ReLuGain / math.Pow(float64(layer.FilterSize*layer.FilterSize*layer.inputChannels), 0.5))
+
+	layer.Biases = data.NewData(layer.FiltersCount, 1, 1)
 
 	return layer
 }

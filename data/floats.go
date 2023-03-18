@@ -5,6 +5,29 @@ import (
 	"math/rand"
 )
 
+const (
+	ReLuGain = 1.4142135624
+	TanhGain = 1.6666666667
+)
+
+func Round(v, k float64) float64 {
+	return math.Round(v*k) / k
+}
+
+func RoundFloats(src []float64, k float64) []float64 {
+	out := Copy(src)
+	for i, v := range out {
+		out[i] = math.Round(v*k) / k
+	}
+	return out
+}
+
+func RoundTo(floats []float64, k float64) {
+	for i, v := range floats {
+		floats[i] = math.Round(v*k) / k
+	}
+}
+
 func Copy(src []float64) (dst []float64) {
 	dst = make([]float64, len(src))
 	copy(dst, src)
@@ -18,9 +41,14 @@ func Fill(dst []float64, v float64) {
 }
 
 func FillRandom(dst []float64) {
+	//rand.Seed(time.Now().UnixNano())
 	for i := range dst {
-		dst[i] = rand.Float64()
+		dst[i] = rand.NormFloat64()
+		//dst[i] = rand.Float64()
 	}
+
+	//fmt.Println(dst)
+	//os.Exit(1)
 }
 
 func MakeRandom(size int) (out []float64) {
@@ -57,6 +85,18 @@ func MulTo(dst []float64, f float64) {
 func Mul(src []float64, f float64) (out []float64) {
 	out = Copy(src)
 	MulTo(out, f)
+	return
+}
+
+func DivTo(dst []float64, f float64) {
+	for i, v := range dst {
+		dst[i] = v / f
+	}
+}
+
+func Div(src []float64, f float64) (out []float64) {
+	out = Copy(src)
+	DivTo(out, f)
 	return
 }
 
@@ -108,9 +148,10 @@ func GetMax(src []float64) (maxv float64, maxi int) {
 }
 
 func ExpTo(src []float64) {
-	max, _ := GetMax(src)
+	//max, _ := GetMax(src)
 	for i, v := range src {
-		src[i] = math.Exp(v - max)
+		//src[i] = math.Exp(v - max)
+		src[i] = math.Exp(v)
 	}
 }
 

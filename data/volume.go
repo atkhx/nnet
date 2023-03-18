@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 )
 
@@ -41,6 +42,54 @@ func (obj *Volume) Sum() *Volume {
 
 func (obj *Volume) Mean() *Volume {
 	return WrapVolume(1, 1, 1, []float64{Sum(obj.Data) / float64(obj.Len())})
+}
+
+func (obj *Volume) Std() *Volume {
+	mean := obj.Mean().Data[0]
+
+	out := 0.0
+	for _, v := range obj.Data {
+		out += math.Pow(v-mean, 2)
+	}
+	out /= float64(obj.Len() - 1)
+	out = math.Sqrt(out)
+
+	return WrapVolume(1, 1, 1, []float64{out})
+}
+
+func (obj *Volume) RowMean() *Volume {
+	out := NewVolume(1, obj.H, obj.D)
+	obj.ScanRows(func(y, z int, f []float64) {
+		out.Set(0, y, z, Sum(f)/float64(len(f)))
+	})
+	return out
+}
+
+func (obj *Volume) ColMean() *Volume {
+	out := NewVolume(obj.W, 1, obj.D)
+	k := 1.0 / float64(obj.H)
+	obj.Scan(func(x, y, z int, offset int, v float64) {
+		out.PointAdd(x, 0, z, k*v)
+	})
+
+	return out
+}
+
+func (obj *Volume) ColStd() (*Volume, *Volume) {
+	colMean := obj.ColMean()
+	colStd := NewVolume(colMean.W, 1, colMean.D)
+
+	k := 1.0 / float64(obj.H)
+
+	obj.Scan(func(x, y, z int, offset int, v float64) {
+		colStd.PointAdd(x, 0, z, math.Pow(v-colMean.At(x, 0, z), 2))
+	})
+
+	colStd.Scan(func(x, _, z int, offset int, v float64) {
+		colStd.Data[offset] = k * math.Sqrt(v)
+	})
+
+	return colMean, colStd
 }
 
 func (obj *Volume) Copy() *Volume {
@@ -108,6 +157,12 @@ func (obj *Volume) FillRandomMinMax(min, max float64) {
 	return
 }
 
+func (obj *Volume) AddScalar(f float64) {
+	for i, v := range obj.Data {
+		obj.Data[i] = v + f
+	}
+}
+
 func (obj *Volume) Add(src *Volume) {
 	obj.AddFloats(src.Data)
 }
@@ -118,9 +173,45 @@ func (obj *Volume) AddFloats(src []float64) {
 	}
 }
 
-func (obj *Volume) AddScalar(f float64) {
-	for i, v := range obj.Data {
-		obj.Data[i] = v + f
+func (obj *Volume) Sub(src *Volume) {
+	obj.SubFloats(src.Data)
+}
+
+func (obj *Volume) SubFloats(src []float64) {
+	for i, v := range src {
+		obj.Data[i] -= v
+	}
+}
+
+func (obj *Volume) MulScalar(f float64) *Volume {
+	MulTo(obj.Data, f)
+	return obj
+}
+
+func (obj *Volume) Mul(src *Volume) *Volume {
+	obj.MulFloats(src.Data)
+	return obj
+}
+
+func (obj *Volume) MulFloats(src []float64) {
+	for i, v := range src {
+		obj.Data[i] *= v
+	}
+}
+
+func (obj *Volume) DivScalar(f float64) *Volume {
+	DivTo(obj.Data, f)
+	return obj
+}
+
+func (obj *Volume) Div(src *Volume) *Volume {
+	obj.DivFloats(src.Data)
+	return obj
+}
+
+func (obj *Volume) DivFloats(src []float64) {
+	for i, v := range src {
+		obj.Data[i] /= v
 	}
 }
 
@@ -149,17 +240,17 @@ func (obj *Volume) Log() *Volume {
 	return obj
 }
 
-func (obj *Volume) Mul(f float64) *Volume {
-	MulTo(obj.Data, f)
-	return obj
-}
-
 func (obj *Volume) Softmax() *Volume {
-	sums := obj.Exp().Sum().Data[0]
+	exps := obj.Exp()
+	sums := exps.Sum().Data[0]
 	for i := range obj.Data {
 		obj.Data[i] /= sums
 	}
 	return obj
+}
+
+func (obj *Volume) PointAdd(x, y, z int, v float64) {
+	obj.Data[z*obj.W*obj.H+y*obj.W+x] += v
 }
 
 func (obj *Volume) Set(x, y, z int, v float64) {

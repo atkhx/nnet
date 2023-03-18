@@ -11,22 +11,31 @@ func New(options ...Option) *FC {
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
 
-	layer.Weights = data.NewRandomMinMax(
+	//layer.Weights = data.NewRandomMinMax(
+	//	layer.layerSize,
+	//	layer.inputSize,
+	//	1,
+	//	-1,
+	//	1,
+	//)
+
+	layer.Weights = data.NewRandom(
 		layer.layerSize,
 		layer.inputSize,
 		1,
-		-1,
-		1,
 	)
 
-	wk := math.Sqrt(2) / math.Sqrt(float64(layer.Weights.Data.Len()))
-	for k := range layer.Weights.Data.Data {
-		layer.Weights.Data.Data[k] *= wk
-	}
+	//layer.Weights.Data.MulScalar(0.01)
+	layer.Weights.Data.MulScalar(data.ReLuGain / math.Pow(float64(layer.inputSize), 0.5))
+
+	//
+	//wk := math.Sqrt(2) / math.Sqrt(float64(layer.Weights.Data.Len()))
+	//for k := range layer.Weights.Data.Data {
+	//	layer.Weights.Data.Data[k] *= wk
+	//}
 
 	if layer.WithBiases {
-		layer.Biases = data.NewRandom(layer.layerSize, 1, 1)
-		layer.Biases.Data.Fill(0)
+		layer.Biases = data.NewData(layer.layerSize, 1, 1)
 	}
 
 	return layer

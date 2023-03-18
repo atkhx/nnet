@@ -22,5 +22,5 @@ func FromImages(w, h, d int, images ...[]float64) (outData *Data) {
 	for _, image := range images {
 		data = append(data, image...)
 	}
-	return NewData(w*h, d, len(images), data)
+	return WrapData(w*h, d, len(images), data)
 }

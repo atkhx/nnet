@@ -166,10 +166,10 @@ func (d *dataset) ReadSample(index int) (input, target *data.Data, err error) {
 
 	//nolint:gomnd
 	if d.rgb {
-		input = data.NewData(ImageWidth, ImageHeight, 3, d.images[index*ImageSizeRGB:(index+1)*ImageSizeRGB])
+		input = data.WrapData(ImageWidth, ImageHeight, 3, d.images[index*ImageSizeRGB:(index+1)*ImageSizeRGB])
 
 	} else {
-		input = data.NewData(ImageWidth, ImageHeight, 1, d.images[index*ImageSizeGray:(index+1)*ImageSizeGray])
+		input = data.WrapData(ImageWidth, ImageHeight, 1, d.images[index*ImageSizeGray:(index+1)*ImageSizeGray])
 	}
 
 	return

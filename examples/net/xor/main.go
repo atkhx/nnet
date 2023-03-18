@@ -22,14 +22,14 @@ func main() {
 	statChunk := 1000
 	epochs := 10000
 
-	inputs := data.NewData(inputSize, batchSize, 1, []float64{
+	inputs := data.WrapData(inputSize, batchSize, 1, []float64{
 		0, 0,
 		1, 0,
 		0, 1,
 		1, 1,
 	})
 
-	targets := data.NewData(1, batchSize, 1, []float64{
+	targets := data.WrapData(1, batchSize, 1, []float64{
 		0,
 		1,
 		1,
