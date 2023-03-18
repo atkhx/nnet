@@ -39,10 +39,6 @@ func (l *BatchNorm) Forward(inputs *data.Data) *data.Data {
 	return l.output
 }
 
-func (l *BatchNorm) shortCalc(inputs *data.Data) {
-
-}
-
 func (l *BatchNorm) GetOutput() *data.Data {
 	return l.output
 }
