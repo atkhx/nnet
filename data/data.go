@@ -366,7 +366,7 @@ func (m *Data) Conv(
 		inputs := m
 
 		outputGrad := outMatrix.Grad
-		outputGradPad := WrapVolume(AddPadding(outputGrad.Data, outImageWidth, outImageHeight, filtersCount*imagesCount, 2-padding))
+		outputGradPad := WrapVolume(AddPadding(outputGrad.Data, outImageWidth, outImageHeight, filtersCount*imagesCount, filterSize-1-padding))
 
 		filtersRot := filters.Data.
 			Reshape(filterSize, filterSize, filtersCount*channels).
