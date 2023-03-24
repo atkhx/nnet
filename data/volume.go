@@ -316,3 +316,34 @@ func (obj *Volume) GetRow(y, z int) *Volume {
 func (obj *Volume) GetRows(z int) *Volume {
 	return WrapVolume(obj.W, obj.H, 1, obj.Data[z*obj.W*obj.H:(z+1)*obj.W*obj.H])
 }
+
+func (obj *Volume) String() string {
+	var result string
+	var offset int
+
+	result += "\n"
+	for z := 0; z < obj.D; z++ {
+		//result += "\t[\n"
+		for y := 0; y < obj.H; y++ {
+			result += "\t\t["
+			for x := 0; x < obj.W; x++ {
+				if x > 0 {
+					result += ", "
+				}
+
+				if obj.Data[offset] >= 0 {
+					result += fmt.Sprintf(" %.9f", obj.Data[offset])
+				} else {
+					result += fmt.Sprintf("%.9f", obj.Data[offset])
+				}
+				offset++
+			}
+			result += " ]"
+			if y < obj.H-1 {
+				result += "\n"
+			}
+		}
+		//result += "\t]\n"
+	}
+	return result
+}

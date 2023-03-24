@@ -371,6 +371,8 @@ func ConvLayersTo(
 	fw, fh, fc int, filter []float64,
 	padding int,
 ) {
+	iw, ih, _, inputs = AddPadding(inputs, iw, ih, ic*fc, padding)
+
 	outputSquare := ow * oh
 	inputsSquare := iw * ih
 	filterSquare := fw * fh
@@ -402,7 +404,7 @@ func ConvLayerTo(
 	fw, fh int, filter []float64,
 	padding int,
 ) {
-	iw, ih, _, inputs = AddPadding(inputs, iw, ih, 1, padding)
+	//iw, ih, _, inputs = AddPadding(inputs, iw, ih, 1, padding)
 
 	oc := 0
 	for oy := 0; oy < oh; oy++ {

@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -320,3 +321,77 @@ func TestData_Pow(t *testing.T) {
 		1.7644, 1.9774, 0.0160,
 	}, RoundFloats(data.Grad.Data, 10_000))
 }
+
+func TestData_Math(t *testing.T) {
+	x := WrapData(2, 1, 1, []float64{1.0, 0.7})
+	z := x.AddRowVector(WrapData(2, 1, 1, []float64{1.0, 1.0}))
+	y := x.DivRowVector(z)
+	m := y.Mean()
+	m.Backward()
+
+	fmt.Println("z.grad", z.Grad.Data)
+	fmt.Println("y.grad", y.Grad.Data)
+	fmt.Println("x.grad", x.Grad.Data)
+	fmt.Println("m.grad", m.Grad.Data)
+}
+
+func TestData_Batchnorm(t *testing.T) {
+	inputs := WrapData(2, 2, 1, []float64{
+		-0.9800, -1.6578,
+		-0.0572, -0.3409,
+	})
+
+	weights := WrapData(2, 2, 1, []float64{
+		2.0992, 0.8964,
+		0.3379, -0.2087,
+	})
+
+	targets := WrapData(2, 2, 1, []float64{
+		1.0, 0.0,
+		0.0, 1.0,
+	})
+
+	output := inputs.MatrixMultiply(weights)
+	fmt.Println("output", output.Data)
+
+	outputadded := output.AddRowVector(WrapData(2, 1, 1, []float64{0.1, 0.1}))
+
+	mean := outputadded.ColMean()
+	mean.title = "colMean 1"
+	fmt.Println("mean", mean.Data)
+
+	std := outputadded.ColStd()
+	fmt.Println("std", std.Data)
+
+	outsubmean := outputadded.SubRowVector(mean)
+	outnorm := outsubmean.DivRowVector(std)
+
+	fmt.Println("outnorm", outnorm.Data)
+
+	loss := outnorm.CrossEntropy(targets).Mean()
+	fmt.Println("loss", loss.Data)
+
+	//return
+	loss.Backward()
+
+	fmt.Println("weights.grad", weights.Grad)
+	fmt.Println("inputs.grad", inputs.Grad)
+	fmt.Println("std.Grad", std.Grad)
+	fmt.Println("mean.Grad", mean.Grad)
+	//fmt.Println("outsubmean.Data", outsubmean.Data)
+	fmt.Println("outsubmean.Grad", outsubmean.Grad)
+	fmt.Println("outnorm.Grad", outnorm.Grad)
+	fmt.Println("output.Grad", output.Grad)
+	fmt.Println("outputadded.Grad", outputadded.Grad)
+}
+
+//backward crossEntropy
+//backward divRowVector
+//backward subRowVector
+//backward matrixMultiply
+//backward colMean
+//backward matrixMultiply
+//backward colStd
+//backward matrixMultiply
+//backward colMean
+//backward matrixMultiply
