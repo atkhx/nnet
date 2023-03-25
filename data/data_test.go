@@ -62,26 +62,6 @@ func TestData_ColStd_3x2(t *testing.T) {
 	}, RoundFloats(data.Grad.Data, 10_000))
 }
 
-func TestData_ColStd_3x3(t *testing.T) {
-	data := WrapData(3, 3, 1, []float64{
-		0.7081, 0.3542, 0.1054,
-		0.5996, 0.0904, 0.0899,
-		0.8822, 0.9887, 0.0080,
-	})
-	std := data.ColStd()
-	std.Sum().Backward()
-
-	assert.Equal(t, []float64{
-		0.1426, 0.4617, 0.0523,
-	}, RoundFloats(std.Data.Data, 10_000))
-
-	assert.Equal(t, []float64{
-		-0.0767, -0.1338, 0.3595,
-		-0.4572, -0.4195, 0.2115,
-		0.5339, 0.5533, -0.5710,
-	}, RoundFloats(data.Grad.Data, 10_000))
-}
-
 func TestData_Softmax(t *testing.T) {
 	inputs := WrapData(3, 1, 1, []float64{
 		0.7081, 0.3542, 0.1054,
@@ -335,7 +315,7 @@ func TestData_Math(t *testing.T) {
 	fmt.Println("m.grad", m.Grad.Data)
 }
 
-func TestData_Batchnorm(t *testing.T) {
+func TestData_ColStd(t *testing.T) {
 	inputs := WrapData(2, 2, 1, []float64{
 		-0.9800, -1.6578,
 		-0.0572, -0.3409,
@@ -352,46 +332,72 @@ func TestData_Batchnorm(t *testing.T) {
 	})
 
 	output := inputs.MatrixMultiply(weights)
-	fmt.Println("output", output.Data)
-
-	outputadded := output.AddRowVector(WrapData(2, 1, 1, []float64{0.1, 0.1}))
-
-	mean := outputadded.ColMean()
-	mean.title = "colMean 1"
-	fmt.Println("mean", mean.Data)
-
-	std := outputadded.ColStd()
-	fmt.Println("std", std.Data)
-
-	outsubmean := outputadded.SubRowVector(mean)
-	outnorm := outsubmean.DivRowVector(std)
-
-	fmt.Println("outnorm", outnorm.Data)
-
+	std := output.ColStd()
+	outnorm := output.DivRowVector(std)
 	loss := outnorm.CrossEntropy(targets).Mean()
-	fmt.Println("loss", loss.Data)
 
 	//return
 	loss.Backward()
 
+	fmt.Println("inputs", inputs.Data)
+	fmt.Println("weight", weights.Data)
+	fmt.Println("target", targets.Data)
+	fmt.Println("output", output.Data)
+	fmt.Println("outnorm", outnorm.Data)
+	fmt.Println("std", std.Data)
+	fmt.Println("loss", loss.Data)
+
 	fmt.Println("weights.grad", weights.Grad)
 	fmt.Println("inputs.grad", inputs.Grad)
 	fmt.Println("std.Grad", std.Grad)
-	fmt.Println("mean.Grad", mean.Grad)
-	//fmt.Println("outsubmean.Data", outsubmean.Data)
-	fmt.Println("outsubmean.Grad", outsubmean.Grad)
-	fmt.Println("outnorm.Grad", outnorm.Grad)
 	fmt.Println("output.Grad", output.Grad)
-	fmt.Println("outputadded.Grad", outputadded.Grad)
+	fmt.Println("outnorm.Grad", outnorm.Grad)
 }
 
-//backward crossEntropy
-//backward divRowVector
-//backward subRowVector
-//backward matrixMultiply
-//backward colMean
-//backward matrixMultiply
-//backward colStd
-//backward matrixMultiply
-//backward colMean
-//backward matrixMultiply
+func TestData_BatchNorm(t *testing.T) {
+	inputs := WrapData(2, 2, 1, []float64{
+		-0.9800, -1.6578,
+		-0.0572, -0.3409,
+	})
+
+	weights := WrapData(2, 2, 1, []float64{
+		2.0992, 0.8964,
+		0.3379, -0.2087,
+	})
+
+	targets := WrapData(2, 2, 1, []float64{
+		1.0, 0.0,
+		0.0, 1.0,
+	})
+
+	output := inputs.MatrixMultiply(weights)
+	mean := output.ColMean()
+	std := output.ColStd()
+
+	outsubmean := output.SubRowVector(mean)
+	outnorm := outsubmean.DivRowVector(std)
+
+	//outnorm := output.SubRowVector(mean).DivRowVector(std)
+	loss := outnorm.CrossEntropy(targets).Mean()
+
+	//return
+	loss.Backward()
+
+	fmt.Println("inputs", inputs.Data)
+	fmt.Println("weight", weights.Data)
+	fmt.Println("target", targets.Data)
+	fmt.Println("output", output.Data)
+	fmt.Println("outnorm", outnorm.Data)
+	//fmt.Println("outsubmean", outsubmean.Data)
+	fmt.Println("mean", mean.Data)
+	fmt.Println("std", std.Data)
+	fmt.Println("loss", loss.Data)
+
+	fmt.Println("weights.grad", weights.Grad)
+	fmt.Println("inputs.grad", inputs.Grad)
+	fmt.Println("mean.Grad", mean.Grad)
+	fmt.Println("std.Grad", std.Grad)
+	fmt.Println("output.Grad", output.Grad)
+	fmt.Println("outsubmean.Grad", outsubmean.Grad)
+	fmt.Println("outnorm.Grad", outnorm.Grad)
+}

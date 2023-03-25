@@ -52,7 +52,6 @@ func (t *trainer) Forward(inputs *data.Data, getLoss func(output *data.Data) *da
 	output := t.net.Forward(inputs)
 
 	loss := getLoss(output)
-	loss.ResetGrad()
 	loss.Backward()
 
 	t.updateWeights()

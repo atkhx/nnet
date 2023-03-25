@@ -51,11 +51,6 @@ func (m *Data) generate(data *Volume, backwardFn func(), parents ...*Data) (outM
 	return &Data{Data: data, backwardFn: backwardFn, parents: append([]*Data{m}, parents...)}
 }
 
-func (m *Data) generateB(data *Volume, backwardFn func(), parents ...*Data) (outMatrix *Data) {
-	//return &Data{Data: data, backwardFn: backwardFn, parents: append([]*Data{m}, parents...)}
-	return &Data{Data: data, backwardFn: backwardFn, parents: append(parents, m)}
-}
-
 func (m *Data) GetDims() []int {
 	return m.Data.GetDims()
 }
@@ -134,7 +129,6 @@ func (m *Data) ColMean() (outMatrix *Data) {
 	})
 
 	return m.generate(out, func() {
-		fmt.Println("backward colMean", outMatrix.title)
 		m.Grad.Scan(func(x, y, z int, offset int, v float64) {
 			m.Grad.Data[offset] += outMatrix.Grad.At(x, 0, z) * k
 		})
@@ -143,71 +137,36 @@ func (m *Data) ColMean() (outMatrix *Data) {
 
 func (m *Data) ColStd() (outMatrix *Data) {
 	colMean := m.ColMean()
-	colMean.title = "colMean in colStd"
-	colStd := NewVolume(colMean.Data.W, 1, colMean.Data.D)
+	colVariance := NewVolume(colMean.Data.W, 1, colMean.Data.D)
+	colStdDev := NewVolume(colMean.Data.W, 1, colMean.Data.D)
 
 	k := 1.0 / float64(m.Data.H-1)
+	e := 0.000000001
+
 	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		colStd.PointAdd(x, 0, z, k*math.Pow(v-colMean.Data.At(x, 0, z), 2))
+		colVariance.PointAdd(x, 0, z, math.Pow(v-colMean.Data.At(x, 0, z), 2)*k)
 	})
 
-	colStd.Scan(func(_, _, _ int, offset int, v float64) {
-		colStd.Data[offset] = v + 0.000000001
+	colVariance.Scan(func(_, _, _ int, offset int, v float64) {
+		colStdDev.Data[offset] = math.Sqrt(v + e)
 	})
 
-	colStdSqrt := colStd.Copy()
-	colStdSqrt.Scan(func(_, _, _ int, offset int, v float64) {
-		colStdSqrt.Data[offset] = math.Sqrt(v)
-	})
+	return m.generate(colStdDev, func() {
+		colStdDevGrad := NewVolume(colMean.Data.W, 1, colMean.Data.D)
+		outMatrix.Data.Scan(func(x, y, z int, offset int, v float64) {
+			g := outMatrix.Grad.Data[offset]
+			o := outMatrix.Data.Data[offset]
 
-	return m.generate(colStdSqrt, func() {
-		fmt.Println("backward colStd")
-		m.Grad.Scan(func(x, y, z int, offset int, _ float64) {
-			g := outMatrix.Grad.At(x, 0, z)
-			mean := colMean.Data.At(x, 0, z)
-			stds := colStd.At(x, 0, z)
-
-			m.Grad.Data[offset] += g * (m.Data.Data[offset] - mean) * (-0.5) * math.Pow(stds, -1.5)
+			colStdDevGrad.Data[offset] = g * (1.0 / (2.0 * o))
 		})
-	}, colMean)
-}
 
-func (m *Data) ColStd2() (outMatrix *Data) {
-	colMean := m.ColMean()
-	colMean.title = "colMean in colStd"
-	colStd := NewVolume(colMean.Data.W, 1, colMean.Data.D)
+		m.Data.Scan(func(x, y, z int, offset int, v float64) {
+			g := colStdDevGrad.At(x, 0, z)
+			M := colMean.Data.At(x, 0, z)
 
-	k := 1.0 / float64(m.Data.H-1)
-	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		colStd.PointAdd(x, 0, z, math.Pow(v-colMean.Data.At(x, 0, z), 2))
-	})
-
-	colStd.Scan(func(_, _, _ int, offset int, v float64) {
-		colStd.Data[offset] = math.Sqrt(v * k) // + 0.0000001
-	})
-
-	// SQRT (    ((X1-mean)^2 + (X2-mean)^2) * k   )
-	// = g * 1/2 * out   * k   * 2(x1-mean)   * 1/d.h
-	// = g * 1/out * x1-mean * 1/d.H
-
-	return m.generate(colStd, func() {
-		fmt.Println("backward colStd")
-		m.Grad.Scan(func(x, y, z int, offset int, _ float64) {
-			g := outMatrix.Grad.At(x, 0, z)
-			out := outMatrix.Data.At(x, 0, z)
-			mean := colMean.Data.At(x, 0, z)
-
-			//vvv := g * (1.0 / out) * (m.Data.Data[offset] - mean) * k
-			vvv := g * (1.0 / out) * (m.Data.Data[offset] - mean) * k * (1 / float64(m.Data.H))
-			m.Grad.Data[offset] += g * (1.0 / out) * (m.Data.Data[offset] - mean) * k * (1 / float64(m.Data.H))
-			colMean.Grad.PointAdd(x, 0, z,
-				vvv,
-				//g*(1.0/out)*(m.Data.Data[offset]-mean)*k,
-			)
-			fmt.Println("colMean.Grad", colMean.Grad)
+			m.Grad.Data[offset] += g * 2.0 * (v - M)
 		})
-		m.Grad.Fill(0)
-	}, colMean)
+	})
 }
 
 func (m *Data) Pow(pow float64) (outMatrix *Data) {
@@ -279,8 +238,6 @@ func (m *Data) AddRowVector(b *Data) (outMatrix *Data) {
 	})
 
 	return m.generate(out, func() {
-		fmt.Println("backward addRowVector")
-		//m.Grad.Fill(0.0)
 		m.Grad.Add(outMatrix.Grad)
 		outMatrix.Grad.ScanRowsVolume(func(y, z int, f *Volume) {
 			b.Grad.GetRows(z).Add(f)
@@ -298,14 +255,11 @@ func (m *Data) SubRowVector(b *Data) (outMatrix *Data) {
 		f.Sub(b.Data.GetRows(z))
 	})
 
-	return m.generateB(out, func() {
-		fmt.Println("backward subRowVector")
-		//m.Grad.Fill(0.0)
+	return m.generate(out, func() {
 		m.Grad.Add(outMatrix.Grad)
 		outMatrix.Grad.ScanRowsVolume(func(y, z int, f *Volume) {
 			b.Grad.GetRows(z).Sub(f)
 		})
-		//outMatrix.Grad.Fill(0.0)
 	}, b)
 }
 
@@ -348,8 +302,6 @@ func (m *Data) DivRowVector(b *Data) (outMatrix *Data) {
 	})
 
 	return m.generate(out, func() {
-		fmt.Println("backward divRowVector")
-
 		bDataRow := b.Data.Data
 		//m.Grad.Fill(0.0)
 		m.Grad.ScanRows(func(y, z int, iGradRow []float64) {
@@ -369,15 +321,12 @@ func (m *Data) DivRowVector(b *Data) (outMatrix *Data) {
 
 func (m *Data) MatrixMultiply(b *Data) (outMatrix *Data) {
 	return m.generate(m.Data.MatrixMultiply(b.Data), func() {
-		fmt.Println("backward matrixMultiply")
 		oG := WrapData(
 			outMatrix.Data.W,
 			outMatrix.Data.H,
 			outMatrix.Data.D,
 			outMatrix.Grad.Data,
-			//outMatrix.Grad.Copy().Data,
 		)
-
 		m.Grad.Add(oG.MatrixMultiply(b.Transpose()).Data)
 		b.Grad.Add(m.Transpose().MatrixMultiply(oG).Data)
 	}, b)
@@ -564,7 +513,6 @@ func (m *Data) CrossEntropy(targets *Data) (outMatrix *Data) {
 	})
 
 	return m.generate(logLikelihood, func() {
-		fmt.Println("backward crossEntropy")
 		outMatrix.Grad.ScanRows(func(y, z int, f []float64) {
 			for x := 0; x < m.Data.W; x++ {
 				m.Grad.PointAdd(x, y, z, f[0]*(softmax.At(x, y, z)-targets.Data.At(x, y, z)))
@@ -602,18 +550,6 @@ func (m *Data) Backward() {
 	collect(m)
 	m.Grad.Fill(1)
 
-	var callBackward func(data *Data)
-	callBackward = func(data *Data) {
-		if data.backwardFn != nil {
-			data.backwardFn()
-		}
-
-		for _, parent := range data.parents {
-			callBackward(parent)
-		}
-	}
-
-	//callBackward(m)
 	for i := len(parents); i > 0; i-- {
 		if parents[i-1].backwardFn != nil {
 			parents[i-1].backwardFn()
