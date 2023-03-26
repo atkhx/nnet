@@ -315,7 +315,6 @@ func (m *Data) DivRowVector(b *Data) (outMatrix *Data) {
 				bGradRow[x] += g * iDataRow[x] * (-1.0 / (bDataRow[x] * bDataRow[x]))
 			}
 		})
-		//outMatrix.Grad.Fill(0.0)
 	}, b)
 }
 
@@ -358,10 +357,10 @@ func (m *Data) Conv(
 			filter := filters.Data.GetRows(filterIndex)
 			featureMap := outputData[offset : offset+outputSquare]
 
-			ConvTo(
+			ConvolveTo(
+				outImageWidth, outImageHeight, featureMap,
 				imageWidth, imageHeight, image.Data,
 				filterSize, filterSize, filter.Data,
-				outImageWidth, outImageHeight, featureMap,
 				channels,
 				padding,
 			)
@@ -395,7 +394,7 @@ func (m *Data) Conv(
 				biases.Grad.Data[filterIndex] += deltas.Sum().Data[0]
 
 				// dW = I x Dy
-				ConvLayersTo(
+				Convolve2dBatchTo(
 					filterSize, filterSize, wGrads.Data,
 					imageWidth, imageHeight, channels, inputs.Data,
 					outImageWidth, outImageHeight, 1, deltas.Data,
@@ -406,7 +405,7 @@ func (m *Data) Conv(
 				filterRot := filtersRot.GetRows(filterIndex)
 
 				// dI = DyPad x Wrot180
-				ConvLayersTo(
+				Convolve2dBatchTo(
 					imageWidth, imageHeight, iGrads.Data,
 					deltasPad.W, deltasPad.H, 1, deltasPad.Data,
 					filterSize, filterSize, channels, filterRot.Data,

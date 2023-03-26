@@ -258,7 +258,7 @@ func AddPadding(src []float64, iw, ih, id, padding int) (int, int, int, []float6
 	return pw, ph, pd, res
 }
 
-func Conv(
+func Convolve(
 	iw, ih int, inputs []float64,
 	fw, fh int, filter []float64,
 	channels int,
@@ -270,7 +270,7 @@ func Conv(
 	ow, oh = CalcConvOutputSize(iw, ih, fw, fh, padding, stride)
 	output = make([]float64, ow*oh)
 
-	ConvTo(iw, ih, inputs, fw, fh, filter, ow, oh, output, channels, padding)
+	ConvolveTo(ow, oh, output, iw, ih, inputs, fw, fh, filter, channels, padding)
 	return
 }
 
@@ -283,15 +283,24 @@ func CalcConvOutputSize(
 	return (iw-fw+2*padding)/stride + 1, (ih-fh+2*padding)/stride + 1
 }
 
-func ConvTo(
-	iw, ih int, image []float64,
-	fw, fh int, filter []float64,
+func ConvolveTo(
 	ow, oh int, output []float64,
+	iw, ih int, inputs []float64,
+	fw, fh int, filter []float64,
 	channels int,
 	padding int,
 ) {
-	iw, ih, _, inputs := AddPadding(image, iw, ih, channels, padding)
+	iw, ih, _, inputs = AddPadding(inputs, iw, ih, channels, padding)
+	ConvolvePaddedTo(ow, oh, output, iw, ih, inputs, fw, fh, filter, channels)
+}
 
+func ConvolvePaddedTo(
+	ow, oh int, output []float64,
+	iw, ih int, inputs []float64,
+	fw, fh int, filter []float64,
+	channels int,
+) {
+	// todo implement stride param
 	fHiW := fh * iw
 	oHiW := oh * iw
 
@@ -299,14 +308,13 @@ func ConvTo(
 	iCube := iSquare * channels
 
 	wCoord := 0
-	for izo := 0; izo < iCube; izo += iSquare {
-		for iyo := izo; iyo < izo+fHiW; iyo += iw {
-			for ixo := iyo; ixo < iyo+fw; ixo++ {
+	for izFrom := 0; izFrom < iCube; izFrom += iSquare {
+		for iyFrom := izFrom; iyFrom < izFrom+fHiW; iyFrom += iw {
+			for ixFrom := iyFrom; ixFrom < iyFrom+fw; ixFrom++ {
 				weight := filter[wCoord]
 				wCoord++
 
-				oCoord := 0
-				for iCoord := ixo; iCoord < ixo+oHiW; iCoord += iw {
+				for iCoord, oCoord := ixFrom, 0; iCoord < ixFrom+oHiW; iCoord += iw {
 					output := output[oCoord : oCoord+ow]
 					inputs := inputs[iCoord : iCoord+ow]
 					for ic, iv := range inputs {
@@ -317,55 +325,10 @@ func ConvTo(
 			}
 		}
 	}
-
-	return
 }
 
-func Conv2DTo(
-	iw, ih int, image []float64,
-	fw, fh int, filter2D []float64,
-	ow, oh int, output []float64,
-	channels int,
-	padding int,
-) {
-	iw, ih, _, inputs := AddPadding(image, iw, ih, channels, padding)
-
-	fHiW := fh * iw
-	oHiW := oh * iw
-
-	iSquare := iw * ih
-	iCube := iSquare * channels
-
-	oSquare := oh * ow
-	oOffset := 0
-
-	for izo := 0; izo < iCube; izo += iSquare {
-		wCoord := 0
-		output := output[oOffset : oOffset+oSquare]
-		oOffset += oSquare
-
-		for iyo := izo; iyo < izo+fHiW; iyo += iw {
-			for ixo := iyo; ixo < iyo+fw; ixo++ {
-				weight := filter2D[wCoord]
-				wCoord++
-
-				oCoord := 0
-				for iCoord := ixo; iCoord < ixo+oHiW; iCoord += iw {
-					output := output[oCoord : oCoord+ow]
-					inputs := inputs[iCoord : iCoord+ow]
-					for ic, iv := range inputs {
-						output[ic] += iv * weight
-					}
-					oCoord += ow
-				}
-			}
-		}
-	}
-
-	return
-}
-
-func ConvLayersTo(
+// Convolve2dBatchTo convolve each 2d-input by each 2d-filter and store separate convolution result in output
+func Convolve2dBatchTo(
 	ow, oh int, output []float64,
 	iw, ih, ic int, inputs []float64,
 	fw, fh, fc int, filter []float64,
@@ -383,11 +346,11 @@ func ConvLayersTo(
 	for ii := 0; ii < ic; ii++ {
 		filterOffset := 0
 		for fi := 0; fi < fc; fi++ {
-			ConvLayerTo(
+			ConvolvePaddedTo(
 				ow, oh, output[outputOffset:outputOffset+outputSquare],
 				iw, ih, inputs[inputsOffset:inputsOffset+inputsSquare],
 				fw, fh, filter[filterOffset:filterOffset+filterSquare],
-				padding,
+				1,
 			)
 
 			outputOffset += outputSquare
@@ -402,10 +365,7 @@ func ConvLayerTo(
 	ow, oh int, output []float64,
 	iw, ih int, inputs []float64,
 	fw, fh int, filter []float64,
-	padding int,
 ) {
-	//iw, ih, _, inputs = AddPadding(inputs, iw, ih, 1, padding)
-
 	oc := 0
 	for oy := 0; oy < oh; oy++ {
 		for ox := 0; ox < ow; ox++ {
