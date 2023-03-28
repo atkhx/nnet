@@ -18,9 +18,17 @@ func FromImages(w, h, d int, images ...[]float64) (outData *Data) {
 		panic(fmt.Sprintf("image data length is not equal %d * %d * %d", w, h, d))
 	}
 
-	data := make([]float64, 0, w*h*d*len(images))
+	whd := w * h * d
+	data := make([]float64, whd*len(images))
+	offset := 0
 	for _, image := range images {
-		data = append(data, image...)
+		copy(data[offset:offset+whd], image)
+		//data = append(data, image...)
+		offset += whd
 	}
+	//data := make([]float64, 0, w*h*d*len(images))
+	//for _, image := range images {
+	//	data = append(data, image...)
+	//}
 	return WrapData(w*h, d, len(images), data)
 }

@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -290,8 +291,9 @@ func ConvolveTo(
 	channels int,
 	padding int,
 ) {
-	iw, ih, _, inputs = AddPadding(inputs, iw, ih, channels, padding)
-	ConvolvePaddedTo(ow, oh, output, iw, ih, inputs, fw, fh, filter, channels)
+	ConvolveTo2(ow, oh, output, iw, ih, inputs, fw, fh, filter, channels, padding)
+	//iw, ih, _, inputs = AddPadding(inputs, iw, ih, channels, padding)
+	//ConvolvePaddedTo(ow, oh, output, iw, ih, inputs, fw, fh, filter, channels)
 }
 
 func ConvolvePaddedTo(
@@ -327,6 +329,184 @@ func ConvolvePaddedTo(
 	}
 }
 
+func ConvolveTo2(
+	ow, oh int, output []float64,
+	iw, ih int, inputs []float64,
+	fw, fh int, filter []float64,
+	channels int,
+	padding int,
+) {
+	iSquare := iw * ih
+	iCube := iSquare * channels
+
+	wCoord := 0
+
+	for izFrom := 0; izFrom < iCube; izFrom += iSquare {
+		for fy := 0; fy < fh; fy++ {
+			oyOffsetLeft := positive(padding - fy)
+			oyOffsetRight := positive(fy - padding)
+
+			maxW := min(oh, ih+oyOffsetLeft-oyOffsetRight) * ow
+
+			iyFrom := izFrom + oyOffsetRight*iw
+			oyFrom := oyOffsetLeft * ow
+
+			for fx := 0; fx < fw; fx++ {
+				weight := filter[wCoord]
+				wCoord++
+
+				ox := positive(padding - fx)
+				ix := positive(fx - padding)
+
+				OW := min(ow-ox, iw-ix)
+
+				for ixFrom, oxFrom := iyFrom+ix, oyFrom+ox; oxFrom < maxW; ixFrom, oxFrom = ixFrom+iw, oxFrom+ow {
+					output := output[oxFrom : oxFrom+OW]
+					inputs := inputs[ixFrom : ixFrom+OW]
+					for ic, iv := range inputs {
+						output[ic] += iv * weight
+					}
+				}
+			}
+		}
+	}
+}
+
+func min(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
+}
+
+func positive(f int) int {
+	if f > 0 {
+		return f
+	}
+	return 0
+}
+
+func ConvolveTo2WorksAlways(
+	ow, oh int, output []float64,
+	iw, ih int, inputs []float64,
+	fw, fh int, filter []float64,
+	channels int,
+	padding int,
+) {
+	// todo implement stride param
+	//fHiW := fh * iw
+	//oHiW := oh * iw
+
+	iSquare := iw * ih
+	//iCube := iSquare * channels
+
+	wCoord := 0
+
+	for fz := 0; fz < channels; fz++ {
+		for fy := 0; fy < fh; fy++ {
+			for fx := 0; fx < fw; fx++ {
+				weight := filter[wCoord]
+				if false {
+					fmt.Println("weight", weight)
+				}
+				wCoord++
+
+				oyOffset := positive(padding - fy)
+				oxOffset := positive(padding - fx)
+
+				//for oy := oyOffset; oy < oh-positive(fy-padding); oy++ {
+				//for oy := oyOffset; oy < oyOffset+ih; oy++ {
+				//for oy := oyOffset; oy < oh; oy++ {
+				for oy := oyOffset; oy < min(oh, ih+oyOffset-positive(fy-padding)); oy++ {
+					ox := oxOffset
+					ix := positive(fx - padding)
+					///OW := ow - ox - positive(fx-padding)
+					OW := iw // - padding - fx
+					OW = min(ow-ox, iw-ix)
+
+					iy := oy - positive(padding-fy) + positive(fy-padding)
+
+					fmt.Println("oy", oy, "ox", ox, "OW", OW, "|", "iy", iy, "ix", ix)
+
+					output := output[oy*ow+ox : oy*ow+ox+OW]
+					inputs := inputs[fz*iSquare+iy*iw+ix : fz*iSquare+iy*iw+ix+OW]
+
+					//fmt.Println("output", output)
+					//fmt.Println("inputs", inputs)
+
+					if len(inputs) != len(output) {
+						panic("invalid length")
+					}
+
+					for ic, iv := range inputs {
+						output[ic] += iv * weight
+					}
+				}
+				fmt.Println()
+			}
+			fmt.Println("----")
+		}
+	}
+}
+
+func ConvolveTo2WorksForPadding1(
+	ow, oh int, output []float64,
+	iw, ih int, inputs []float64,
+	fw, fh int, filter []float64,
+	channels int,
+	padding int,
+) {
+	// todo implement stride param
+	//fHiW := fh * iw
+	//oHiW := oh * iw
+
+	iSquare := iw * ih
+	//iCube := iSquare * channels
+
+	wCoord := 0
+
+	for fz := 0; fz < channels; fz++ {
+		for fy := 0; fy < fh; fy++ {
+			for fx := 0; fx < fw; fx++ {
+				weight := filter[wCoord]
+				if false {
+					fmt.Println("weight", weight)
+				}
+				wCoord++
+
+				oyOffset := positive(padding - fy)
+				oxOffset := positive(padding - fx)
+
+				for oy := oyOffset; oy < oh-positive(fy-padding); oy++ {
+					ox := oxOffset
+					OW := ow - ox - positive(fx-padding)
+
+					iy := oy - positive(padding-fy) + positive(fy-padding)
+					ix := positive(fx - padding)
+
+					fmt.Println("oy", oy, "ox", ox, "OW", OW, "|", "iy", iy, "ix", ix)
+
+					output := output[oy*ow+ox : oy*ow+ox+OW]
+					inputs := inputs[fz*iSquare+iy*iw+ix : fz*iSquare+iy*iw+ix+OW]
+
+					//fmt.Println("output", output)
+					//fmt.Println("inputs", inputs)
+
+					if len(inputs) != len(output) {
+						panic("invalid length")
+					}
+
+					for ic, iv := range inputs {
+						output[ic] += iv * weight
+					}
+				}
+				fmt.Println()
+			}
+			fmt.Println("----")
+		}
+	}
+}
+
 // Convolve2dBatchTo convolve each 2d-input by each 2d-filter and store separate convolution result in output
 func Convolve2dBatchTo(
 	ow, oh int, output []float64,
@@ -334,7 +514,7 @@ func Convolve2dBatchTo(
 	fw, fh, fc int, filter []float64,
 	padding int,
 ) {
-	iw, ih, _, inputs = AddPadding(inputs, iw, ih, ic*fc, padding)
+	//iw, ih, _, inputs = AddPadding(inputs, iw, ih, ic*fc, padding)
 
 	outputSquare := ow * oh
 	inputsSquare := iw * ih
@@ -346,11 +526,12 @@ func Convolve2dBatchTo(
 	for ii := 0; ii < ic; ii++ {
 		filterOffset := 0
 		for fi := 0; fi < fc; fi++ {
-			ConvolvePaddedTo(
+			ConvolveTo2(
 				ow, oh, output[outputOffset:outputOffset+outputSquare],
 				iw, ih, inputs[inputsOffset:inputsOffset+inputsSquare],
 				fw, fh, filter[filterOffset:filterOffset+filterSquare],
 				1,
+				padding,
 			)
 
 			outputOffset += outputSquare

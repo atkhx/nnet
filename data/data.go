@@ -357,7 +357,7 @@ func (m *Data) Conv(
 			filter := filters.Data.GetRows(filterIndex)
 			featureMap := outputData[offset : offset+outputSquare]
 
-			ConvolveTo(
+			ConvolveTo2(
 				outImageWidth, outImageHeight, featureMap,
 				imageWidth, imageHeight, image.Data,
 				filterSize, filterSize, filter.Data,
@@ -374,7 +374,6 @@ func (m *Data) Conv(
 		inputs := m
 
 		outputGrad := outMatrix.Grad
-		outputGradPad := WrapVolume(AddPadding(outputGrad.Data, outImageWidth, outImageHeight, filtersCount*imagesCount, filterSize-1-padding))
 
 		filtersRot := filters.Data.
 			Reshape(filterSize, filterSize, filtersCount*channels).
@@ -401,15 +400,14 @@ func (m *Data) Conv(
 					padding,
 				)
 
-				deltasPad := outputGradPad.GetRows(imageIndex*filtersCount + filterIndex)
 				filterRot := filtersRot.GetRows(filterIndex)
 
 				// dI = DyPad x Wrot180
 				Convolve2dBatchTo(
 					imageWidth, imageHeight, iGrads.Data,
-					deltasPad.W, deltasPad.H, 1, deltasPad.Data,
+					deltas.W, deltas.H, 1, deltas.Data,
 					filterSize, filterSize, channels, filterRot.Data,
-					0,
+					padding,
 				)
 			}
 		}

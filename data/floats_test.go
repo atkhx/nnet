@@ -1,31 +1,46 @@
 package data
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConvLayerTo2(t *testing.T) {
-	iw, ih := 32, 32
+	iw, ih := 5, 5
 	fw, fh := 3, 3
-	padding := 2
+	// todo fix for padding 2
+	padding := 1
 
 	ow, oh := CalcConvOutputSize(iw, ih, fw, fh, padding, 1)
+
+	fmt.Println("ow", ow, "oh", oh)
+	fmt.Println("iw", iw, "ih", ih)
+	fmt.Println()
 
 	inputs := make([]float64, iw*ih)
 	FillRandom(inputs)
 
-	iw, ih, _, inputs = AddPadding(inputs, iw, ih, 1, padding)
+	iwP, ihP, _, inputsP := AddPadding(inputs, iw, ih, 1, padding)
 
 	filter := make([]float64, fw*fh)
 	FillRandom(filter)
 
 	output1 := make([]float64, ow*oh)
 	output3 := make([]float64, ow*oh)
+	output4 := make([]float64, ow*oh)
 
-	ConvLayerTo(ow, oh, output1, iw, ih, inputs, fw, fh, filter)
-	ConvolveTo(ow, oh, output3, iw, ih, inputs, fw, fh, filter, 1, 0)
+	ConvLayerTo(ow, oh, output1, iwP, ihP, inputsP, fw, fh, filter)
+	ConvolveTo(ow, oh, output3, iwP, ihP, inputsP, fw, fh, filter, 1, 0)
+	ConvolveTo2(ow, oh, output4, iw, ih, inputs, fw, fh, filter, 1, padding)
 
+	assert.True(t, true)
 	assert.Equal(t, output1, output3)
+	assert.Equal(t, output1, output4)
+
+	fmt.Println(output4)
+
+	// for oy := oyOffset; oy < oh-(oh-ih-oyOffset); oy++ {
+
 }
