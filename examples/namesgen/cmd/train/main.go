@@ -6,36 +6,35 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 
-	data2 "github.com/atkhx/nnet/data"
-	"github.com/atkhx/nnet/examples/bigram/data"
-	"github.com/atkhx/nnet/examples/bigram/pkg"
+	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/examples/namesgen/dataset"
+	"github.com/atkhx/nnet/examples/namesgen/pkg"
 	"github.com/atkhx/nnet/net"
 	"github.com/atkhx/nnet/trainer"
 )
 
 const (
-	batchSize   = 1
 	epochsCount = 1
 )
 
-var (
-	nnetCfgFile string
-)
+var nnetCfgFile string
 
 func init() {
-	flag.StringVar(&nnetCfgFile, "c", "./examples/bigram/config.json", "nn config file")
+	rand.Seed(time.Now().UnixNano())
+
+	flag.StringVar(&nnetCfgFile, "c", "./examples/namesgen/config.json", "nn config file")
 	flag.Parse()
 }
 
 func main() {
-	//fmt.Println(math.Log(math.E))
-	//return
 	var err error
 	defer func() {
 		if err != nil {
@@ -43,10 +42,20 @@ func main() {
 		}
 	}()
 
+	fmt.Println("initialize names dataset")
+	fmt.Println("- contextSize:", dataset.NamesContextSize)
+	fmt.Println("- miniBatchSize:", dataset.NamesMiniBatchSize)
+
+	namesDataset := dataset.NewDataset(dataset.NamesContextSize, dataset.NamesMiniBatchSize, dataset.Names)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	fmt.Println("create nn")
-	nn := pkg.CreateNN(data.AlphabetSize, data.WordLen)
+	nn := pkg.CreateNN(
+		namesDataset.GetAlphabetSize(),
+		namesDataset.GetContextSize(),
+		namesDataset.GetMiniBatchSize(),
+	)
 
 	fmt.Println("load nn pretrain config from", nnetCfgFile)
 	pretrainedConfig, err := os.ReadFile(nnetCfgFile)
@@ -62,10 +71,7 @@ func main() {
 	}
 
 	fmt.Println("create trainer")
-	netTrainer := trainer.New(
-		nn,
-		//trainer.WithMethod(methods.VanilaSGD(0.1)),
-	)
+	netTrainer := trainer.New(nn)
 
 	var sampleIndex int
 	defer func() {
@@ -75,8 +81,11 @@ func main() {
 		}
 	}()
 
-	lossSum := 0.0
 	statChunkSize := 1000
+
+	fmt.Println("show statistics every", statChunkSize, "iteration")
+
+	lossSum := 0.0
 	totalLossSum := 0.0
 
 	trainStopped := make(chan any)
@@ -85,27 +94,24 @@ func main() {
 			fmt.Println()
 			fmt.Println("nn training stopped")
 			fmt.Println("- samples seen", sampleIndex)
-			fmt.Println("- totalLossSum", totalLossSum/float64(len(data.Samples)))
+			fmt.Println("- totalLossSum", totalLossSum/float64(namesDataset.GetSamplesCount()))
 			fmt.Println("- totalLossAvg", fmt.Sprintf("%.8f", totalLossSum/float64(sampleIndex)))
 
 			trainStopped <- true
 		}()
 
 		fmt.Println("nn training started")
-		statChunkSize = 1000
 		for epoch := 0; epoch < epochsCount; epoch++ {
-			//for sampleIndex = 0; sampleIndex < len(data.Samples); sampleIndex++ {
-			for sampleIndex = 0; sampleIndex < 100_000; sampleIndex++ {
+			for sampleIndex = 0; sampleIndex < namesDataset.GetSamplesCount(); sampleIndex++ {
 				select {
 				case <-ctx.Done():
 					return
 				default:
 				}
 
-				sample := data.Samples[sampleIndex]
-
-				lossObject := netTrainer.Forward(sample.Input, func(output *data2.Data) *data2.Data {
-					return output.Classification(sample.Target).Mean()
+				input, target, _ := namesDataset.ReadRandomSampleBatch()
+				lossObject := netTrainer.Forward(input, func(output *data.Data) *data.Data {
+					return output.CrossEntropy(target).Mean()
 				})
 
 				loss := lossObject.Data.Data[0]
@@ -113,9 +119,11 @@ func main() {
 				totalLossSum += loss
 
 				if sampleIndex > 0 && sampleIndex%statChunkSize == 0 {
-					//fmt.Println()
-					//fmt.Println("avg stat for samples", sampleIndex, "-", sampleIndex+statChunkSize)
-					fmt.Println("- avg loss err\t", fmt.Sprintf("%.8f", lossSum/float64(statChunkSize)))
+					fmt.Println(
+						"",
+						"\t- avg loss err\t", fmt.Sprintf("%.8f", lossSum/float64(statChunkSize)),
+						"\t - last loss\t", fmt.Sprintf("%.8f", loss),
+					)
 					lossSum = 0.0
 				}
 			}

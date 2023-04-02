@@ -8,6 +8,8 @@ import (
 
 func New(options ...Option) *Conv {
 	layer := &Conv{}
+	layer.gain = data.ReLuGain
+	layer.batchSize = 1
 
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
@@ -18,10 +20,13 @@ func New(options ...Option) *Conv {
 		layer.FiltersCount,
 	)
 
-	layer.Filters.Data.MulScalar(data.ReLuGain / math.Pow(float64(layer.FilterSize*layer.FilterSize*layer.inputChannels), 0.5))
+	if layer.gain > 0 {
+		fanIn := layer.FilterSize * layer.FilterSize * layer.inputChannels * layer.batchSize
+		initK := layer.gain / math.Pow(float64(fanIn), 0.5)
+		layer.Filters.Data.MulScalar(initK)
+	}
 
 	layer.Biases = data.NewData(layer.FiltersCount, 1, 1)
-
 	return layer
 }
 
@@ -37,6 +42,9 @@ type Conv struct {
 	inputWidth    int
 	inputHeight   int
 	inputChannels int
+
+	batchSize int
+	gain      float64
 
 	inputs *data.Data
 	output *data.Data

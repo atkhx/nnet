@@ -22,6 +22,18 @@ func WithInputSize(inputSize int) Option {
 	}
 }
 
+func WithBatchSize(batchSize int) Option {
+	return func(layer *FC) {
+		layer.batchSize = batchSize
+	}
+}
+
+func WithGain(gain float64) Option {
+	return func(layer *FC) {
+		layer.gain = gain
+	}
+}
+
 func WithBiases(WithBiases bool) Option {
 	return func(layer *FC) {
 		layer.WithBiases = WithBiases

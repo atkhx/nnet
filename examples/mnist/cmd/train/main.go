@@ -21,6 +21,7 @@ import (
 
 const (
 	epochsCount = 1
+	batchSize   = 1
 )
 
 var (
@@ -45,7 +46,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	fmt.Println("create convNet")
-	convNet := pkg.CreateConvNet()
+	convNet := pkg.CreateConvNet(batchSize)
 
 	fmt.Println("load convNet pretrain config from", nnetCfgFile)
 	pretrainedConfig, err := os.ReadFile(nnetCfgFile)
@@ -70,39 +71,37 @@ func main() {
 	netTrainer := trainer.New(convNet)
 
 	var sampleIndex int
-	//defer func() {
-	//	fmt.Println("save convNet pretrain config to", nnetCfgFile)
-	//	if err = saveConvNet(convNet, nnetCfgFile); err != nil {
-	//		return
-	//	}
-	//}()
+	defer func() {
+		fmt.Println("save convNet pretrain config to", nnetCfgFile)
+		if err = saveConvNet(convNet, nnetCfgFile); err != nil {
+			return
+		}
+	}()
 
 	lossSum := 0.0
-	//success := 0
+	success := 0
 	statChunkSize := 1000
 
 	totalLossSum := 0.0
-	//totalSuccess := 0
+	totalSuccess := 0
 
 	trainStopped := make(chan any)
 	go func() {
 		defer func() {
-			//fmt.Println()
-			//fmt.Println("convNet training stopped")
-			//fmt.Println("- samples seen", sampleIndex)
-			//fmt.Println("- totalLossSum", totalLossSum)
-			//fmt.Println("- totalLossAvg", fmt.Sprintf("%.8f", totalLossSum/float64(sampleIndex)))
-			//fmt.Println("- totalSuccess", totalSuccess, "from", dataset.GetSamplesCount())
-			//fmt.Println("- success rate", fmt.Sprintf("%.2f%%", 100*float64(totalSuccess)/float64(sampleIndex)))
+			fmt.Println()
+			fmt.Println("convNet training stopped")
+			fmt.Println("- samples seen", sampleIndex)
+			fmt.Println("- totalLossSum", totalLossSum)
+			fmt.Println("- totalLossAvg", fmt.Sprintf("%.8f", totalLossSum/float64(sampleIndex)))
+			fmt.Println("- totalSuccess", totalSuccess, "from", dataset.GetSamplesCount())
+			fmt.Println("- success rate", fmt.Sprintf("%.2f%%", 100*float64(totalSuccess)/float64(sampleIndex)))
 
 			trainStopped <- true
 		}()
 
-		statChunkSize = 1
 		fmt.Println("convNet training started")
 		for epoch := 0; epoch < epochsCount; epoch++ {
 			for sampleIndex = 0; sampleIndex < dataset.GetSamplesCount(); sampleIndex++ {
-				//for sampleIndex = 0; sampleIndex < 2000; sampleIndex++ {
 				select {
 				case <-ctx.Done():
 					return
@@ -114,12 +113,11 @@ func main() {
 					return
 				}
 
-				//fmt.Println("input", input.GetDims())
-				//fmt.Println("input", input.Data)
+				lossObject := netTrainer.Forward(input, func(out *data.Data) *data.Data {
+					output := data.WrapData(out.Data.W, out.Data.H, out.Data.D, out.Softmax().Data.Data)
 
-				lossObject := netTrainer.Forward(input, func(output *data.Data) *data.Data {
-					loss := output.Classification(target).Mean()
-					return loss
+					success += isSuccessPrediction(output, target)
+					return out.CrossEntropy(target).Mean()
 				})
 
 				loss := lossObject.Data.Data[0]
@@ -127,18 +125,13 @@ func main() {
 				totalLossSum += loss
 
 				if sampleIndex%statChunkSize == 0 {
-					fmt.Println("lossObject", lossObject.Data)
-					//fmt.Println()
-					//fmt.Println("avg stat for samples", sampleIndex, "-", sampleIndex+statChunkSize)
-					//fmt.Println("- avg loss err\t", fmt.Sprintf("%.8f", lossSum/float64(statChunkSize)))
-					//fmt.Println("- success rate\t", fmt.Sprintf("%.2f%%", 100*float64(success)/float64(statChunkSize)))
+					fmt.Println()
+					fmt.Println("avg stat for samples", sampleIndex, "-", sampleIndex+statChunkSize)
+					fmt.Println("- avg loss err\t", fmt.Sprintf("%.8f", lossSum/float64(statChunkSize)))
+					fmt.Println("- success rate\t", fmt.Sprintf("%.2f%%", 100*float64(success)/float64(statChunkSize)))
 
-					//success = 0
+					success = 0
 					lossSum = 0.0
-				}
-
-				if sampleIndex > 10 {
-					return
 				}
 			}
 		}
@@ -152,6 +145,18 @@ func main() {
 		cancel()
 		<-trainStopped
 	}
+}
+
+func isSuccessPrediction(output, target *data.Data) (successCount int) {
+	for row := 0; row < target.Data.H; row++ {
+		_, resultIndex := output.Data.GetRow(row, 0).GetMax()
+		_, targetIndex := target.Data.GetRow(row, 0).GetMax()
+
+		if resultIndex == targetIndex {
+			successCount++
+		}
+	}
+	return
 }
 
 func saveConvNet(

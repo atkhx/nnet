@@ -85,6 +85,7 @@ func (m *Data) Sigmoid() (outMatrix *Data) {
 
 func (m *Data) Relu() (outMatrix *Data) {
 	return m.generate(m.Data.Copy().Relu(), func() {
+		//return m.generate(m.Data.Relu(), func() {
 		for i, v := range outMatrix.Data.Data {
 			if v > 0 {
 				m.Grad.Data[i] += outMatrix.Grad.Data[i]
@@ -338,34 +339,59 @@ func (m *Data) Conv(
 ) (outMatrix *Data) {
 	imagesCount := m.Data.D
 	filtersCount := filters.Data.D
-	channels := m.Data.H
 
 	outImageWidth, outImageHeight := CalcConvOutputSize(
 		imageWidth, imageHeight,
 		filterSize, filterSize,
 		padding, stride,
 	)
+
+	outputSquare := outImageWidth * outImageHeight
+	outputData := make([]float64, outputSquare*imagesCount*filtersCount)
+
+	return m.ConvTo(
+		outImageWidth, outImageHeight, outputData,
+		imageWidth, imageHeight, filterSize, padding, stride,
+		filters,
+		biases,
+	)
+}
+
+func (m *Data) ConvTo(
+	outImageWidth, outImageHeight int, outputData []float64,
+	imageWidth, imageHeight, filterSize, padding, stride int,
+	filters *Data,
+	biases *Data,
+) (outMatrix *Data) {
+	imagesCount := m.Data.D
+	filtersCount := filters.Data.D
+	channels := m.Data.H
+
+	//outImageWidth, outImageHeight := CalcConvOutputSize(
+	//	imageWidth, imageHeight,
+	//	filterSize, filterSize,
+	//	padding, stride,
+	//)
 	outputSquare := outImageWidth * outImageHeight
 
-	outputData := make([]float64, outputSquare*imagesCount*filtersCount)
+	//outputData := make([]float64, outputSquare*imagesCount*filtersCount)
 
 	offset := 0
 	for imageIndex := 0; imageIndex < imagesCount; imageIndex++ {
 		image := m.Data.GetRows(imageIndex)
 
 		for filterIndex := 0; filterIndex < filtersCount; filterIndex++ {
-			filter := filters.Data.GetRows(filterIndex)
 			featureMap := outputData[offset : offset+outputSquare]
+			Fill(featureMap, biases.Data.Data[filterIndex])
 
-			ConvolveTo2(
+			ConvTo(
 				outImageWidth, outImageHeight, featureMap,
 				imageWidth, imageHeight, image.Data,
-				filterSize, filterSize, filter.Data,
+				filterSize, filterSize, filters.Data.GetRows(filterIndex).Data,
 				channels,
 				padding,
 			)
-
-			AddScalarTo(featureMap, biases.Data.Data[filterIndex])
+			//AddScalarTo(featureMap, biases.Data.Data[filterIndex])
 			offset += outputSquare
 		}
 	}
@@ -388,32 +414,44 @@ func (m *Data) Conv(
 
 			for filterIndex := 0; filterIndex < filtersCount; filterIndex++ {
 				deltas := outputGrad.GetRows(imageIndex*filtersCount + filterIndex)
-				wGrads := filters.Grad.GetRows(filterIndex)
-
 				biases.Grad.Data[filterIndex] += deltas.Sum().Data[0]
 
-				// dW = I x Dy
-				Convolve2dBatchTo(
-					filterSize, filterSize, wGrads.Data,
+				filtersGrad := filters.Grad.GetRows(filterIndex).Data
+				filtersRotGrad := filtersRot.GetRows(filterIndex).Data
+
+				// fWH[D] = iWH[D] x Dy[1]
+				// dW     = I      x Dy
+				Convolve2dBatchTo22(
+					filterSize, filterSize, filtersGrad,
 					imageWidth, imageHeight, channels, inputs.Data,
 					outImageWidth, outImageHeight, 1, deltas.Data,
 					padding,
 				)
 
-				filterRot := filtersRot.GetRows(filterIndex)
-
-				// dI = DyPad x Wrot180
+				// iWH[D] = oWoH[1] x fWH[D]
+				// dI     = DyPad   x Wrot180
 				Convolve2dBatchTo(
 					imageWidth, imageHeight, iGrads.Data,
 					deltas.W, deltas.H, 1, deltas.Data,
-					filterSize, filterSize, channels, filterRot.Data,
+					filterSize, filterSize, channels, filtersRotGrad,
 					padding,
 				)
+
+				//
 			}
 		}
 
 	}, m, filters, biases)
 }
+
+//
+//func calcFiltersGrad(
+//	filterSize int, filtersGrad []float64,
+//	imageWidth, imageHeight, channels int, inputs []float64,
+//	outImageWidth, outImageHeight, 1, deltas.Data
+//) {
+//
+//}
 
 func (m *Data) Softmax() (outMatrix *Data) {
 	out := m.Data.Copy()
@@ -501,6 +539,7 @@ func (m *Data) CrossEntropy(targets *Data) (outMatrix *Data) {
 		f.Softmax()
 	})
 
+	//fmt.Println("softmax", softmax.Data)
 	logLikelihood := NewVolume(1, m.Data.H, m.Data.D)
 
 	targets.Data.ScanRows(func(y, z int, row []float64) {
@@ -508,6 +547,7 @@ func (m *Data) CrossEntropy(targets *Data) (outMatrix *Data) {
 			logLikelihood.PointAdd(0, y, z, -t*math.Log(softmax.At(i, y, z)))
 		}
 	})
+	//fmt.Println("logLikelihood", logLikelihood.Data)
 
 	return m.generate(logLikelihood, func() {
 		outMatrix.Grad.ScanRows(func(y, z int, f []float64) {

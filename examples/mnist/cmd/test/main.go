@@ -38,7 +38,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	fmt.Println("create convNet")
-	convNet := pkg.CreateConvNet()
+	convNet := pkg.CreateConvNet(1)
 
 	fmt.Println("load convNet pretrain config from", nnetCfgFile)
 	pretrainedConfig, err := os.ReadFile(nnetCfgFile)
@@ -100,7 +100,6 @@ func main() {
 			output := convNet.Forward(input)
 
 			_, outputIndex := output.Data.GetMax()
-			//outputIndex := getMaxIndex(output)
 			_, targetIndex := target.Data.GetMax()
 
 			if outputIndex == targetIndex {
@@ -108,7 +107,7 @@ func main() {
 				totalSuccess++
 			}
 
-			lossVal := output.Classification(target).Mean().Data.Data[0]
+			lossVal := output.CrossEntropy(target).Mean().Data.Data[0]
 			lossSum += lossVal
 			totalLossSum += lossVal
 

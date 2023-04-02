@@ -317,6 +317,10 @@ func (obj *Volume) GetRows(z int) *Volume {
 	return WrapVolume(obj.W, obj.H, 1, obj.Data[z*obj.W*obj.H:(z+1)*obj.W*obj.H])
 }
 
+func (obj *Volume) GetRowsN(z, n int) *Volume {
+	return WrapVolume(obj.W, obj.H, 1, obj.Data[z*obj.W*obj.H:(z+n)*obj.W*obj.H])
+}
+
 func (obj *Volume) String() string {
 	var result string
 	var offset int

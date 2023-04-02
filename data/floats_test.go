@@ -28,15 +28,12 @@ func TestConvLayerTo2(t *testing.T) {
 	FillRandom(filter)
 
 	output1 := make([]float64, ow*oh)
-	output3 := make([]float64, ow*oh)
 	output4 := make([]float64, ow*oh)
 
 	ConvLayerTo(ow, oh, output1, iwP, ihP, inputsP, fw, fh, filter)
-	ConvolveTo(ow, oh, output3, iwP, ihP, inputsP, fw, fh, filter, 1, 0)
-	ConvolveTo2(ow, oh, output4, iw, ih, inputs, fw, fh, filter, 1, padding)
+	ConvTo(ow, oh, output4, iw, ih, inputs, fw, fh, filter, 1, padding)
 
 	assert.True(t, true)
-	assert.Equal(t, output1, output3)
 	assert.Equal(t, output1, output4)
 
 	fmt.Println(output4)

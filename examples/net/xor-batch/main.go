@@ -20,7 +20,7 @@ func main() {
 	rand.Seed(123)
 
 	statChunk := 1000
-	epochs := 10000
+	epochs := 10_000
 
 	inputs := data.WrapData(inputSize, batchSize, 1, []float64{
 		0, 0,
@@ -40,23 +40,22 @@ func main() {
 		fc.New(
 			fc.WithInputSize(inputSize),
 			fc.WithLayerSize(3),
+			fc.WithBiases(true),
+			fc.WithBatchSize(batchSize),
+			fc.WithGain(data.SigmoidGain),
 		),
 		activation.NewSigmoid(),
 		fc.New(
 			fc.WithInputSize(3),
 			fc.WithLayerSize(1),
+			fc.WithBiases(true),
+			fc.WithBatchSize(batchSize),
+			fc.WithGain(data.SigmoidGain),
 		),
 		activation.NewSigmoid(),
 	})
 
-	nnTrainer := trainer.New(
-		nn,
-		//trainer.WithMethod(methods.Adadelta(trainer.Ro, trainer.Eps)),
-		//trainer.WithMethod(methods.Adagard(0.1, trainer.Eps)),
-		//trainer.WithMethod(methods.Nesterov(0.1, 0.7)),
-		//trainer.WithMethod(methods.Momentum(0.1, 0.7)),
-		//trainer.WithMethod(methods.VanilaSGD(0.1)),
-	)
+	nnTrainer := trainer.New(nn)
 
 	for e := 0; e < epochs; e++ {
 		loss := nnTrainer.Forward(inputs, func(output *data.Data) *data.Data {

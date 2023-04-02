@@ -22,6 +22,18 @@ func WithInputSize(width, height, channels int) Option {
 	}
 }
 
+func WithBatchSize(batchSize int) Option {
+	return func(layer *Conv) {
+		layer.batchSize = batchSize
+	}
+}
+
+func WithGain(gain float64) Option {
+	return func(layer *Conv) {
+		layer.gain = gain
+	}
+}
+
 func WithFilterSize(filterSize int) Option {
 	return func(layer *Conv) {
 		layer.FilterSize = filterSize

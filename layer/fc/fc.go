@@ -8,16 +8,11 @@ import (
 
 func New(options ...Option) *FC {
 	layer := &FC{}
+	layer.gain = data.LinearGain
+	layer.batchSize = 1
+
 	applyOptions(layer, defaults...)
 	applyOptions(layer, options...)
-
-	//layer.Weights = data.NewRandomMinMax(
-	//	layer.layerSize,
-	//	layer.inputSize,
-	//	1,
-	//	-1,
-	//	1,
-	//)
 
 	layer.Weights = data.NewRandom(
 		layer.layerSize,
@@ -25,14 +20,10 @@ func New(options ...Option) *FC {
 		1,
 	)
 
-	//layer.Weights.Data.MulScalar(0.01)
-	layer.Weights.Data.MulScalar(data.ReLuGain / math.Pow(float64(layer.inputSize), 0.5))
-
-	//
-	//wk := math.Sqrt(2) / math.Sqrt(float64(layer.Weights.Data.Len()))
-	//for k := range layer.Weights.Data.Data {
-	//	layer.Weights.Data.Data[k] *= wk
-	//}
+	if layer.gain > 0 {
+		fanIn := layer.inputSize * layer.batchSize
+		layer.Weights.Data.MulScalar(layer.gain / math.Pow(float64(fanIn), 0.5))
+	}
 
 	if layer.WithBiases {
 		layer.Biases = data.NewData(layer.layerSize, 1, 1)
@@ -44,12 +35,15 @@ func New(options ...Option) *FC {
 type FC struct {
 	layerSize int
 	inputSize int
+	batchSize int
 
 	inputs, output *data.Data
 
 	// public for easy persist by marshaling network
 	Weights *data.Data
 	Biases  *data.Data
+
+	gain float64
 
 	WithBiases bool
 }

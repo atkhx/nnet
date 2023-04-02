@@ -6,17 +6,12 @@ import (
 	"github.com/atkhx/nnet/layer/activation"
 	"github.com/atkhx/nnet/layer/conv"
 	"github.com/atkhx/nnet/layer/fc"
+	"github.com/atkhx/nnet/layer/maxpooling"
 	"github.com/atkhx/nnet/layer/reshape"
-	"github.com/atkhx/nnet/layer/softmax"
 	"github.com/atkhx/nnet/net"
 )
 
-func CreateConvNet() *net.FeedForward {
-	return CreateConvNetOneLayer()
-	return CreateConvNetTwoLayer()
-}
-
-func CreateConvNetTwoLayer() *net.FeedForward {
+func CreateConvNet(batchSize int) *net.FeedForward {
 	return net.New(
 		net.Layers{
 			conv.New(
@@ -25,122 +20,46 @@ func CreateConvNetTwoLayer() *net.FeedForward {
 					mnist.ImageHeight,
 					mnist.ImageDepth,
 				),
-				conv.WithFilterSize(3),
+				conv.WithFilterSize(5),
 				conv.WithFiltersCount(16),
-				conv.WithPadding(0),
-				// out: 26 x 26 x 16
+				conv.WithPadding(2),
+				conv.WithBatchSize(batchSize),
+				conv.WithGain(data.ReLuGain),
 			),
+
 			activation.NewReLu(),
-			//
-			//conv.New(
-			//	conv.WithInputSize(26, 26, 16),
-			//	conv.WithFilterSize(3),
-			//	conv.WithFiltersCount(3),
-			//	// out: 24 x 24 x 3
-			//),
-			//activation.NewReLu(),
 
-			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
-				return input.Generate(
-					data.WrapVolume(
-						input.Data.W*input.Data.H,
-						input.Data.D,
-						1,
-						data.Copy(input.Data.Data),
-					),
-					func() {
-						input.Grad.Data = data.Copy(outMatrix.Grad.Data)
-					},
-					input,
-				)
-			}),
-
-			fc.New(
-				//fc.WithInputSize(24*24*3),
-				fc.WithInputSize(26*26*3),
-				fc.WithLayerSize(10),
-				fc.WithBiases(true),
-			),
-			softmax.New(),
-		},
-	)
-}
-
-func CreateConvNetOneLayer() *net.FeedForward {
-	return net.New(
-		net.Layers{
-			conv.New(
-				conv.WithInputSize(
-					mnist.ImageWidth,
-					mnist.ImageHeight,
-					mnist.ImageDepth,
+			maxpooling.New(
+				maxpooling.WithInputSize(
+					28,
+					28,
+					16,
 				),
+				maxpooling.FilterSize(2),
+				maxpooling.Stride(2),
+			),
+
+			conv.New(
+				conv.WithInputSize(14, 14, 16),
 				conv.WithFilterSize(3),
-				conv.WithFiltersCount(16),
-				conv.WithPadding(0),
-				// out: 26 x 26 x 16
+				conv.WithFiltersCount(10),
+				conv.WithPadding(1),
+				conv.WithBatchSize(batchSize),
+				conv.WithGain(data.ReLuGain),
 			),
 			activation.NewReLu(),
 
-			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
-				return input.Generate(
-					data.WrapVolume(
-						input.Data.W*input.Data.H,
-						input.Data.D,
-						1,
-						data.Copy(input.Data.Data),
-					),
-					func() {
-						input.Grad.Data = data.Copy(outMatrix.Grad.Data)
-					},
-					input,
-				)
+			reshape.New(func(iw, ih, id int) (int, int, int) {
+				return iw * ih, id, 1
 			}),
 
 			fc.New(
-				fc.WithInputSize(26*26*16),
+				fc.WithInputSize(14*14*10),
 				fc.WithLayerSize(10),
 				fc.WithBiases(true),
+				fc.WithBatchSize(batchSize),
+				fc.WithGain(data.LinearGain),
 			),
-			softmax.New(),
-		},
-	)
-}
-
-func CreateNetFC() *net.FeedForward {
-	return net.New(
-		net.Layers{
-			fc.New(
-				fc.WithInputSize(28*28*1),
-				fc.WithLayerSize(20),
-				fc.WithBiases(true),
-			),
-			//activation.NewReLu(),
-			activation.NewTanh(),
-			fc.New(
-				fc.WithInputSize(20),
-				fc.WithLayerSize(10),
-				fc.WithBiases(true),
-			),
-			//activation.NewReLu(),
-			//activation.NewTanh(),
-
-			reshape.New(func(input *data.Data) (outMatrix *data.Data) {
-				return input.Generate(
-					data.WrapVolume(
-						input.Data.W*input.Data.H,
-						input.Data.D,
-						1,
-						data.Copy(input.Data.Data),
-					),
-					func() {
-						input.Grad.Data = data.Copy(outMatrix.Grad.Data)
-					},
-					input,
-				)
-			}),
-
-			softmax.New(),
 		},
 	)
 }
