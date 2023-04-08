@@ -401,3 +401,32 @@ func TestData_BatchNorm(t *testing.T) {
 	fmt.Println("outsubmean.Grad", outsubmean.Grad)
 	fmt.Println("outnorm.Grad", outnorm.Grad)
 }
+
+func TestData_RowMean(t *testing.T) {
+	inputs := WrapData(5, 2, 1, []float64{
+		0.1, 0.7, 0.3, 0.4, 0.7,
+		0.1, 0.1, -0.1, 0.1, 0.1,
+	})
+
+	mean := inputs.RowMean()
+	fmt.Println(mean.Data)
+}
+
+func TestData_RowVariance(t *testing.T) {
+	inputs := WrapData(5, 2, 1, []float64{
+		0.1, 0.7, 0.3, 0.4, 0.7,
+		0.1, 0.1, -0.1, 0.1, 0.1,
+	})
+
+	vars := inputs.RowVariance()
+	fmt.Println(vars.Data)
+
+	mean := vars.Mean()
+	fmt.Println("mean", mean)
+
+	mean.Backward()
+
+	fmt.Println("mean.grad", mean.Grad)
+	fmt.Println("vars.grad", vars.Grad)
+	fmt.Println("inputs.grad", inputs.Grad)
+}
