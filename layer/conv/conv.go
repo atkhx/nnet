@@ -1,7 +1,6 @@
 package conv
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/atkhx/nnet/data"
@@ -64,9 +63,9 @@ func (l *Conv) Forward(inputs *data.Data) *data.Data {
 		l.Biases,
 	)
 
-	fmt.Println("inputs dims", l.inputs.GetDims())
-	fmt.Println("output dims", l.output.GetDims())
-	fmt.Println("-------------------------")
+	//fmt.Println("inputs dims", l.inputs.GetDims())
+	//fmt.Println("output dims", l.output.GetDims())
+	//fmt.Println("-------------------------")
 	//os.Exit(1)
 
 	return l.output

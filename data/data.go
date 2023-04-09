@@ -55,6 +55,23 @@ func (m *Data) GetDims() []int {
 	return m.Data.GetDims()
 }
 
+func (m *Data) Reshape(w, h, d int) (outMatrix *Data) {
+	if w*h*d != m.Data.Len() {
+		panic(fmt.Sprintf("w*h*d != data.Len: %d != %d", w*h*d, m.Data.Len()))
+	}
+
+	return m.Generate(
+		WrapVolume(w, h, d, m.Data.Data),
+		func() {
+			if m.Grad == nil {
+				m.Grad = WrapVolume(m.Data.W, m.Data.H, m.Data.D, outMatrix.Grad.Data)
+			} else {
+				m.Grad.Data = outMatrix.Grad.Data
+			}
+		},
+	)
+}
+
 func (m *Data) Transpose() (outMatrix *Data) {
 	return m.generate(m.Data.Transpose(), func() {
 		m.Grad.Add(outMatrix.Grad.Transpose())
@@ -107,20 +124,6 @@ func (m *Data) Mean() (outMatrix *Data) {
 	})
 }
 
-func (m *Data) Std() (outMatrix *Data) {
-	return m.generate(m.Data.Std(), func() {
-		g := outMatrix.Grad.Data[0]
-		k := 1.0 / float64(m.Data.Len()-1)
-
-		out := outMatrix.Data.Data[0]
-		mean := m.Data.Mean().Data[0]
-
-		for offset := range m.Grad.Data {
-			m.Grad.Data[offset] += g * (1.0 / out) * (m.Data.Data[offset] - mean) * k
-		}
-	})
-}
-
 func (m *Data) ColMean() (outMatrix *Data) {
 	k := 1.0 / float64(m.Data.H)
 
@@ -140,14 +143,35 @@ func (m *Data) RowMean() (outMatrix *Data) {
 	k := 1.0 / float64(m.Data.W)
 
 	out := NewVolume(1, m.Data.H, m.Data.D)
-	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		out.PointAdd(0, y, z, k*v)
+	m.Data.ScanRowsVolume(func(y, z int, f *Volume) {
+		out.Set(0, y, z, k*f.Sum().Data[0])
 	})
 
 	return m.generate(out, func() {
-		m.Grad.Scan(func(x, y, z int, offset int, v float64) {
-			m.Grad.Data[offset] += outMatrix.Grad.At(0, y, z) * k
+		m.Grad.ScanRows(func(y, z int, f []float64) {
+			mgk := outMatrix.Grad.At(0, y, z) * k
+			for x := range f {
+				f[x] += mgk
+			}
 		})
+	})
+}
+
+func sqr(x float64) float64 {
+	return x * x
+}
+
+func (m *Data) Std() (outMatrix *Data) {
+	return m.generate(m.Data.Std(), func() {
+		g := outMatrix.Grad.Data[0]
+		k := 1.0 / float64(m.Data.Len()-1)
+
+		out := outMatrix.Data.Data[0]
+		mean := m.Data.Mean().Data[0]
+
+		for offset := range m.Grad.Data {
+			m.Grad.Data[offset] += g * (1.0 / out) * (m.Data.Data[offset] - mean) * k
+		}
 	})
 }
 
@@ -158,7 +182,11 @@ func (m *Data) RowVariance() (outMatrix *Data) {
 	k := 1.0 / float64(m.Data.W-1)
 
 	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		rowVars.PointAdd(0, y, z, math.Pow(v-rowMean.Data.At(0, y, z), 2)*k)
+		rowVars.PointAdd(0, y, z, sqr(v-rowMean.Data.At(0, y, z)))
+	})
+
+	rowVars.Scan(func(x, y, z int, offset int, v float64) {
+		rowVars.Data[offset] *= k
 	})
 
 	return m.generate(rowVars, func() {
@@ -269,8 +297,11 @@ func (m *Data) AddColVector(b *Data) (outMatrix *Data) {
 	}
 
 	out := m.Data.Copy()
-	out.Scan(func(x, y, z int, offset int, v float64) {
-		out.Data[offset] += b.Data.At(0, y, z)
+	out.ScanRows(func(y, z int, f []float64) {
+		C := b.Data.At(0, y, z)
+		for x := range f {
+			f[x] += C
+		}
 	})
 
 	return m.generate(out, func() {
@@ -305,8 +336,11 @@ func (m *Data) SubColVector(b *Data) (outMatrix *Data) {
 	}
 
 	out := m.Data.Copy()
-	out.Scan(func(x, y, z int, offset int, v float64) {
-		out.Data[offset] -= b.Data.At(0, y, z)
+	out.ScanRows(func(y, z int, f []float64) {
+		C := b.Data.At(0, y, z)
+		for x := range f {
+			f[x] -= C
+		}
 	})
 
 	return m.generate(out, func() {
@@ -341,8 +375,14 @@ func (m *Data) MulColVector(b *Data) (outMatrix *Data) {
 	}
 
 	out := m.Data.Copy()
-	out.Scan(func(x, y, z int, offset int, v float64) {
-		out.Data[offset] *= b.Data.At(0, y, z)
+	//out.Scan(func(x, y, z int, offset int, v float64) {
+	//	out.Data[offset] *= b.Data.At(0, y, z)
+	//})
+	out.ScanRows(func(y, z int, f []float64) {
+		C := b.Data.At(0, y, z)
+		for x := range f {
+			f[x] *= C
+		}
 	})
 
 	return m.generate(out, func() {
@@ -394,15 +434,18 @@ func (m *Data) DivColVector(b *Data) (outMatrix *Data) {
 	})
 
 	return m.generate(out, func() {
-		outMatrix.Grad.Scan(func(x, y, z int, offset int, g float64) {
-			bValue := b.Data.At(0, y, z)
-			bSquare := bValue * bValue
-			if bSquare == 0 {
-				bSquare = 0.0000000001
-			}
+		bSquare := b.Data.Copy()
+		for k, v := range bSquare.Data {
+			bSquare.Data[k] = -1.0 / (v * v)
+		}
 
-			m.Grad.Data[offset] += g / b.Data.At(0, y, z)
-			b.Grad.PointAdd(0, y, z, g*m.Data.Data[offset]*(-1.0/(bValue*bValue)))
+		outMatrix.Grad.Scan(func(x, y, z int, offset int, g float64) {
+			bData := b.Data.At(0, y, z)
+			bDSqr := bSquare.At(0, y, z)
+			iData := m.Data.Data[offset]
+
+			m.Grad.Data[offset] += g / bData
+			b.Grad.PointAdd(0, y, z, g*iData*bDSqr)
 		})
 	}, b)
 }
