@@ -18,13 +18,11 @@ func Round(v, k float64) float64 {
 
 func RoundFloats(src []float64, k float64) []float64 {
 	out := Copy(src)
-	for i, v := range out {
-		out[i] = math.Round(v*k) / k
-	}
+	RoundFloatsTo(out, k)
 	return out
 }
 
-func RoundTo(floats []float64, k float64) {
+func RoundFloatsTo(floats []float64, k float64) {
 	for i, v := range floats {
 		floats[i] = math.Round(v*k) / k
 	}
@@ -51,18 +49,6 @@ func FillRandom(dst []float64) {
 func MakeRandom(size int) (out []float64) {
 	out = make([]float64, size)
 	FillRandom(out)
-	return
-}
-
-func FillRandomMinMax(dst []float64, min, max float64) {
-	for i := range dst {
-		dst[i] = min + (max-min)*rand.Float64()
-	}
-}
-
-func MakeRandomMinMax(size int, min, max float64) (out []float64) {
-	out = make([]float64, size)
-	FillRandomMinMax(out, min, max)
 	return
 }
 

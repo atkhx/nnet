@@ -28,11 +28,11 @@ func (obj *Volume) GetDims() []int {
 	return []int{obj.W, obj.H, obj.D}
 }
 
-func (obj *Volume) Len() int {
+func (obj *Volume) GetLen() int {
 	return len(obj.Data)
 }
 
-func (obj *Volume) GetMax() (float64, int) {
+func (obj *Volume) GetMax() (maxValue float64, maxIndex int) {
 	return GetMax(obj.Data)
 }
 
@@ -41,7 +41,7 @@ func (obj *Volume) Sum() *Volume {
 }
 
 func (obj *Volume) Mean() *Volume {
-	return WrapVolume(1, 1, 1, []float64{Sum(obj.Data) / float64(obj.Len())})
+	return WrapVolume(1, 1, 1, []float64{Sum(obj.Data) / float64(obj.GetLen())})
 }
 
 func (obj *Volume) Std() *Volume {
@@ -51,7 +51,7 @@ func (obj *Volume) Std() *Volume {
 	for _, v := range obj.Data {
 		out += math.Pow(v-mean, 2)
 	}
-	out /= float64(obj.Len() - 1)
+	out /= float64(obj.GetLen() - 1)
 	out = math.Sqrt(out)
 
 	return WrapVolume(1, 1, 1, []float64{out})
@@ -315,10 +315,6 @@ func (obj *Volume) GetRow(y, z int) *Volume {
 
 func (obj *Volume) GetRows(z int) *Volume {
 	return WrapVolume(obj.W, obj.H, 1, obj.Data[z*obj.W*obj.H:(z+1)*obj.W*obj.H])
-}
-
-func (obj *Volume) GetRowsN(z, n int) *Volume {
-	return WrapVolume(obj.W, obj.H, 1, obj.Data[z*obj.W*obj.H:(z+n)*obj.W*obj.H])
 }
 
 func (obj *Volume) String() string {

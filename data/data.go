@@ -56,20 +56,16 @@ func (m *Data) GetDims() []int {
 }
 
 func (m *Data) Reshape(w, h, d int) (outMatrix *Data) {
-	if w*h*d != m.Data.Len() {
-		panic(fmt.Sprintf("w*h*d != data.Len: %d != %d", w*h*d, m.Data.Len()))
+	if w*h*d != m.Data.GetLen() {
+		panic(fmt.Sprintf("w*h*d != data.Len: %d != %d", w*h*d, m.Data.GetLen()))
 	}
 
-	return m.Generate(
-		WrapVolume(w, h, d, m.Data.Data),
-		func() {
-			if m.Grad == nil {
-				m.Grad = WrapVolume(m.Data.W, m.Data.H, m.Data.D, outMatrix.Grad.Data)
-			} else {
-				m.Grad.Data = outMatrix.Grad.Data
-			}
-		},
-	)
+	// just to escape initialization on backward
+	m.Grad = &Volume{}
+
+	return m.Generate(WrapVolume(w, h, d, m.Data.Data), func() {
+		m.Grad = WrapVolume(m.Data.W, m.Data.H, m.Data.D, outMatrix.Grad.Data)
+	})
 }
 
 func (m *Data) Transpose() (outMatrix *Data) {
@@ -79,7 +75,7 @@ func (m *Data) Transpose() (outMatrix *Data) {
 }
 
 func (m *Data) Flat() (outMatrix *Data) {
-	return m.generate(m.Data.Reshape(m.Data.Len(), 1, 1), func() {
+	return m.generate(m.Data.Reshape(m.Data.GetLen(), 1, 1), func() {
 		m.Grad.Add(outMatrix.Grad)
 	})
 }
@@ -119,7 +115,7 @@ func (m *Data) Sum() (outMatrix *Data) {
 
 func (m *Data) Mean() (outMatrix *Data) {
 	return m.generate(m.Data.Mean(), func() {
-		k := 1.0 / float64(m.Data.Len())
+		k := 1.0 / float64(m.Data.GetLen())
 		m.Grad.AddScalar(outMatrix.Grad.Data[0] * k)
 	})
 }
@@ -157,14 +153,10 @@ func (m *Data) RowMean() (outMatrix *Data) {
 	})
 }
 
-func sqr(x float64) float64 {
-	return x * x
-}
-
 func (m *Data) Std() (outMatrix *Data) {
 	return m.generate(m.Data.Std(), func() {
 		g := outMatrix.Grad.Data[0]
-		k := 1.0 / float64(m.Data.Len()-1)
+		k := 1.0 / float64(m.Data.GetLen()-1)
 
 		out := outMatrix.Data.Data[0]
 		mean := m.Data.Mean().Data[0]
@@ -182,7 +174,7 @@ func (m *Data) RowVariance() (outMatrix *Data) {
 	k := 1.0 / float64(m.Data.W-1)
 
 	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		rowVars.PointAdd(0, y, z, sqr(v-rowMean.Data.At(0, y, z)))
+		rowVars.PointAdd(0, y, z, math.Pow(v-rowMean.Data.At(0, y, z), 2.0))
 	})
 
 	rowVars.Scan(func(x, y, z int, offset int, v float64) {
@@ -375,14 +367,8 @@ func (m *Data) MulColVector(b *Data) (outMatrix *Data) {
 	}
 
 	out := m.Data.Copy()
-	//out.Scan(func(x, y, z int, offset int, v float64) {
-	//	out.Data[offset] *= b.Data.At(0, y, z)
-	//})
-	out.ScanRows(func(y, z int, f []float64) {
-		C := b.Data.At(0, y, z)
-		for x := range f {
-			f[x] *= C
-		}
+	out.ScanRowsVolume(func(y, z int, f *Volume) {
+		f.MulScalar(b.Data.At(0, y, z))
 	})
 
 	return m.generate(out, func() {
@@ -598,9 +584,9 @@ func (m *Data) Softmax() (outMatrix *Data) {
 
 	return m.generate(out, func() {
 		out.ScanRowsVolume(func(y, z int, f *Volume) {
-			for i := 0; i < f.Len(); i++ {
+			for i := 0; i < f.GetLen(); i++ {
 				g := outMatrix.Grad.At(i, y, z)
-				for j := 0; j < f.Len(); j++ {
+				for j := 0; j < f.GetLen(); j++ {
 					if i == j {
 						m.Grad.PointAdd(j, y, z, g*f.Data[i]*(1-f.Data[i]))
 					} else {
@@ -676,7 +662,6 @@ func (m *Data) CrossEntropy(targets *Data) (outMatrix *Data) {
 		f.Softmax()
 	})
 
-	//fmt.Println("softmax", softmax.Data)
 	logLikelihood := NewVolume(1, m.Data.H, m.Data.D)
 
 	targets.Data.ScanRows(func(y, z int, row []float64) {
@@ -684,7 +669,6 @@ func (m *Data) CrossEntropy(targets *Data) (outMatrix *Data) {
 			logLikelihood.PointAdd(0, y, z, -t*math.Log(softmax.At(i, y, z)))
 		}
 	})
-	//fmt.Println("logLikelihood", logLikelihood.Data)
 
 	return m.generate(logLikelihood, func() {
 		outMatrix.Grad.ScanRows(func(y, z int, f []float64) {

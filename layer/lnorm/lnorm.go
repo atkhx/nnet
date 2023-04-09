@@ -27,7 +27,7 @@ func (l *LayerNorm) Forward(inputs *data.Data) *data.Data {
 	//eps := 1e-5
 	W, H, D := inputs.Data.W, inputs.Data.H, inputs.Data.D
 
-	inputs = inputs.Reshape(inputs.Data.Len()/l.batchSize, l.batchSize, 1)
+	inputs = inputs.Reshape(inputs.Data.GetLen()/l.batchSize, l.batchSize, 1)
 
 	meanByRows := inputs.RowMean()
 	varsByRows := inputs.RowVariance()

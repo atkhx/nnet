@@ -27,7 +27,7 @@ func TestFC_AsEmbedding(t *testing.T) {
 	output := embed.Forward(input)
 	output = data.WrapData(
 		wordLength*featuresCount,
-		output.Data.Len()/(wordLength*featuresCount),
+		output.Data.GetLen()/(wordLength*featuresCount),
 		1,
 		output.Data.Data,
 	)

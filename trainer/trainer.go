@@ -32,17 +32,17 @@ func (t *trainer) getWeightsCount() (weightsCount int) {
 		l := t.net.GetLayer(i)
 
 		if withWeights, ok := l.(nnet.WithWeights); ok {
-			if withWeights.GetWeights().Data.Len() == 0 {
+			if withWeights.GetWeights().Data.GetLen() == 0 {
 				panic("weights len is zero")
 			}
-			weightsCount += withWeights.GetWeights().Data.Len()
+			weightsCount += withWeights.GetWeights().Data.GetLen()
 		}
 
 		if withBiases, ok := l.(nnet.WithBiases); ok && withBiases.HasBiases() {
-			if withBiases.GetBiases().Data.Len() == 0 {
+			if withBiases.GetBiases().Data.GetLen() == 0 {
 				panic("biases len is zero")
 			}
-			weightsCount += withBiases.GetBiases().Data.Len()
+			weightsCount += withBiases.GetBiases().Data.GetLen()
 		}
 	}
 	return
@@ -67,20 +67,20 @@ func (t *trainer) updateWeights() {
 			weights := withWeights.GetWeights()
 			t.updateWeightsWithUsingMethod(k, weights)
 
-			k += weights.Data.Len()
+			k += weights.Data.GetLen()
 		}
 
 		if withBiases, ok := l.(nnet.WithBiases); ok && withBiases.HasBiases() {
 			biases := withBiases.GetBiases()
 			t.updateWeightsWithUsingMethod(k, biases)
 
-			k += biases.Data.Len()
+			k += biases.Data.GetLen()
 		}
 	}
 }
 
 func (t *trainer) updateWeightsWithUsingMethod(offset int, w *data.Data) {
-	for j := 0; j < w.Data.Len(); j++ {
+	for j := 0; j < w.Data.GetLen(); j++ {
 		l1grad := t.l1Decay
 		if w.Data.Data[j] <= 0 {
 			l1grad = -l1grad
