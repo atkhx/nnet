@@ -29,7 +29,7 @@ func (l *LayerNorm) Forward(inputs *data.Data) *data.Data {
 
 	inputs = inputs.Reshape(inputs.Data.GetLen()/l.batchSize, l.batchSize, 1)
 
-	meanByRows := inputs.RowMean()
+	meanByRows := inputs.MeanByRows()
 	varsByRows := inputs.RowVariance()
 
 	//varsByRows.Data.AddScalar(eps)

@@ -138,6 +138,18 @@ func ExpTo(src []float64) {
 	}
 }
 
+func PowTo(src []float64, pow float64) {
+	for i, v := range src {
+		src[i] = math.Pow(v, pow)
+	}
+}
+
+func SqrtTo(src []float64) {
+	for i, v := range src {
+		src[i] = math.Sqrt(v)
+	}
+}
+
 func LogTo(src []float64) {
 	for i, v := range src {
 		src[i] = math.Log(v)

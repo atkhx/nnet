@@ -22,7 +22,7 @@ func TestData_ColMean(t *testing.T) {
 		0.7081, 0.3542, 0.1054,
 		0.5996, 0.0904, 0.0899,
 	})
-	mean := data.ColMean()
+	mean := data.MeanByCols()
 
 	assert.Equal(t, []float64{0.6539, 0.2223, 0.0976}, RoundFloats(mean.Data.Data, 10_000))
 
@@ -371,7 +371,7 @@ func TestData_BatchNorm(t *testing.T) {
 	})
 
 	output := inputs.MatrixMultiply(weights)
-	mean := output.ColMean()
+	mean := output.MeanByCols()
 	std := output.ColStd()
 
 	outsubmean := output.SubRowVector(mean)
@@ -408,7 +408,7 @@ func TestData_RowMean(t *testing.T) {
 		0.1, 0.1, -0.1, 0.1, 0.1,
 	})
 
-	mean := inputs.RowMean()
+	mean := inputs.MeanByRows()
 	fmt.Println(mean.Data)
 }
 

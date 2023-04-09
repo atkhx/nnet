@@ -43,10 +43,6 @@ func (m *Data) SetParentsAndBackwardFn(parents []*Data, backwardFn func()) {
 	m.backwardFn = backwardFn
 }
 
-func (m *Data) Generate(data *Volume, backwardFn func(), parents ...*Data) (outMatrix *Data) {
-	return m.generate(data, backwardFn, parents...)
-}
-
 func (m *Data) generate(data *Volume, backwardFn func(), parents ...*Data) (outMatrix *Data) {
 	return &Data{Data: data, backwardFn: backwardFn, parents: append([]*Data{m}, parents...)}
 }
@@ -56,27 +52,20 @@ func (m *Data) GetDims() []int {
 }
 
 func (m *Data) Reshape(w, h, d int) (outMatrix *Data) {
-	if w*h*d != m.Data.GetLen() {
-		panic(fmt.Sprintf("w*h*d != data.Len: %d != %d", w*h*d, m.Data.GetLen()))
-	}
-
-	// just to escape initialization on backward
-	m.Grad = &Volume{}
-
-	return m.Generate(WrapVolume(w, h, d, m.Data.Data), func() {
-		m.Grad = WrapVolume(m.Data.W, m.Data.H, m.Data.D, outMatrix.Grad.Data)
-	})
-}
-
-func (m *Data) Transpose() (outMatrix *Data) {
-	return m.generate(m.Data.Transpose(), func() {
-		m.Grad.Add(outMatrix.Grad.Transpose())
+	return m.generate(m.Data.Reshape(w, h, d), func() {
+		m.Grad.Add(outMatrix.Grad)
 	})
 }
 
 func (m *Data) Flat() (outMatrix *Data) {
 	return m.generate(m.Data.Reshape(m.Data.GetLen(), 1, 1), func() {
 		m.Grad.Add(outMatrix.Grad)
+	})
+}
+
+func (m *Data) Transpose() (outMatrix *Data) {
+	return m.generate(m.Data.Transpose(), func() {
+		m.Grad.Add(outMatrix.Grad.Transpose())
 	})
 }
 
@@ -98,7 +87,6 @@ func (m *Data) Sigmoid() (outMatrix *Data) {
 
 func (m *Data) Relu() (outMatrix *Data) {
 	return m.generate(m.Data.Copy().Relu(), func() {
-		//return m.generate(m.Data.Relu(), func() {
 		for i, v := range outMatrix.Data.Data {
 			if v > 0 {
 				m.Grad.Data[i] += outMatrix.Grad.Data[i]
@@ -115,40 +103,24 @@ func (m *Data) Sum() (outMatrix *Data) {
 
 func (m *Data) Mean() (outMatrix *Data) {
 	return m.generate(m.Data.Mean(), func() {
-		k := 1.0 / float64(m.Data.GetLen())
-		m.Grad.AddScalar(outMatrix.Grad.Data[0] * k)
+		m.Grad.AddScalar(outMatrix.Grad.Data[0] * (1.0 / float64(m.Data.GetLen())))
 	})
 }
 
-func (m *Data) ColMean() (outMatrix *Data) {
-	k := 1.0 / float64(m.Data.H)
-
-	out := NewVolume(m.Data.W, 1, m.Data.D)
-	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		out.PointAdd(x, 0, z, k*v)
-	})
-
-	return m.generate(out, func() {
-		m.Grad.Scan(func(x, y, z int, offset int, v float64) {
-			m.Grad.Data[offset] += outMatrix.Grad.At(x, 0, z) * k
+func (m *Data) MeanByCols() (outMatrix *Data) {
+	return m.generate(m.Data.MeanByCols(), func() {
+		grads := outMatrix.Grad.Copy().MulScalar(1.0 / float64(m.Data.H)).Data
+		m.Grad.EachRowVolume(func(gradRow *Volume) {
+			gradRow.AddFloats(grads)
 		})
 	})
 }
 
-func (m *Data) RowMean() (outMatrix *Data) {
-	k := 1.0 / float64(m.Data.W)
-
-	out := NewVolume(1, m.Data.H, m.Data.D)
-	m.Data.ScanRowsVolume(func(y, z int, f *Volume) {
-		out.Set(0, y, z, k*f.Sum().Data[0])
-	})
-
-	return m.generate(out, func() {
-		m.Grad.ScanRows(func(y, z int, f []float64) {
-			mgk := outMatrix.Grad.At(0, y, z) * k
-			for x := range f {
-				f[x] += mgk
-			}
+func (m *Data) MeanByRows() (outMatrix *Data) {
+	return m.generate(m.Data.MeanByRows(), func() {
+		k := 1.0 / float64(m.Data.W)
+		m.Grad.EachRowAbsNum(func(f []float64, n int) {
+			AddScalarTo(f, outMatrix.Grad.Data[n]*k)
 		})
 	})
 }
@@ -168,17 +140,18 @@ func (m *Data) Std() (outMatrix *Data) {
 }
 
 func (m *Data) RowVariance() (outMatrix *Data) {
-	rowMean := m.RowMean()
+	rowMean := m.MeanByRows()
 	rowVars := NewVolume(1, rowMean.Data.H, rowMean.Data.D)
 
 	k := 1.0 / float64(m.Data.W-1)
 
-	m.Data.Scan(func(x, y, z int, offset int, v float64) {
-		rowVars.PointAdd(0, y, z, math.Pow(v-rowMean.Data.At(0, y, z), 2.0))
-	})
-
-	rowVars.Scan(func(x, y, z int, offset int, v float64) {
-		rowVars.Data[offset] *= k
+	m.Data.EachRowAbsNum(func(f []float64, n int) {
+		V := 0.0
+		M := rowMean.Data.Data[n]
+		for _, v := range f {
+			V += (v - M) * (v - M)
+		}
+		rowVars.Data[n] = V * k
 	})
 
 	return m.generate(rowVars, func() {
@@ -188,11 +161,11 @@ func (m *Data) RowVariance() (outMatrix *Data) {
 
 			m.Grad.Data[offset] += G * 2.0 * (v - M) * k
 		})
-	})
+	}, rowMean)
 }
 
 func (m *Data) ColStd() (outMatrix *Data) {
-	colMean := m.ColMean()
+	colMean := m.MeanByCols()
 	colVariance := NewVolume(colMean.Data.W, 1, colMean.Data.D)
 	colStdDev := NewVolume(colMean.Data.W, 1, colMean.Data.D)
 
@@ -226,12 +199,7 @@ func (m *Data) ColStd() (outMatrix *Data) {
 }
 
 func (m *Data) Pow(pow float64) (outMatrix *Data) {
-	out := m.Data.Copy()
-	out.Scan(func(x, y, z int, offset int, v float64) {
-		out.Data[offset] = math.Pow(v, pow)
-	})
-
-	return m.generate(out, func() {
+	return m.generate(m.Data.Copy().Pow(pow), func() {
 		for i := range m.Grad.Data {
 			m.Grad.Data[i] += outMatrix.Grad.Data[i] * pow * math.Pow(m.Data.Data[i], pow-1)
 		}
@@ -239,12 +207,7 @@ func (m *Data) Pow(pow float64) (outMatrix *Data) {
 }
 
 func (m *Data) Sqrt() (outMatrix *Data) {
-	out := m.Data.Copy()
-	out.Scan(func(_, _, _ int, offset int, v float64) {
-		out.Data[offset] = math.Sqrt(v)
-	})
-
-	return m.generate(out, func() {
+	return m.generate(m.Data.Copy().Sqrt(), func() {
 		for i := range m.Grad.Data {
 			m.Grad.Data[i] += outMatrix.Grad.Data[i] * 0.5 * math.Pow(m.Data.Data[i], -0.5)
 		}
@@ -289,8 +252,8 @@ func (m *Data) AddColVector(b *Data) (outMatrix *Data) {
 	}
 
 	out := m.Data.Copy()
-	out.ScanRows(func(y, z int, f []float64) {
-		C := b.Data.At(0, y, z)
+	out.EachRowAbsNum(func(f []float64, n int) {
+		C := b.Data.Data[n]
 		for x := range f {
 			f[x] += C
 		}
@@ -298,13 +261,16 @@ func (m *Data) AddColVector(b *Data) (outMatrix *Data) {
 
 	return m.generate(out, func() {
 		m.Grad.Add(outMatrix.Grad)
-		outMatrix.Grad.Scan(func(x, y, z int, offset int, v float64) {
-			b.Grad.PointAdd(0, y, z, v)
+		outMatrix.Grad.EachRowAbsNum(func(f []float64, n int) {
+			b.Grad.Data[n] += Sum(f)
 		})
 	}, b)
 }
 
 func (m *Data) AddRowVector(b *Data) (outMatrix *Data) {
+	// now is adds matrix (W, H, D) with H = 1
+	// todo implement broadcasting?
+
 	if b.Data.H > 1 {
 		panic(fmt.Sprintf("bRowsCount > 1: %d", b.Data.H))
 	}
@@ -337,8 +303,8 @@ func (m *Data) SubColVector(b *Data) (outMatrix *Data) {
 
 	return m.generate(out, func() {
 		m.Grad.Add(outMatrix.Grad)
-		outMatrix.Grad.Scan(func(x, y, z int, offset int, v float64) {
-			b.Grad.PointAdd(0, y, z, -v)
+		outMatrix.Grad.EachRowAbsNum(func(f []float64, n int) {
+			b.Grad.Data[n] -= Sum(f)
 		})
 	}, b)
 }

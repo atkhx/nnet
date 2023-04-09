@@ -40,8 +40,32 @@ func (obj *Volume) Sum() *Volume {
 	return WrapVolume(1, 1, 1, []float64{Sum(obj.Data)})
 }
 
+func (obj *Volume) SumByCols() *Volume {
+	out := NewVolume(obj.W, 1, obj.D)
+	obj.EachRow(func(row []float64) {
+		out.AddFloats(row)
+	})
+	return out
+}
+
+func (obj *Volume) SumByRows() *Volume {
+	out := NewVolume(1, obj.H, obj.D)
+	obj.EachRowAbsNum(func(row []float64, n int) {
+		out.Data[n] = Sum(row)
+	})
+	return out
+}
+
 func (obj *Volume) Mean() *Volume {
 	return WrapVolume(1, 1, 1, []float64{Sum(obj.Data) / float64(obj.GetLen())})
+}
+
+func (obj *Volume) MeanByCols() *Volume {
+	return obj.SumByCols().MulScalar(1.0 / float64(obj.H))
+}
+
+func (obj *Volume) MeanByRows() *Volume {
+	return obj.SumByRows().MulScalar(1.0 / float64(obj.W))
 }
 
 func (obj *Volume) Std() *Volume {
@@ -57,26 +81,8 @@ func (obj *Volume) Std() *Volume {
 	return WrapVolume(1, 1, 1, []float64{out})
 }
 
-func (obj *Volume) RowMean() *Volume {
-	out := NewVolume(1, obj.H, obj.D)
-	obj.ScanRows(func(y, z int, f []float64) {
-		out.Set(0, y, z, Sum(f)/float64(len(f)))
-	})
-	return out
-}
-
-func (obj *Volume) ColMean() *Volume {
-	out := NewVolume(obj.W, 1, obj.D)
-	k := 1.0 / float64(obj.H)
-	obj.Scan(func(x, y, z int, offset int, v float64) {
-		out.PointAdd(x, 0, z, k*v)
-	})
-
-	return out
-}
-
 func (obj *Volume) ColStd() (*Volume, *Volume) {
-	colMean := obj.ColMean()
+	colMean := obj.MeanByCols()
 	colStd := NewVolume(colMean.W, 1, colMean.D)
 
 	k := 1.0 / float64(obj.H)
@@ -173,6 +179,12 @@ func (obj *Volume) AddFloats(src []float64) {
 	}
 }
 
+func (obj *Volume) SubScalar(f float64) {
+	for i, v := range obj.Data {
+		obj.Data[i] = v - f
+	}
+}
+
 func (obj *Volume) Sub(src *Volume) {
 	obj.SubFloats(src.Data)
 }
@@ -240,6 +252,16 @@ func (obj *Volume) Log() *Volume {
 	return obj
 }
 
+func (obj *Volume) Pow(pow float64) *Volume {
+	PowTo(obj.Data, pow)
+	return obj
+}
+
+func (obj *Volume) Sqrt() *Volume {
+	SqrtTo(obj.Data)
+	return obj
+}
+
 func (obj *Volume) Softmax() *Volume {
 	exps := obj.Exp()
 	sums := exps.Sum().Data[0]
@@ -263,6 +285,24 @@ func (obj *Volume) At(x, y, z int) float64 {
 
 func (obj *Volume) WrapRow(f []float64) *Volume {
 	return WrapVolume(obj.W, 1, 1, f)
+}
+
+func (obj *Volume) EachRow(fn func(f []float64)) {
+	for offset := 0; offset < obj.GetLen(); offset += obj.W {
+		fn(obj.Data[offset : offset+obj.W])
+	}
+}
+
+func (obj *Volume) EachRowVolume(fn func(f *Volume)) {
+	for offset := 0; offset < obj.GetLen(); offset += obj.W {
+		fn(obj.WrapRow(obj.Data[offset : offset+obj.W]))
+	}
+}
+
+func (obj *Volume) EachRowAbsNum(fn func(f []float64, n int)) {
+	for offset, n := 0, 0; offset < obj.GetLen(); offset, n = offset+obj.W, n+1 {
+		fn(obj.Data[offset:offset+obj.W], n)
+	}
 }
 
 func (obj *Volume) ScanRowsVolume(fn func(y, z int, f *Volume)) {
