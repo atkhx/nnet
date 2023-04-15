@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/atkhx/nnet/layers"
+	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/num"
 )
 
@@ -17,28 +17,28 @@ func TestSequential(t *testing.T) {
 
 	// FC Block 1
 	model.RegisterLayer(func(inputs, iGrads []float64) Layer {
-		return layers.NewFC(10, inputs, iGrads)
+		return layer.NewFC(10, inputs, iGrads)
 	})
 
 	model.RegisterLayer(func(inputs, iGrads []float64) Layer {
-		return layers.NewBias(inputs, iGrads)
+		return layer.NewBias(inputs, iGrads)
 	})
 
 	model.RegisterLayer(func(inputs, iGrads []float64) Layer {
-		return layers.NewSigmoid(inputs, iGrads)
+		return layer.NewSigmoid(inputs, iGrads)
 	})
 
 	// FC Block 2
 	model.RegisterLayer(func(inputs, iGrads []float64) Layer {
-		return layers.NewFC(1, inputs, iGrads)
+		return layer.NewFC(1, inputs, iGrads)
 	})
 
 	model.RegisterLayer(func(inputs, iGrads []float64) Layer {
-		return layers.NewBias(inputs, iGrads)
+		return layer.NewBias(inputs, iGrads)
 	})
 
 	model.RegisterLayer(func(inputs, iGrads []float64) Layer {
-		return layers.NewSigmoid(inputs, iGrads)
+		return layer.NewSigmoid(inputs, iGrads)
 	})
 
 	var loss float64

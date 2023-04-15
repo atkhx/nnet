@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/atkhx/nnet/layers"
+	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/model"
 )
@@ -12,38 +12,42 @@ var (
 	allInputs  = [][]float64{{0, 0}, {1, 0}, {0, 1}, {1, 1}}
 	allTargets = [][]float64{{0}, {1}, {1}, {0}}
 
+	inputsSize = 2
+	outputSize = 1
+	hiddenSize = 10
+
 	learningRate   = 0.01
 	learningEpochs = 100_000
 	statisticsStep = 1000
 )
 
 func main() {
-	seqModel := model.NewSequential(2)
+	seqModel := model.NewSequential(inputsSize)
 
 	// FC Block 1
 	seqModel.RegisterLayer(func(inputs, iGrads []float64) model.Layer {
-		return layers.NewFC(10, inputs, iGrads)
+		return layer.NewFC(hiddenSize, inputs, iGrads)
 	})
 
 	seqModel.RegisterLayer(func(inputs, iGrads []float64) model.Layer {
-		return layers.NewBias(inputs, iGrads)
+		return layer.NewBias(inputs, iGrads)
 	})
 
 	seqModel.RegisterLayer(func(inputs, iGrads []float64) model.Layer {
-		return layers.NewSigmoid(inputs, iGrads)
+		return layer.NewSigmoid(inputs, iGrads)
 	})
 
 	// FC Block 2
 	seqModel.RegisterLayer(func(inputs, iGrads []float64) model.Layer {
-		return layers.NewFC(1, inputs, iGrads)
+		return layer.NewFC(outputSize, inputs, iGrads)
 	})
 
 	seqModel.RegisterLayer(func(inputs, iGrads []float64) model.Layer {
-		return layers.NewBias(inputs, iGrads)
+		return layer.NewBias(inputs, iGrads)
 	})
 
 	seqModel.RegisterLayer(func(inputs, iGrads []float64) model.Layer {
-		return layers.NewSigmoid(inputs, iGrads)
+		return layer.NewSigmoid(inputs, iGrads)
 	})
 
 	lossAvg := 0.0

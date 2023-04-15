@@ -1,4 +1,4 @@
-package layers
+package layer
 
 func NewBias(inputs, iGrads []float64) *Bias {
 	return &Bias{

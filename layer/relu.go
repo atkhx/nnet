@@ -1,4 +1,4 @@
-package layers
+package layer
 
 func NewReLu(inputs, iGrads []float64) *ReLu {
 	return &ReLu{
