@@ -1,16 +1,7 @@
 package layer
 
-func NewBias(inputs, iGrads []float64) *Bias {
-	return &Bias{
-		weights: make([]float64, len(inputs)),
-		wGrads:  make([]float64, len(inputs)),
-
-		inputs: inputs,
-		iGrads: iGrads,
-
-		output: make([]float64, len(inputs)),
-		oGrads: make([]float64, len(inputs)),
-	}
+func NewBias() *Bias {
+	return &Bias{}
 }
 
 type Bias struct {
@@ -27,7 +18,16 @@ type Bias struct {
 	oGrads []float64
 }
 
-func (l *Bias) Buffers() (output, oGrads []float64) {
+func (l *Bias) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+	l.weights = make([]float64, len(inputs))
+	l.wGrads = make([]float64, len(inputs))
+
+	l.inputs = inputs
+	l.iGrads = iGrads
+
+	l.output = make([]float64, len(inputs))
+	l.oGrads = make([]float64, len(inputs))
+
 	return l.output, l.oGrads
 }
 

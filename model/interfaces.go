@@ -4,7 +4,7 @@ type Layer interface {
 	Forward()
 	Backward()
 
-	Buffers() (output, oGrads []float64)
+	Compile(inputs, iGrads []float64) ([]float64, []float64)
 }
 
 type Updatable interface {

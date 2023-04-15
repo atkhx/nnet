@@ -6,23 +6,8 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewFC(size int, inputs, iGrads []float64) *FC {
-	weights := make([]float64, len(inputs)*size)
-	for i := range weights {
-		weights[i] = rand.NormFloat64()
-	}
-
-	return &FC{
-		size:    size,
-		weights: weights,
-		wGrads:  make([]float64, len(inputs)*size),
-
-		inputs: inputs,
-		iGrads: iGrads,
-
-		output: make([]float64, size),
-		oGrads: make([]float64, size),
-	}
+func NewFC(size int) *FC {
+	return &FC{size: size}
 }
 
 type FC struct {
@@ -41,7 +26,21 @@ type FC struct {
 	oGrads []float64
 }
 
-func (l *FC) Buffers() (output, oGrads []float64) {
+func (l *FC) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+	weights := make([]float64, len(inputs)*l.size)
+	for i := range weights {
+		weights[i] = rand.NormFloat64()
+	}
+
+	l.weights = weights
+	l.wGrads = make([]float64, len(inputs)*l.size)
+
+	l.inputs = inputs
+	l.iGrads = iGrads
+
+	l.output = make([]float64, l.size)
+	l.oGrads = make([]float64, l.size)
+
 	return l.output, l.oGrads
 }
 

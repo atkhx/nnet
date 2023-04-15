@@ -1,13 +1,7 @@
 package layer
 
-func NewReLu(inputs, iGrads []float64) *ReLu {
-	return &ReLu{
-		inputs: inputs,
-		iGrads: iGrads,
-
-		output: make([]float64, len(inputs)),
-		oGrads: make([]float64, len(iGrads)),
-	}
+func NewReLu() *ReLu {
+	return &ReLu{}
 }
 
 type ReLu struct {
@@ -20,7 +14,13 @@ type ReLu struct {
 	oGrads []float64
 }
 
-func (l *ReLu) Buffers() (output, oGrads []float64) {
+func (l *ReLu) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+	l.inputs = inputs
+	l.iGrads = iGrads
+
+	l.output = make([]float64, len(inputs))
+	l.oGrads = make([]float64, len(inputs))
+
 	return l.output, l.oGrads
 }
 

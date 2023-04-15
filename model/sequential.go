@@ -1,15 +1,15 @@
 package model
 
-func NewSequential(iSize int) *Sequential {
+func NewSequential(iSize int, layers []Layer) *Sequential {
 	return &Sequential{
-		inputs: make([]float64, iSize),
-		iGrads: make([]float64, iSize),
-		output: nil,
-		oGrads: nil,
+		iSize:  iSize,
+		layers: layers,
 	}
 }
 
 type Sequential struct {
+	iSize int
+
 	inputs []float64
 	iGrads []float64
 
@@ -20,16 +20,18 @@ type Sequential struct {
 	lossFn LossFn
 }
 
-func (s *Sequential) RegisterLayer(newLayer func(inputs, iGrads []float64) Layer) {
-	var layer Layer
-	if len(s.layers) == 0 {
-		layer = newLayer(s.inputs, s.iGrads)
-	} else {
-		layer = newLayer(s.output, s.oGrads)
+func (s *Sequential) Compile() {
+	s.inputs = make([]float64, s.iSize)
+	s.iGrads = make([]float64, s.iSize)
+
+	inputs, iGrads := s.inputs, s.iGrads
+
+	for _, layer := range s.layers {
+		inputs, iGrads = layer.Compile(inputs, iGrads)
 	}
 
-	s.layers = append(s.layers, layer)
-	s.output, s.oGrads = layer.Buffers()
+	s.output = inputs
+	s.oGrads = iGrads
 }
 
 func (s *Sequential) Forward(inputs, output []float64) {

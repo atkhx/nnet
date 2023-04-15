@@ -4,14 +4,8 @@ import (
 	"math"
 )
 
-func NewSigmoid(inputs, iGrads []float64) *Sigmoid {
-	return &Sigmoid{
-		inputs: inputs,
-		iGrads: iGrads,
-
-		output: make([]float64, len(inputs)),
-		oGrads: make([]float64, len(inputs)),
-	}
+func NewSigmoid() *Sigmoid {
+	return &Sigmoid{}
 }
 
 type Sigmoid struct {
@@ -24,7 +18,13 @@ type Sigmoid struct {
 	oGrads []float64
 }
 
-func (l *Sigmoid) Buffers() (output, oGrads []float64) {
+func (l *Sigmoid) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+	l.inputs = inputs
+	l.iGrads = iGrads
+
+	l.output = make([]float64, len(inputs))
+	l.oGrads = make([]float64, len(inputs))
+
 	return l.output, l.oGrads
 }
 

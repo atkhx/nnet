@@ -2,13 +2,8 @@ package block
 
 import "github.com/atkhx/nnet/model"
 
-func NewSequential(inputs, iGrads []float64) *Sequential {
-	return &Sequential{
-		inputs: inputs,
-		iGrads: iGrads,
-		output: nil,
-		oGrads: nil,
-	}
+func NewSequentialBlock(layers []model.Layer) *Sequential {
+	return &Sequential{layers: layers}
 }
 
 type Sequential struct {
@@ -21,16 +16,18 @@ type Sequential struct {
 	layers []model.Layer
 }
 
-func (s *Sequential) RegisterLayer(newLayer func(inputs, iGrads []float64) model.Layer) {
-	var layer model.Layer
-	if len(s.layers) == 0 {
-		layer = newLayer(s.inputs, s.iGrads)
-	} else {
-		layer = newLayer(s.output, s.oGrads)
+func (s *Sequential) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+	s.inputs = inputs
+	s.iGrads = iGrads
+
+	for _, layer := range s.layers {
+		inputs, iGrads = layer.Compile(inputs, iGrads)
 	}
 
-	s.layers = append(s.layers, layer)
-	s.output, s.oGrads = layer.Buffers()
+	s.output = inputs
+	s.oGrads = iGrads
+
+	return s.output, s.oGrads
 }
 
 func (s *Sequential) Forward() {
@@ -45,13 +42,21 @@ func (s *Sequential) Backward() {
 	}
 }
 
+func (s *Sequential) ResetGrads() {
+	for _, layer := range s.layers {
+		if l, ok := layer.(model.WithGrads); ok {
+			l.ResetGrads()
+		}
+	}
+}
+
 func (s *Sequential) ForUpdate() [][2][]float64 {
-	var result [][2][]float64
+	result := make([][2][]float64, 0, len(s.layers))
+
 	for _, layer := range s.layers {
 		if l, ok := layer.(model.Updatable); ok {
 			result = append(result, l.ForUpdate()...)
 		}
 	}
-
 	return result
 }
