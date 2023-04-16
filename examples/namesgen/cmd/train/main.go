@@ -82,7 +82,7 @@ func main() {
 			lossAvg += loss.RegressionMean(dataset.NamesMiniBatchSize, batchTarget, output)
 
 			seqModel.Backward(batchTarget)
-			seqModel.Update(0.1)
+			seqModel.Update(0.01)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

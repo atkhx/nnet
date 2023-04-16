@@ -13,8 +13,8 @@ import (
 var Names []byte
 
 const (
-	NamesContextSize   = 10
-	NamesMiniBatchSize = 30
+	NamesContextSize   = 5
+	NamesMiniBatchSize = 15
 )
 
 func NewDataset(contextSize, miniBatchSize int) *Dataset {
@@ -22,9 +22,6 @@ func NewDataset(contextSize, miniBatchSize int) *Dataset {
 		contextSize:   contextSize,
 		miniBatchSize: miniBatchSize,
 	}
-
-	//result.ParseAlphabet(bytes)
-	//result.PrepareDataset(bytes)
 
 	return result
 }
