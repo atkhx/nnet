@@ -1,10 +1,12 @@
 package layer
 
+import "github.com/atkhx/nnet/num"
+
 type Layers []Layer
 
-func (s Layers) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+func (s Layers) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
 	for _, layer := range s {
-		inputs, iGrads = layer.Compile(inputs, iGrads)
+		inputs, iGrads = layer.Compile(bSize, inputs, iGrads)
 	}
 
 	return inputs, iGrads
@@ -30,9 +32,8 @@ func (s Layers) ResetGrads() {
 	}
 }
 
-func (s Layers) ForUpdate() [][2][]float64 {
-	result := make([][2][]float64, 0, len(s))
-
+func (s Layers) ForUpdate() [][2]num.Float64s {
+	result := make([][2]num.Float64s, 0, len(s))
 	for _, layer := range s {
 		if l, ok := layer.(Updatable); ok {
 			result = append(result, l.ForUpdate()...)

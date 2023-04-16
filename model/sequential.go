@@ -1,16 +1,20 @@
 package model
 
-import "github.com/atkhx/nnet/layer"
+import (
+	"github.com/atkhx/nnet/layer"
+)
 
-func NewSequential(iSize int, layers []layer.Layer) *Sequential {
+func NewSequential(iSize, bSize int, layers []layer.Layer) *Sequential {
 	return &Sequential{
 		iSize:  iSize,
+		bSize:  bSize,
 		layers: layers,
 	}
 }
 
 type Sequential struct {
 	iSize int
+	bSize int
 
 	inputs []float64
 	iGrads []float64
@@ -22,10 +26,10 @@ type Sequential struct {
 }
 
 func (s *Sequential) Compile() {
-	s.inputs = make([]float64, s.iSize)
-	s.iGrads = make([]float64, s.iSize)
+	s.inputs = make([]float64, s.iSize*s.bSize)
+	s.iGrads = make([]float64, s.iSize*s.bSize)
 
-	s.output, s.oGrads = s.layers.Compile(s.inputs, s.iGrads)
+	s.output, s.oGrads = s.layers.Compile(s.bSize, s.inputs, s.iGrads)
 }
 
 func (s *Sequential) Forward(inputs, output []float64) {
@@ -35,10 +39,12 @@ func (s *Sequential) Forward(inputs, output []float64) {
 }
 
 func (s *Sequential) Backward(target []float64) {
+	k := 1.0 / float64(s.bSize)
 	for i, t := range target {
-		s.oGrads[i] = s.output[i] - t
+		s.oGrads[i] = k * (s.output[i] - t)
 	}
 
+	//fmt.Println("s.oGrads", s.oGrads)
 	s.layers.Backward()
 }
 

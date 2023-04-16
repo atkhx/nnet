@@ -6,6 +6,7 @@ import (
 	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/model"
+	"github.com/atkhx/nnet/num"
 )
 
 var (
@@ -22,13 +23,13 @@ var (
 )
 
 func main() {
-	seqModel := model.NewSequential(inputsSize, layer.Layers{
+	seqModel := model.NewSequential(inputsSize, 1, layer.Layers{
 		// FC Block 1
-		layer.NewFC(hiddenSize),
+		layer.NewFC(hiddenSize, num.SigmoidGain),
 		layer.NewBias(),
 		layer.NewSigmoid(),
 		// FC Block 2
-		layer.NewFC(outputSize),
+		layer.NewFC(outputSize, num.SigmoidGain),
 		layer.NewBias(),
 		layer.NewSigmoid(),
 	})

@@ -1,81 +1,88 @@
 package layer
 
 import (
-	"math/rand"
+	"math"
 
 	"github.com/atkhx/nnet/num"
 )
 
-func NewFC(size int) *FC {
-	return &FC{size: size}
+func NewFC(size int, gain float64) *FC {
+	return &FC{size: size, gain: gain}
 }
 
 type FC struct {
 	size int
+	gain float64
+
+	iSize int
+	bSize int
 
 	// internal buffers
-	weights []float64
-	wGrads  []float64
+	weights num.Float64s
+	wGrads  num.Float64s
 
 	// buffers from the previous layer
-	inputs []float64
-	iGrads []float64
+	inputs num.Float64s
+	iGrads num.Float64s
 
 	// buffers to the next layer
-	output []float64
-	oGrads []float64
+	output num.Float64s
+	oGrads num.Float64s
 }
 
-func (l *FC) Compile(inputs, iGrads []float64) ([]float64, []float64) {
-	weights := make([]float64, len(inputs)*l.size)
-	for i := range weights {
-		weights[i] = rand.NormFloat64()
+func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
+	l.iSize = len(inputs) / bSize
+	l.bSize = bSize
+
+	weightK := 1.0
+	if l.gain > 0 {
+		fanIn := l.iSize * l.bSize
+		weightK = l.gain / math.Pow(float64(fanIn), 0.5)
 	}
 
+	weights := make(num.Float64s, l.iSize*l.size)
+	weights.RandNormWeighted(weightK)
+
 	l.weights = weights
-	l.wGrads = make([]float64, len(inputs)*l.size)
+	l.wGrads = make(num.Float64s, l.iSize*l.size)
 
 	l.inputs = inputs
 	l.iGrads = iGrads
 
-	l.output = make([]float64, l.size)
-	l.oGrads = make([]float64, l.size)
+	l.output = make(num.Float64s, l.size*l.bSize)
+	l.oGrads = make(num.Float64s, l.size*l.bSize)
 
 	return l.output, l.oGrads
 }
 
 func (l *FC) Forward() {
-	for o := 0; o < l.size; o++ {
-		l.output[o] = num.Dot(l.inputs, l.weights[o*len(l.inputs):(o+1)*len(l.inputs)])
+	for b := 0; b < l.bSize; b++ {
+		inputs := l.inputs[b*l.iSize : (b+1)*l.iSize]
+		output := l.output[b*l.size : (b+1)*l.size]
+
+		for o := 0; o < l.size; o++ {
+			output[o] = num.Dot(inputs, l.weights[o*l.iSize:(o+1)*l.iSize])
+		}
 	}
 }
 
 func (l *FC) Backward() {
-	for i, delta := range l.oGrads {
-		weights := l.weights[i*len(l.inputs) : (i+1)*len(l.inputs)]
-		for j, iv := range weights {
-			l.iGrads[j] += delta * iv
-		}
+	for b := 0; b < l.bSize; b++ {
+		inputs := l.inputs[b*l.iSize : (b+1)*l.iSize]
+		iGrads := l.iGrads[b*l.iSize : (b+1)*l.iSize]
 
-		wGrads := l.wGrads[i*len(l.inputs) : (i+1)*len(l.inputs)]
-		for j, iv := range l.inputs {
-			wGrads[j] += delta * iv
+		for i, delta := range l.oGrads[b*l.size : (b+1)*l.size] {
+			iGrads.AddWeighted(l.weights[i*l.iSize:(i+1)*l.iSize], delta)
+			l.wGrads[i*l.iSize:(i+1)*l.iSize].AddWeighted(inputs, delta)
 		}
 	}
 }
 
 func (l *FC) ResetGrads() {
-	for i := range l.wGrads {
-		l.wGrads[i] = 0
-	}
-
-	for i := range l.oGrads {
-		l.oGrads[i] = 0
-	}
+	l.oGrads.Fill(0)
+	l.wGrads.Fill(0)
 }
 
-func (l *FC) ForUpdate() [][2][]float64 {
-	return [][2][]float64{
-		{l.weights, l.wGrads},
-	}
+func (l *FC) ForUpdate() [][2]num.Float64s {
+	return [][2]num.Float64s{{l.weights, l.wGrads}}
 }

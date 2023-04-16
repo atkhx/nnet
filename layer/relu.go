@@ -1,25 +1,27 @@
 package layer
 
+import "github.com/atkhx/nnet/num"
+
 func NewReLu() *ReLu {
 	return &ReLu{}
 }
 
 type ReLu struct {
 	// buffers from the previous layer
-	inputs []float64
-	iGrads []float64
+	inputs num.Float64s
+	iGrads num.Float64s
 
 	// buffers to the next layer
-	output []float64
-	oGrads []float64
+	output num.Float64s
+	oGrads num.Float64s
 }
 
-func (l *ReLu) Compile(inputs, iGrads []float64) ([]float64, []float64) {
+func (l *ReLu) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
 	l.inputs = inputs
 	l.iGrads = iGrads
 
-	l.output = make([]float64, len(inputs))
-	l.oGrads = make([]float64, len(inputs))
+	l.output = make(num.Float64s, len(inputs))
+	l.oGrads = make(num.Float64s, len(inputs))
 
 	return l.output, l.oGrads
 }
@@ -43,7 +45,5 @@ func (l *ReLu) Backward() {
 }
 
 func (l *ReLu) ResetGrads() {
-	for i := range l.oGrads {
-		l.oGrads[i] = 0
-	}
+	l.oGrads.Fill(0)
 }
