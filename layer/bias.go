@@ -10,9 +10,9 @@ type Bias struct {
 	iSize int
 	bSize int
 
-	// internal buffers
-	weights num.Float64s
-	wGrads  num.Float64s
+	// internal buffers (storable)
+	Weights num.Float64s
+	WGrads  num.Float64s
 
 	// buffers from the previous layer
 	inputs num.Float64s
@@ -27,8 +27,8 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 	l.iSize = len(inputs) / bSize
 	l.bSize = bSize
 
-	l.weights = make(num.Float64s, l.iSize)
-	l.wGrads = make(num.Float64s, l.iSize)
+	l.Weights = make(num.Float64s, l.iSize)
+	l.WGrads = make(num.Float64s, l.iSize)
 
 	l.inputs = inputs
 	l.iGrads = iGrads
@@ -42,7 +42,7 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 func (l *Bias) Forward() {
 	copy(l.output, l.inputs)
 	for b := 0; b < l.bSize; b++ {
-		l.output[b*l.iSize : (b+1)*l.iSize].Add(l.weights)
+		l.output[b*l.iSize : (b+1)*l.iSize].Add(l.Weights)
 	}
 }
 
@@ -50,15 +50,15 @@ func (l *Bias) Backward() {
 	l.iGrads.Add(l.oGrads)
 
 	for b := 0; b < l.bSize; b++ {
-		l.wGrads.Add(l.oGrads[b*l.iSize : (b+1)*l.iSize])
+		l.WGrads.Add(l.oGrads[b*l.iSize : (b+1)*l.iSize])
 	}
 }
 
 func (l *Bias) ResetGrads() {
 	l.oGrads.Fill(0)
-	l.wGrads.Fill(0)
+	l.WGrads.Fill(0)
 }
 
 func (l *Bias) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{{l.weights, l.wGrads}}
+	return [][2]num.Float64s{{l.Weights, l.WGrads}}
 }

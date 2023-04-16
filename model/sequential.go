@@ -8,7 +8,7 @@ func NewSequential(iSize, bSize int, layers []layer.Layer) *Sequential {
 	return &Sequential{
 		iSize:  iSize,
 		bSize:  bSize,
-		layers: layers,
+		Layers: layers,
 	}
 }
 
@@ -22,19 +22,19 @@ type Sequential struct {
 	output []float64
 	oGrads []float64
 
-	layers layer.Layers
+	Layers layer.Layers
 }
 
 func (s *Sequential) Compile() {
 	s.inputs = make([]float64, s.iSize*s.bSize)
 	s.iGrads = make([]float64, s.iSize*s.bSize)
 
-	s.output, s.oGrads = s.layers.Compile(s.bSize, s.inputs, s.iGrads)
+	s.output, s.oGrads = s.Layers.Compile(s.bSize, s.inputs, s.iGrads)
 }
 
 func (s *Sequential) Forward(inputs, output []float64) {
 	copy(s.inputs, inputs)
-	s.layers.Forward()
+	s.Layers.Forward()
 	copy(output, s.output)
 }
 
@@ -44,15 +44,15 @@ func (s *Sequential) Backward(target []float64) {
 		s.oGrads[i] = k * (s.output[i] - t)
 	}
 
-	s.layers.Backward()
+	s.Layers.Backward()
 }
 
 func (s *Sequential) Update(learningRate float64) {
-	for _, pair := range s.layers.ForUpdate() {
+	for _, pair := range s.Layers.ForUpdate() {
 		for j := range pair[1] {
 			pair[0][j] -= pair[1][j] * learningRate
 		}
 	}
 
-	s.layers.ResetGrads()
+	s.Layers.ResetGrads()
 }

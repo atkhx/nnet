@@ -6,7 +6,7 @@ import (
 )
 
 func NewSequentialBlock(layers layer.Layers) *Sequential {
-	return &Sequential{layers: layers}
+	return &Sequential{Layers: layers}
 }
 
 type Sequential struct {
@@ -16,30 +16,30 @@ type Sequential struct {
 	output num.Float64s
 	oGrads num.Float64s
 
-	layers layer.Layers
+	Layers layer.Layers
 }
 
 func (s *Sequential) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
 	s.inputs = inputs
 	s.iGrads = iGrads
 
-	s.output, s.oGrads = s.layers.Compile(bSize, inputs, iGrads)
+	s.output, s.oGrads = s.Layers.Compile(bSize, inputs, iGrads)
 
 	return s.output, s.oGrads
 }
 
 func (s *Sequential) Forward() {
-	s.layers.Forward()
+	s.Layers.Forward()
 }
 
 func (s *Sequential) Backward() {
-	s.layers.Backward()
+	s.Layers.Backward()
 }
 
 func (s *Sequential) ResetGrads() {
-	s.layers.ResetGrads()
+	s.Layers.ResetGrads()
 }
 
 func (s *Sequential) ForUpdate() [][2]num.Float64s {
-	return s.layers.ForUpdate()
+	return s.Layers.ForUpdate()
 }

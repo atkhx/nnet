@@ -17,9 +17,9 @@ type FC struct {
 	iSize int
 	bSize int
 
-	// internal buffers
-	weights num.Float64s
-	wGrads  num.Float64s
+	// internal buffers (storable)
+	Weights num.Float64s
+	WGrads  num.Float64s
 
 	// buffers from the previous layer
 	inputs num.Float64s
@@ -43,8 +43,8 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 	weights := make(num.Float64s, l.iSize*l.size)
 	weights.RandNormWeighted(weightK)
 
-	l.weights = weights
-	l.wGrads = make(num.Float64s, l.iSize*l.size)
+	l.Weights = weights
+	l.WGrads = make(num.Float64s, l.iSize*l.size)
 
 	l.inputs = inputs
 	l.iGrads = iGrads
@@ -61,7 +61,7 @@ func (l *FC) Forward() {
 		output := l.output[b*l.size : (b+1)*l.size]
 
 		for o := 0; o < l.size; o++ {
-			output[o] = num.Dot(inputs, l.weights[o*l.iSize:(o+1)*l.iSize])
+			output[o] = num.Dot(inputs, l.Weights[o*l.iSize:(o+1)*l.iSize])
 		}
 	}
 }
@@ -72,17 +72,17 @@ func (l *FC) Backward() {
 		iGrads := l.iGrads[b*l.iSize : (b+1)*l.iSize]
 
 		for i, delta := range l.oGrads[b*l.size : (b+1)*l.size] {
-			iGrads.AddWeighted(l.weights[i*l.iSize:(i+1)*l.iSize], delta)
-			l.wGrads[i*l.iSize:(i+1)*l.iSize].AddWeighted(inputs, delta)
+			iGrads.AddWeighted(l.Weights[i*l.iSize:(i+1)*l.iSize], delta)
+			l.WGrads[i*l.iSize:(i+1)*l.iSize].AddWeighted(inputs, delta)
 		}
 	}
 }
 
 func (l *FC) ResetGrads() {
 	l.oGrads.Fill(0)
-	l.wGrads.Fill(0)
+	l.WGrads.Fill(0)
 }
 
 func (l *FC) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{{l.weights, l.wGrads}}
+	return [][2]num.Float64s{{l.Weights, l.WGrads}}
 }
