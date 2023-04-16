@@ -40,7 +40,7 @@ func main() {
 	seqModel.Compile()
 
 	lossAvg := 0.0
-	output := []float64{0}
+	output := seqModel.NewOutput()
 	for i := 0; i < learningEpochs; i++ {
 		for j := range allInputs {
 			inputs := allInputs[j]

@@ -42,10 +42,10 @@ func main() {
 	seqModel.Compile()
 
 	lossAvg := 0.0
-	output := make([]float64, outputSize*batchSize)
+	output := seqModel.NewOutput()
 
-	batchInputs := make([]float64, 0, inputsSize*batchSize)
-	batchTarget := make([]float64, 0, outputSize*batchSize)
+	batchInputs := make(num.Float64s, 0, inputsSize*batchSize)
+	batchTarget := make(num.Float64s, 0, outputSize*batchSize)
 	for i := range allInputs {
 		batchInputs = append(batchInputs, allInputs[i]...)
 		batchTarget = append(batchTarget, allTargets[i]...)

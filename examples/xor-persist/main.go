@@ -1,12 +1,9 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
 
 	"github.com/atkhx/nnet/block"
 	"github.com/atkhx/nnet/layer"
@@ -48,21 +45,21 @@ func main() {
 	})
 
 	seqModel.Compile()
-	if err := loadModel(seqModel, filename); err != nil {
+	if err := seqModel.LoadFromFile(filename); err != nil {
 		log.Fatalln(err)
 	}
 
 	defer func() {
-		if err := saveModel(seqModel, filename); err != nil {
+		if err := seqModel.SaveToFile(filename); err != nil {
 			log.Fatalln(err)
 		}
 	}()
 
 	lossAvg := 0.0
-	output := make([]float64, outputSize*batchSize)
+	output := seqModel.NewOutput()
 
-	batchInputs := make([]float64, 0, inputsSize*batchSize)
-	batchTarget := make([]float64, 0, outputSize*batchSize)
+	batchInputs := make(num.Float64s, 0, inputsSize*batchSize)
+	batchTarget := make(num.Float64s, 0, outputSize*batchSize)
 	for i := range allInputs {
 		batchInputs = append(batchInputs, allInputs[i]...)
 		batchTarget = append(batchTarget, allTargets[i]...)
@@ -87,33 +84,4 @@ func main() {
 			lossAvg = 0
 		}
 	}
-}
-
-func loadModel(model *model.Sequential, filename string) error {
-	config, err := os.ReadFile(filename)
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		log.Println("trained config not found (skip)")
-		return nil
-	}
-
-	if err != nil {
-		return fmt.Errorf("read file failed: %w", err)
-	}
-
-	if err = json.Unmarshal(config, model); err != nil {
-		return fmt.Errorf("unmarshal config failed: %w", err)
-	}
-	return nil
-}
-
-func saveModel(model *model.Sequential, filename string) error {
-	nnBytes, err := json.Marshal(model)
-	if err != nil {
-		return fmt.Errorf("marshal model config failed: %w", err)
-	}
-
-	if err := os.WriteFile(filename, nnBytes, os.ModePerm); err != nil {
-		return fmt.Errorf("write model config failed: %w", err)
-	}
-	return nil
 }

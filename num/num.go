@@ -1,6 +1,9 @@
 package num
 
-import "math/rand"
+import (
+	"math"
+	"math/rand"
+)
 
 const (
 	ReLuGain    = 1.4142135624
@@ -30,6 +33,12 @@ func (f Float64s) Fill(v float64) {
 	}
 }
 
+func (f Float64s) Copy() Float64s {
+	res := make(Float64s, len(f))
+	copy(res, f)
+	return res
+}
+
 func (f Float64s) Add(b Float64s) {
 	for i, v := range f {
 		f[i] = v + b[i]
@@ -40,4 +49,48 @@ func (f Float64s) AddWeighted(b Float64s, w float64) {
 	for i, v := range f {
 		f[i] = v + b[i]*w
 	}
+}
+
+func (f Float64s) Exp() {
+	for i, v := range f {
+		f[i] = math.Exp(v)
+	}
+}
+
+func (f Float64s) Sum() (sum float64) {
+	for _, v := range f {
+		sum += v
+	}
+	return
+}
+
+func (f Float64s) Softmax() {
+	exp := f.Copy()
+	exp.Exp()
+
+	sum := exp.Sum()
+	for i := range f {
+		f[i] /= sum
+	}
+}
+
+func (f Float64s) CumulativeSum() Float64s {
+	res := f.Copy()
+	for i := 1; i < len(res); i++ {
+		res[i] += res[i-1]
+	}
+	return res
+}
+
+func (f Float64s) Multinomial() (r int) {
+	// f - distribution
+	d := f.CumulativeSum()
+	v := rand.Float64() * d[len(d)-1]
+
+	for i, w := range d {
+		if v <= w {
+			return i
+		}
+	}
+	return len(d) - 1
 }
