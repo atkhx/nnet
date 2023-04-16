@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/atkhx/nnet/block"
 	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/model"
@@ -27,9 +28,11 @@ var (
 func main() {
 	seqModel := model.NewSequential(inputsSize, batchSize, layer.Layers{
 		// FC Block 1
-		layer.NewFC(hiddenSize, num.SigmoidGain),
-		layer.NewBias(),
-		layer.NewSigmoid(),
+		block.NewSequentialBlock(layer.Layers{
+			layer.NewFC(hiddenSize, num.SigmoidGain),
+			layer.NewBias(),
+			layer.NewSigmoid(),
+		}),
 		// FC Block 2
 		layer.NewFC(outputSize, num.SigmoidGain),
 		layer.NewBias(),

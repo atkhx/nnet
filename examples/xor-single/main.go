@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/atkhx/nnet/block"
 	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/model"
@@ -29,9 +30,11 @@ func main() {
 		layer.NewBias(),
 		layer.NewSigmoid(),
 		// FC Block 2
-		layer.NewFC(outputSize, num.SigmoidGain),
-		layer.NewBias(),
-		layer.NewSigmoid(),
+		block.NewSequentialBlock(layer.Layers{
+			layer.NewFC(outputSize, num.SigmoidGain),
+			layer.NewBias(),
+			layer.NewSigmoid(),
+		}),
 	})
 
 	seqModel.Compile()
