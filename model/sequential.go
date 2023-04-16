@@ -44,7 +44,6 @@ func (s *Sequential) Backward(target []float64) {
 		s.oGrads[i] = k * (s.output[i] - t)
 	}
 
-	//fmt.Println("s.oGrads", s.oGrads)
 	s.layers.Backward()
 }
 
