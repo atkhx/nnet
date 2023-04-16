@@ -1,4 +1,4 @@
-package model
+package layer
 
 type Layer interface {
 	Forward()
@@ -13,9 +13,4 @@ type Updatable interface {
 
 type WithGrads interface {
 	ResetGrads()
-}
-
-type LossFn interface {
-	GetLoss(target, actual []float64) (loss float64)
-	GetGrads(target, actual, oGrads []float64)
 }
