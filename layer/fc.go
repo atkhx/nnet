@@ -17,9 +17,9 @@ type FC struct {
 	iSize int
 	bSize int
 
-	// internal buffers (storable)
-	Weights num.Float64s
-	WGrads  num.Float64s
+	// internal buffers
+	Weights num.Float64s // (storable)
+	wGrads  num.Float64s
 
 	// buffers from the previous layer
 	inputs num.Float64s
@@ -44,7 +44,7 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 	weights.RandNormWeighted(weightK)
 
 	l.Weights = weights
-	l.WGrads = make(num.Float64s, l.iSize*l.size)
+	l.wGrads = make(num.Float64s, l.iSize*l.size)
 
 	l.inputs = inputs
 	l.iGrads = iGrads
@@ -73,16 +73,16 @@ func (l *FC) Backward() {
 
 		for i, delta := range l.oGrads[b*l.size : (b+1)*l.size] {
 			iGrads.AddWeighted(l.Weights[i*l.iSize:(i+1)*l.iSize], delta)
-			l.WGrads[i*l.iSize:(i+1)*l.iSize].AddWeighted(inputs, delta)
+			l.wGrads[i*l.iSize:(i+1)*l.iSize].AddWeighted(inputs, delta)
 		}
 	}
 }
 
 func (l *FC) ResetGrads() {
 	l.oGrads.Fill(0)
-	l.WGrads.Fill(0)
+	l.wGrads.Fill(0)
 }
 
 func (l *FC) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{{l.Weights, l.WGrads}}
+	return [][2]num.Float64s{{l.Weights, l.wGrads}}
 }
