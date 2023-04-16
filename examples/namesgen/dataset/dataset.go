@@ -17,14 +17,14 @@ const (
 	NamesMiniBatchSize = 30
 )
 
-func NewDataset(contextSize, miniBatchSize int, bytes []byte) *Dataset {
+func NewDataset(contextSize, miniBatchSize int) *Dataset {
 	result := &Dataset{
 		contextSize:   contextSize,
 		miniBatchSize: miniBatchSize,
 	}
 
-	result.parseAlphabet(bytes)
-	result.prepareDataset(bytes)
+	//result.ParseAlphabet(bytes)
+	//result.PrepareDataset(bytes)
 
 	return result
 }
@@ -59,7 +59,7 @@ func (d *Dataset) GetMiniBatchSize() int {
 	return d.miniBatchSize
 }
 
-func (d *Dataset) parseAlphabet(bytes []byte) {
+func (d *Dataset) ParseAlphabet(bytes []byte) {
 	d.index = map[byte]int{}
 	d.chars = []byte{}
 
@@ -88,7 +88,7 @@ func (d *Dataset) parseAlphabet(bytes []byte) {
 	}
 }
 
-func (d *Dataset) prepareDataset(rawBytes []byte) {
+func (d *Dataset) PrepareDataset(rawBytes []byte) {
 	words := bytes.Split(rawBytes, []byte("\n"))
 	input := bytes.Repeat([]byte{'.'}, d.contextSize)
 

@@ -32,7 +32,8 @@ func main() {
 
 	batchSize := 1
 
-	namesDataset := dataset.NewDataset(dataset.NamesContextSize, batchSize, dataset.Names)
+	namesDataset := dataset.NewDataset(dataset.NamesContextSize, batchSize)
+	namesDataset.ParseAlphabet(dataset.Names)
 
 	seqModel := pkg.CreateNN(
 		namesDataset.GetAlphabetSize(),

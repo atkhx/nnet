@@ -16,16 +16,14 @@ import (
 	"github.com/atkhx/nnet/loss"
 )
 
-const (
-	epochsCount = 1
-)
-
 var filename string
+var epochs int
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 
 	flag.StringVar(&filename, "c", "./examples/namesgen/config.json", "nn config file")
+	flag.IntVar(&epochs, "e", 100_000, "epochs count")
 	flag.Parse()
 }
 
@@ -37,7 +35,9 @@ func main() {
 		}
 	}()
 
-	namesDataset := dataset.NewDataset(dataset.NamesContextSize, dataset.NamesMiniBatchSize, dataset.Names)
+	namesDataset := dataset.NewDataset(dataset.NamesContextSize, dataset.NamesMiniBatchSize)
+	namesDataset.ParseAlphabet(dataset.Names)
+	namesDataset.PrepareDataset(dataset.Names)
 
 	seqModel := pkg.CreateNN(
 		namesDataset.GetAlphabetSize(),
@@ -68,28 +68,26 @@ func main() {
 
 		output := seqModel.NewOutput()
 
-		for epoch := 0; epoch < epochsCount; epoch++ {
-			for sampleIndex := 0; sampleIndex < namesDataset.GetSamplesCount(); sampleIndex++ {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
+		for index := 0; index < epochs; index++ {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 
-				batchInputs, batchTarget := namesDataset.ReadRandomSampleBatch()
+			batchInputs, batchTarget := namesDataset.ReadRandomSampleBatch()
 
-				seqModel.Forward(batchInputs, output)
+			seqModel.Forward(batchInputs, output)
 
-				lossAvg += loss.RegressionMean(dataset.NamesMiniBatchSize, batchTarget, output)
+			lossAvg += loss.RegressionMean(dataset.NamesMiniBatchSize, batchTarget, output)
 
-				seqModel.Backward(batchTarget)
-				seqModel.Update(0.1)
+			seqModel.Backward(batchTarget)
+			seqModel.Update(0.1)
 
-				if sampleIndex > 0 && sampleIndex%statChunkSize == 0 {
-					lossAvg /= float64(statChunkSize)
-					fmt.Println("loss", lossAvg)
-					lossAvg = 0
-				}
+			if index > 0 && index%statChunkSize == 0 {
+				lossAvg /= float64(statChunkSize)
+				fmt.Println("loss", lossAvg)
+				lossAvg = 0
 			}
 		}
 	}()

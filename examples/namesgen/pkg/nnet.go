@@ -12,7 +12,7 @@ func CreateNN(
 	miniBatchSize int,
 ) *model.Sequential {
 	embeddingFeatures := 2
-	hiddenLayerSize := 10
+	hiddenLayerSize := 50
 
 	return model.NewSequential(alphabetSize*contextLength, miniBatchSize, layer.Layers{
 		// embedding table
