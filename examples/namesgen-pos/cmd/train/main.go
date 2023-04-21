@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/atkhx/nnet/examples/namesgen/dataset"
-	"github.com/atkhx/nnet/examples/namesgen/pkg"
+	"github.com/atkhx/nnet/examples/namesgen-pos/dataset"
+	"github.com/atkhx/nnet/examples/namesgen-pos/pkg"
 	"github.com/atkhx/nnet/loss"
 )
 
@@ -22,8 +22,8 @@ var epochs int
 func init() {
 	rand.Seed(time.Now().UnixNano())
 
-	flag.StringVar(&filename, "c", "./examples/namesgen/config.json", "nn config file")
-	flag.IntVar(&epochs, "e", 1500_000, "epochs count")
+	flag.StringVar(&filename, "c", "./examples/namesgen-pos/config.json", "nn config file")
+	flag.IntVar(&epochs, "e", 5_000_000, "epochs count")
 	flag.Parse()
 }
 
@@ -79,10 +79,10 @@ func main() {
 
 			seqModel.Forward(batchInputs, output)
 
-			lossAvg += loss.RegressionMean(dataset.NamesMiniBatchSize, batchTarget, output)
+			lossAvg += loss.CrossEntropyMean(dataset.NamesMiniBatchSize, batchTarget, output)
 
 			seqModel.Backward(batchTarget)
-			seqModel.Update(0.05)
+			seqModel.Update(0.01)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

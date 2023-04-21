@@ -21,6 +21,12 @@ func Dot(a, b []float64) (r float64) {
 
 type Float64s []float64
 
+func (f Float64s) RandNorm() {
+	for i := range f {
+		f[i] = rand.NormFloat64()
+	}
+}
+
 func (f Float64s) RandNormWeighted(w float64) {
 	for i := range f {
 		f[i] = rand.NormFloat64() * w
@@ -45,15 +51,46 @@ func (f Float64s) Add(b Float64s) {
 	}
 }
 
+func (f Float64s) AddScalar(b float64) {
+	for i, v := range f {
+		f[i] = v + b
+	}
+}
+
 func (f Float64s) AddWeighted(b Float64s, w float64) {
 	for i, v := range f {
 		f[i] = v + b[i]*w
 	}
 }
 
-func (f Float64s) Exp() {
+func (f Float64s) MulScalar(b float64) {
 	for i, v := range f {
-		f[i] = math.Exp(v)
+		f[i] = v * b
+	}
+}
+
+func (f Float64s) Max() (max float64) {
+	for i, v := range f {
+		if i == 0 || max < v {
+			max = v
+		}
+	}
+	return
+}
+
+func (f Float64s) Min() (min float64) {
+	for i, v := range f {
+		if i == 0 || min > v {
+			min = v
+		}
+	}
+	return
+}
+
+func (f Float64s) Exp() {
+	max := f.Max()
+	for i, v := range f {
+		f[i] = math.Exp(v - max)
 	}
 }
 
@@ -65,32 +102,27 @@ func (f Float64s) Sum() (sum float64) {
 }
 
 func (f Float64s) Softmax() {
-	exp := f.Copy()
-	exp.Exp()
+	f.Exp()
 
-	sum := exp.Sum()
+	sum := f.Sum()
 	for i := range f {
 		f[i] /= sum
 	}
 }
 
-func (f Float64s) CumulativeSum() Float64s {
-	res := f.Copy()
-	for i := 1; i < len(res); i++ {
-		res[i] += res[i-1]
+func (f Float64s) CumulativeSum() {
+	for i := 1; i < len(f); i++ {
+		f[i] += f[i-1]
 	}
-	return res
 }
 
 func (f Float64s) Multinomial() (r int) {
 	// f - distribution
-	d := f.CumulativeSum()
-	v := rand.Float64() * d[len(d)-1]
-
-	for i, w := range d {
+	v := rand.Float64() * f[len(f)-1]
+	for i, w := range f {
 		if v <= w {
 			return i
 		}
 	}
-	return len(d) - 1
+	return len(f) - 1
 }

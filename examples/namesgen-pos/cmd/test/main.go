@@ -8,15 +8,14 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/atkhx/nnet/examples/namesgen/dataset"
-	"github.com/atkhx/nnet/examples/namesgen/pkg"
-	"github.com/atkhx/nnet/num"
+	"github.com/atkhx/nnet/examples/namesgen-pos/dataset"
+	"github.com/atkhx/nnet/examples/namesgen-pos/pkg"
 )
 
 var filename string
 
 func init() {
-	flag.StringVar(&filename, "c", "./examples/namesgen/config.json", "nn config file")
+	flag.StringVar(&filename, "c", "./examples/namesgen-pos/config.json", "nn config file")
 	flag.Parse()
 }
 
@@ -50,9 +49,13 @@ func main() {
 
 	for j := 0; j < 100; j++ {
 		inputBytes := bytes.Repeat([]byte{'.'}, namesDataset.GetContextSize())
+		name := ""
 		for k := 0; k < 50; k++ {
-			inputs := num.NewOneHotVectors(namesDataset.GetAlphabetSize(), namesDataset.Encode(inputBytes...)...)
-			seqModel.Forward(inputs, output)
+			inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
+
+			seqModel.Forward(inputsFloat, output)
+			//output.MulScalar(1.0 / output.Sum())
+			//output.AddScalar(-output.Min())
 			output.Softmax()
 			output.CumulativeSum()
 
@@ -62,10 +65,13 @@ func main() {
 			inputBytes = inputBytes[len(b):]
 
 			if b[len(b)-1] == '.' {
-				fmt.Println()
+				if name != "" {
+					fmt.Println(name)
+				}
 				break
 			}
-			fmt.Print(string(b))
+
+			name += string(b)
 		}
 	}
 

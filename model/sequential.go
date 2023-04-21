@@ -52,11 +52,17 @@ func (s *Sequential) Forward(inputs, output num.Float64s) {
 }
 
 func (s *Sequential) Backward(target num.Float64s) {
-	k := 1.0 / float64(s.bSize)
-	for i, t := range target {
-		s.oGrads[i] = k * (s.output[i] - t)
+	chunkSize := len(s.output) / s.bSize
+
+	softmax := s.output.Copy()
+	for i := 0; i < len(s.output); i += chunkSize {
+		softmax[i : i+chunkSize].Softmax()
 	}
 
+	k := 1.0 / float64(s.bSize)
+	for i, t := range target {
+		s.oGrads[i] = k * (softmax[i] - t)
+	}
 	s.Layers.Backward()
 }
 
