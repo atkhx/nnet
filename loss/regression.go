@@ -1,17 +1,21 @@
 package loss
 
-import "math"
+import (
+	"math"
 
-func Regression(target, actual []float64) (loss float64) {
-	for i, t := range target {
-		loss += math.Pow(actual[i]-t, 2)
-	}
-	return loss * 0.5
-}
+	"github.com/atkhx/nnet/num"
+)
 
-func RegressionMean(bSize int, target, actual []float64) (lossMean float64) {
+func Regression(target, actual num.Float64s, bSize int) (lossMean float64) {
 	for i, t := range target {
 		lossMean += math.Pow(actual[i]-t, 2)
 	}
 	return 0.5 * lossMean / float64(bSize)
+}
+
+func RegressionBackward(target, actual num.Float64s, bSize int) (oGrads num.Float64s) {
+	oGrads = actual.Copy()
+	oGrads.AddWeighted(target, -1.0)
+	oGrads.MulScalar(1.0 / float64(bSize))
+	return oGrads
 }

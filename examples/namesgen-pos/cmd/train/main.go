@@ -79,9 +79,10 @@ func main() {
 
 			seqModel.Forward(batchInputs, output)
 
-			lossAvg += loss.CrossEntropyMean(dataset.NamesMiniBatchSize, batchTarget, output)
+			lossAvg += loss.CrossEntropy(batchTarget, output, namesDataset.GetMiniBatchSize())
+			oGrads := loss.CrossEntropyBackward(batchTarget, output, namesDataset.GetMiniBatchSize())
 
-			seqModel.Backward(batchTarget)
+			seqModel.Backward(oGrads)
 			seqModel.Update(0.01)
 
 			if index > 0 && index%statChunkSize == 0 {

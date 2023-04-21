@@ -73,9 +73,10 @@ func main() {
 
 		seqModel.Forward(batchInputs, output)
 
-		lossAvg += loss.RegressionMean(batchSize, batchTarget, output)
+		lossAvg += loss.Regression(batchTarget, output, batchSize)
+		oGrads := loss.RegressionBackward(batchTarget, output, batchSize)
 
-		seqModel.Backward(batchTarget)
+		seqModel.Backward(oGrads)
 		seqModel.Update(learningRate)
 
 		if i > 0 && i%statisticsStep == 0 {

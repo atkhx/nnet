@@ -79,7 +79,7 @@ func main() {
 
 			seqModel.Forward(batchInputs, output)
 
-			lossAvg += loss.RegressionMean(dataset.NamesMiniBatchSize, batchTarget, output)
+			lossAvg += loss.Regression(batchTarget, output, namesDataset.GetMiniBatchSize())
 
 			seqModel.Backward(batchTarget)
 			seqModel.Update(0.05)

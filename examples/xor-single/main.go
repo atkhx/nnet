@@ -47,9 +47,10 @@ func main() {
 			target := allTargets[j]
 
 			seqModel.Forward(inputs, output)
-			lossAvg += loss.Regression(target, output)
+			lossAvg += loss.Regression(target, output, 1)
+			oGrads := loss.RegressionBackward(target, output, 1)
 
-			seqModel.Backward(target)
+			seqModel.Backward(oGrads)
 			seqModel.Update(learningRate)
 		}
 

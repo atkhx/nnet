@@ -51,7 +51,12 @@ func (s *Sequential) Forward(inputs, output num.Float64s) {
 	copy(output, s.output)
 }
 
-func (s *Sequential) Backward(target num.Float64s) {
+func (s *Sequential) Backward(oGrads num.Float64s) {
+	copy(s.oGrads, oGrads)
+	s.Layers.Backward()
+}
+
+func (s *Sequential) Backward123(target num.Float64s) {
 	chunkSize := len(s.output) / s.bSize
 
 	softmax := s.output.Copy()
