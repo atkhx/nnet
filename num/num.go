@@ -12,13 +12,6 @@ const (
 	LinearGain  = 1.0
 )
 
-func Dot(a, b []float64) (r float64) {
-	for i, aV := range a {
-		r += aV * b[i]
-	}
-	return
-}
-
 type Float64s []float64
 
 func (f Float64s) RandNorm() {

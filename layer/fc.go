@@ -17,6 +17,11 @@ type FC struct {
 	iSize int
 	bSize int
 
+	// clever objects
+	weightObj *num.Data
+	inputsObj *num.Data
+	outputObj *num.Data
+
 	// internal buffers
 	Weights num.Float64s // (storable)
 	wGrads  num.Float64s
@@ -52,35 +57,19 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 	l.output = make(num.Float64s, l.oSize*l.bSize)
 	l.oGrads = make(num.Float64s, l.oSize*l.bSize)
 
+	l.inputsObj = num.Wrap(l.inputs, l.iGrads)
+	l.outputObj = num.Wrap(l.output, l.oGrads)
+	l.weightObj = num.Wrap(l.Weights, l.wGrads)
+
 	return l.output, l.oGrads
 }
 
 func (l *FC) Forward() {
-	for b := 0; b < l.bSize; b++ {
-		inputs := l.inputs[b*l.iSize : (b+1)*l.iSize]
-		output := l.output[b*l.oSize : (b+1)*l.oSize]
-
-		for o := 0; o < l.oSize; o++ {
-			weights := l.Weights[o*l.iSize : (o+1)*l.iSize]
-			output[o] = num.Dot(inputs, weights)
-		}
-	}
+	l.inputsObj.DotTo(l.outputObj, l.weightObj, l.bSize)
 }
 
 func (l *FC) Backward() {
-	for b := 0; b < l.bSize; b++ {
-		inputs := l.inputs[b*l.iSize : (b+1)*l.iSize]
-		iGrads := l.iGrads[b*l.iSize : (b+1)*l.iSize]
-		oGrads := l.oGrads[b*l.oSize : (b+1)*l.oSize]
-
-		for i, delta := range oGrads {
-			weights := l.Weights[i*l.iSize : (i+1)*l.iSize]
-			iGrads.AddWeighted(weights, delta)
-
-			wGrads := l.wGrads[i*l.iSize : (i+1)*l.iSize]
-			wGrads.AddWeighted(inputs, delta)
-		}
-	}
+	l.outputObj.CalcGrad()
 }
 
 func (l *FC) ResetGrads() {

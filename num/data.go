@@ -28,6 +28,38 @@ func (d *Data) AddTo(out *Data, b *Data) {
 	}
 }
 
+func (d *Data) DotTo(out *Data, b *Data, batchSize int) {
+	iSize := len(d.data) / batchSize
+	oSize := len(out.data) / batchSize
+
+	for i := 0; i < batchSize; i++ {
+		inputs := d.data[i*iSize : (i+1)*iSize]
+		output := out.data[i*oSize : (i+1)*oSize]
+
+		for o := 0; o < oSize; o++ {
+			weights := b.data[o*iSize : (o+1)*iSize]
+			output[o] = Dot(inputs, weights)
+		}
+	}
+
+	out.srcNodes = Nodes{d, b}
+	out.calcGrad = func() {
+		for i := 0; i < batchSize; i++ {
+			inputs := d.data[i*iSize : (i+1)*iSize]
+			iGrads := d.grad[i*iSize : (i+1)*iSize]
+			oGrads := out.grad[i*oSize : (i+1)*oSize]
+
+			for o, delta := range oGrads {
+				weights := b.data[o*iSize : (o+1)*iSize]
+				iGrads.AddWeighted(weights, delta)
+
+				wGrads := b.grad[o*iSize : (o+1)*iSize]
+				wGrads.AddWeighted(inputs, delta)
+			}
+		}
+	}
+}
+
 func (d *Data) CalcGrad() {
 	if d.calcGrad != nil {
 		d.calcGrad()
