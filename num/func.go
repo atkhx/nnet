@@ -28,3 +28,10 @@ func max[T int | float64](a, b T) T {
 	}
 	return b
 }
+
+func min[T int | float64](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}

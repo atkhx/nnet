@@ -75,3 +75,39 @@ func Test_getRepeatedPosPairs(t *testing.T) {
 		})
 	}
 }
+
+func Test_MaxOnInt(t *testing.T) {
+	type testCase struct {
+		a, b, expected int
+	}
+
+	testCases := map[string]testCase{
+		"A and B are equals": {7, 7, 7},
+		"A less than B":      {3, 8, 8},
+		"B less than A":      {4, -1, 4},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, max(tc.a, tc.b))
+		})
+	}
+}
+
+func Test_MinOnInt(t *testing.T) {
+	type testCase struct {
+		a, b, expected int
+	}
+
+	testCases := map[string]testCase{
+		"A and B are equals": {7, 7, 7},
+		"A less than B":      {3, 8, 3},
+		"B less than A":      {4, -1, -1},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, min(tc.a, tc.b))
+		})
+	}
+}

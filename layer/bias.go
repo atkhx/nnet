@@ -10,9 +10,10 @@ type Bias struct {
 	iSize int
 	bSize int
 
-	WeightsObj *num.Data
-	InputsObj  *num.Data
-	OutputObj  *num.Data
+	// clever objects
+	weightObj *num.Data
+	inputsObj *num.Data
+	outputObj *num.Data
 
 	// internal buffers
 	Weights num.Float64s // (storable)
@@ -42,31 +43,19 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 
 	// Wrap to cleaver objects
 
-	l.WeightsObj = num.Wrap(l.Weights, l.wGrads)
-	l.InputsObj = num.Wrap(l.inputs, l.iGrads)
-	l.OutputObj = num.Wrap(l.output, l.oGrads)
+	l.weightObj = num.Wrap(l.Weights, l.wGrads)
+	l.inputsObj = num.Wrap(l.inputs, l.iGrads)
+	l.outputObj = num.Wrap(l.output, l.oGrads)
 
 	return l.output, l.oGrads
 }
 
 func (l *Bias) Forward() {
-	// here we need a batch logic
-	l.InputsObj.AddTo(l.OutputObj, l.WeightsObj)
-
-	//copy(l.output, l.inputs)
-	//for b := 0; b < l.bSize; b++ {
-	//	output := l.output[b*l.iSize : (b+1)*l.iSize]
-	//	output.Add(l.Weights)
-	//}
+	l.inputsObj.AddTo(l.outputObj, l.weightObj)
 }
 
 func (l *Bias) Backward() {
-	l.iGrads.Add(l.oGrads)
-
-	for b := 0; b < l.bSize; b++ {
-		oGrads := l.oGrads[b*l.iSize : (b+1)*l.iSize]
-		l.wGrads.Add(oGrads)
-	}
+	l.outputObj.CalcGrad()
 }
 
 func (l *Bias) ResetGrads() {

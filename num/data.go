@@ -27,3 +27,13 @@ func (d *Data) AddTo(out *Data, b *Data) {
 		b.grad.RepeatAdd(out.grad)
 	}
 }
+
+func (d *Data) CalcGrad() {
+	if d.calcGrad != nil {
+		d.calcGrad()
+	}
+
+	for _, node := range d.srcNodes {
+		node.CalcGrad()
+	}
+}
