@@ -39,10 +39,24 @@ func (f Float64s) Fill(v float64) {
 	}
 }
 
+func (f Float64s) CopyFrom(src Float64s) {
+	copy(f, src)
+}
+
 func (f Float64s) Copy() Float64s {
 	res := make(Float64s, len(f))
 	copy(res, f)
 	return res
+}
+
+func (f Float64s) CopyZero() Float64s {
+	return make(Float64s, len(f))
+}
+
+func (f Float64s) RepeatAdd(b Float64s) {
+	for _, pair := range getRepeatedPosPairs(len(f), len(b)) {
+		f[pair[0]] += b[pair[1]]
+	}
 }
 
 func (f Float64s) Add(b Float64s) {
