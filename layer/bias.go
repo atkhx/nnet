@@ -42,7 +42,8 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 func (l *Bias) Forward() {
 	copy(l.output, l.inputs)
 	for b := 0; b < l.bSize; b++ {
-		l.output[b*l.iSize : (b+1)*l.iSize].Add(l.Weights)
+		output := l.output[b*l.iSize : (b+1)*l.iSize]
+		output.Add(l.Weights)
 	}
 }
 
@@ -50,7 +51,8 @@ func (l *Bias) Backward() {
 	l.iGrads.Add(l.oGrads)
 
 	for b := 0; b < l.bSize; b++ {
-		l.wGrads.Add(l.oGrads[b*l.iSize : (b+1)*l.iSize])
+		oGrads := l.oGrads[b*l.iSize : (b+1)*l.iSize]
+		l.wGrads.Add(oGrads)
 	}
 }
 

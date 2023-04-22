@@ -7,12 +7,12 @@ import (
 )
 
 func NewFC(size int, gain float64) *FC {
-	return &FC{size: size, gain: gain}
+	return &FC{oSize: size, gain: gain}
 }
 
 type FC struct {
-	size int
-	gain float64
+	oSize int
+	gain  float64
 
 	iSize int
 	bSize int
@@ -40,17 +40,17 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 		weightK = l.gain / math.Pow(float64(fanIn), 0.5)
 	}
 
-	weights := make(num.Float64s, l.iSize*l.size)
+	weights := make(num.Float64s, l.iSize*l.oSize)
 	weights.RandNormWeighted(weightK)
 
 	l.Weights = weights
-	l.wGrads = make(num.Float64s, l.iSize*l.size)
+	l.wGrads = make(num.Float64s, l.iSize*l.oSize)
 
 	l.inputs = inputs
 	l.iGrads = iGrads
 
-	l.output = make(num.Float64s, l.size*l.bSize)
-	l.oGrads = make(num.Float64s, l.size*l.bSize)
+	l.output = make(num.Float64s, l.oSize*l.bSize)
+	l.oGrads = make(num.Float64s, l.oSize*l.bSize)
 
 	return l.output, l.oGrads
 }
@@ -58,10 +58,11 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 func (l *FC) Forward() {
 	for b := 0; b < l.bSize; b++ {
 		inputs := l.inputs[b*l.iSize : (b+1)*l.iSize]
-		output := l.output[b*l.size : (b+1)*l.size]
+		output := l.output[b*l.oSize : (b+1)*l.oSize]
 
-		for o := 0; o < l.size; o++ {
-			output[o] = num.Dot(inputs, l.Weights[o*l.iSize:(o+1)*l.iSize])
+		for o := 0; o < l.oSize; o++ {
+			weights := l.Weights[o*l.iSize : (o+1)*l.iSize]
+			output[o] = num.Dot(inputs, weights)
 		}
 	}
 }
@@ -70,10 +71,14 @@ func (l *FC) Backward() {
 	for b := 0; b < l.bSize; b++ {
 		inputs := l.inputs[b*l.iSize : (b+1)*l.iSize]
 		iGrads := l.iGrads[b*l.iSize : (b+1)*l.iSize]
+		oGrads := l.oGrads[b*l.oSize : (b+1)*l.oSize]
 
-		for i, delta := range l.oGrads[b*l.size : (b+1)*l.size] {
-			iGrads.AddWeighted(l.Weights[i*l.iSize:(i+1)*l.iSize], delta)
-			l.wGrads[i*l.iSize:(i+1)*l.iSize].AddWeighted(inputs, delta)
+		for i, delta := range oGrads {
+			weights := l.Weights[i*l.iSize : (i+1)*l.iSize]
+			iGrads.AddWeighted(weights, delta)
+
+			wGrads := l.wGrads[i*l.iSize : (i+1)*l.iSize]
+			wGrads.AddWeighted(inputs, delta)
 		}
 	}
 }
