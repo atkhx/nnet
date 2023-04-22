@@ -16,7 +16,7 @@ func CreateNN(
 
 	return model.NewSequential(contextLength, miniBatchSize, layer.Layers{
 		// embedding table
-		layer.NewEmbedPos(embeddingFeatures, alphabetSize, num.LinearGain),
+		layer.NewEmbed(embeddingFeatures, alphabetSize, num.LinearGain),
 
 		// main hidden layer (iSize needs: contextLength * embeddingFeatures)
 		layer.NewFC(hiddenLayerSize, num.TanhGain),

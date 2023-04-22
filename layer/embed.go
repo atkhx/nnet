@@ -1,27 +1,23 @@
 package layer
 
 import (
-	"math"
-
 	"github.com/atkhx/nnet/num"
 )
 
 func NewEmbed(
 	featuresCount int,
-	contextLength int,
+	alphabetSize int,
 	gain float64,
 ) *Embed {
 	return &Embed{
+		alphabetSize:  alphabetSize,
 		featuresCount: featuresCount,
-		contextLength: contextLength,
-
-		gain: gain,
+		gain:          gain,
 	}
 }
 
 type Embed struct {
 	featuresCount int
-	contextLength int
 	alphabetSize  int
 
 	gain float64
@@ -29,13 +25,15 @@ type Embed struct {
 	iSize int
 	bSize int
 
+	pos []int
+
 	// internal buffers
 	Weights num.Float64s // (storable)
 	wGrads  num.Float64s
 
 	// buffers from the previous layer
 	inputs num.Float64s
-	iGrads num.Float64s
+	//iGrads num.Float64s
 
 	// buffers to the next layer
 	output num.Float64s
@@ -46,48 +44,48 @@ func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, n
 	l.iSize = len(inputs) / bSize
 	l.bSize = bSize
 
-	l.alphabetSize = l.iSize / l.contextLength
-
-	weightK := 1.0
-	if l.gain > 0 {
-		fanIn := l.iSize * l.bSize
-		weightK = l.gain / math.Pow(float64(fanIn), 0.5)
-	}
-
 	weights := make(num.Float64s, l.alphabetSize*l.featuresCount)
-	weights.RandNormWeighted(weightK)
+	weights.RandNorm()
 
 	l.Weights = weights
 	l.wGrads = make(num.Float64s, l.alphabetSize*l.featuresCount)
 
 	l.inputs = inputs
-	l.iGrads = iGrads
 
-	l.output = make(num.Float64s, l.featuresCount*l.contextLength*l.bSize)
-	l.oGrads = make(num.Float64s, l.featuresCount*l.contextLength*l.bSize)
+	l.output = make(num.Float64s, l.featuresCount*l.iSize*l.bSize)
+	l.oGrads = make(num.Float64s, l.featuresCount*l.iSize*l.bSize)
+
+	l.pos = make([]int, len(inputs))
 
 	return l.output, l.oGrads
 }
 
 func (l *Embed) Forward() {
-	for b := 0; b < l.bSize*l.contextLength; b++ {
-		inputs := l.inputs[b*l.alphabetSize : (b+1)*l.alphabetSize]
-		output := l.output[b*l.featuresCount : (b+1)*l.featuresCount]
+	for i, v := range l.inputs {
+		l.pos[i] = int(v)
+	}
 
-		for o := 0; o < l.featuresCount; o++ {
-			output[o] = num.Dot(inputs, l.Weights[o*l.alphabetSize:(o+1)*l.alphabetSize])
+	for b := 0; b < l.bSize; b++ {
+		inputs := l.pos[b*l.iSize : (b+1)*l.iSize]
+		output := l.output[b*l.featuresCount*l.iSize : (b+1)*l.featuresCount*l.iSize]
+
+		for i, pos := range inputs {
+			copy(
+				output[i*l.featuresCount:(i+1)*l.featuresCount],
+				l.Weights[pos*l.featuresCount:(pos+1)*l.featuresCount],
+			)
 		}
 	}
 }
 
 func (l *Embed) Backward() {
-	for b := 0; b < l.bSize*l.contextLength; b++ {
-		inputs := l.inputs[b*l.alphabetSize : (b+1)*l.alphabetSize]
-		iGrads := l.iGrads[b*l.alphabetSize : (b+1)*l.alphabetSize]
+	for b := 0; b < l.bSize; b++ {
+		inputs := l.pos[b*l.iSize : (b+1)*l.iSize]
+		oGrads := l.oGrads[b*l.featuresCount*l.iSize : (b+1)*l.featuresCount*l.iSize]
 
-		for i, delta := range l.oGrads[b*l.featuresCount : (b+1)*l.featuresCount] {
-			iGrads.AddWeighted(l.Weights[i*l.alphabetSize:(i+1)*l.alphabetSize], delta)
-			l.wGrads[i*l.alphabetSize:(i+1)*l.alphabetSize].AddWeighted(inputs, delta)
+		for i, pos := range inputs {
+			wGrads := l.wGrads[pos*l.featuresCount : (pos+1)*l.featuresCount]
+			wGrads.Add(oGrads[i*l.featuresCount : (i+1)*l.featuresCount])
 		}
 	}
 }
