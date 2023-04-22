@@ -126,3 +126,25 @@ func (f Float64s) Multinomial() (r int) {
 	}
 	return len(f) - 1
 }
+
+func (f Float64s) ToInt() (r []int) {
+	r = make([]int, len(f))
+	for i, v := range f {
+		r[i] = int(v)
+	}
+	return
+}
+
+func (f Float64s) ToBytes() (r []byte) {
+	r = make([]byte, len(f))
+	for i, v := range f {
+		r[i] = byte(v)
+	}
+	return
+}
+
+func (f Float64s) FromBytes(b []byte) {
+	for i, v := range b {
+		f[i] = float64(v)
+	}
+}
