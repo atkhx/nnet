@@ -64,7 +64,6 @@ func (l *FC) Backward() {
 
 func (l *FC) ResetGrads() {
 	l.outputObj.ResetGrad()
-	l.weightObj.ResetGrad()
 }
 
 func (l *FC) ForUpdate() [][2]num.Float64s {

@@ -24,7 +24,7 @@ func (l *Sigmoid) Compile(_ int, inputs, iGrads num.Float64s) (num.Float64s, num
 }
 
 func (l *Sigmoid) Forward() {
-	l.inputsObj.ReLuTo(l.outputObj)
+	l.inputsObj.SigmoidTo(l.outputObj)
 }
 
 func (l *Sigmoid) Backward() {
