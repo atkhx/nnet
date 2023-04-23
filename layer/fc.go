@@ -37,16 +37,12 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 		weightK = l.gain / math.Pow(float64(fanIn), 0.5)
 	}
 
-	weights := make(num.Float64s, l.iSize*l.oSize)
-	weights.RandNormWeighted(weightK)
-
-	l.Weights = weights
-	l.wGrads = make(num.Float64s, l.iSize*l.oSize)
-
+	l.Weights = num.NewFloat64sRandNormWeighted(l.iSize*l.oSize, weightK)
+	l.wGrads = num.NewFloat64s(l.iSize * l.oSize)
 	l.weightObj = num.Wrap(l.Weights, l.wGrads)
 
-	output := make(num.Float64s, l.oSize*l.bSize)
-	oGrads := make(num.Float64s, l.oSize*l.bSize)
+	output := num.NewFloat64s(l.oSize * l.bSize)
+	oGrads := num.NewFloat64s(l.oSize * l.bSize)
 
 	l.inputsObj = num.Wrap(inputs, iGrads)
 	l.outputObj = num.Wrap(output, oGrads)
