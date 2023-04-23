@@ -25,14 +25,6 @@ type FC struct {
 	// internal buffers
 	Weights num.Float64s // (storable)
 	wGrads  num.Float64s
-
-	// buffers from the previous layer
-	inputs num.Float64s
-	iGrads num.Float64s
-
-	// buffers to the next layer
-	output num.Float64s
-	oGrads num.Float64s
 }
 
 func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
@@ -51,17 +43,15 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 	l.Weights = weights
 	l.wGrads = make(num.Float64s, l.iSize*l.oSize)
 
-	l.inputs = inputs
-	l.iGrads = iGrads
-
-	l.output = make(num.Float64s, l.oSize*l.bSize)
-	l.oGrads = make(num.Float64s, l.oSize*l.bSize)
-
-	l.inputsObj = num.Wrap(l.inputs, l.iGrads)
-	l.outputObj = num.Wrap(l.output, l.oGrads)
 	l.weightObj = num.Wrap(l.Weights, l.wGrads)
 
-	return l.output, l.oGrads
+	output := make(num.Float64s, l.oSize*l.bSize)
+	oGrads := make(num.Float64s, l.oSize*l.bSize)
+
+	l.inputsObj = num.Wrap(inputs, iGrads)
+	l.outputObj = num.Wrap(output, oGrads)
+
+	return output, oGrads
 }
 
 func (l *FC) Forward() {
@@ -73,8 +63,8 @@ func (l *FC) Backward() {
 }
 
 func (l *FC) ResetGrads() {
-	l.oGrads.Fill(0)
-	l.wGrads.Fill(0)
+	l.outputObj.ResetGrad()
+	l.weightObj.ResetGrad()
 }
 
 func (l *FC) ForUpdate() [][2]num.Float64s {
