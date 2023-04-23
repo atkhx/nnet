@@ -77,6 +77,7 @@ func main() {
 
 		output := seqModel.NewOutput()
 
+		t := time.Now()
 		for index := 0; index < epochs; index++ {
 			select {
 			case <-ctx.Done():
@@ -96,8 +97,9 @@ func main() {
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)
-				fmt.Println("loss", lossAvg)
+				fmt.Println(fmt.Sprintf("loss: %.8f", lossAvg), "\t", "duration:", time.Since(t))
 				lossAvg = 0
+				t = time.Now()
 			}
 		}
 	}()

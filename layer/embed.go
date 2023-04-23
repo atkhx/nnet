@@ -25,12 +25,13 @@ type Embed struct {
 	inputsObj *num.Data
 	outputObj *num.Data
 
-	// internal buffers
 	Weights num.Float64s // (storable)
 }
 
-func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	l.iSize = len(inputs) / bSize
+func (l *Embed) Compile(bSize int, inputs *num.Data) *num.Data {
+	inputsLen := len(inputs.GetData())
+
+	l.iSize = inputsLen / bSize
 	l.bSize = bSize
 
 	outputSize := l.featuresCount * l.bSize * l.iSize
@@ -42,26 +43,14 @@ func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, n
 		l.embedObj = num.Wrap(l.Weights, num.NewFloat64s(codeEmbeddingSize))
 	}
 
-	l.inputsObj = num.Wrap(inputs, iGrads)
+	l.inputsObj = inputs
+	l.outputObj = num.New(outputSize)
 
-	// candidate to clever output object
-	output := num.NewFloat64s(outputSize)
-	oGrads := num.NewFloat64s(outputSize)
-	l.outputObj = num.Wrap(output, oGrads)
-
-	return output, oGrads
+	return l.outputObj
 }
 
 func (l *Embed) Forward() {
 	l.embedObj.GetEmbeddedTo(l.outputObj, l.featuresCount, l.inputsObj.GetData().ToInt())
-}
-
-func (l *Embed) Backward() {
-	l.outputObj.CalcGrad()
-}
-
-func (l *Embed) ResetGrads() {
-	l.outputObj.ResetGrad()
 }
 
 func (l *Embed) ForUpdate() num.Nodes {

@@ -23,52 +23,33 @@ type Sequential struct {
 	iSize int
 	bSize int
 
-	inputs num.Float64s
-	iGrads num.Float64s
-
-	output num.Float64s
-	oGrads num.Float64s
+	inputs *num.Data
+	output *num.Data
 
 	Layers layer.Layers
 }
 
 func (s *Sequential) Compile() {
-	s.inputs = make(num.Float64s, s.iSize*s.bSize)
-	s.iGrads = make(num.Float64s, s.iSize*s.bSize)
-
-	s.output, s.oGrads = s.Layers.Compile(s.bSize, s.inputs, s.iGrads)
+	s.inputs = num.New(s.iSize * s.bSize)
+	s.output = s.Layers.Compile(s.bSize, s.inputs)
 }
 
 func (s *Sequential) NewOutput() num.Float64s {
-	res := s.output.Copy()
+	res := s.output.GetData().Copy()
 	res.Fill(0)
 	return res
 }
 
 func (s *Sequential) Forward(inputs, output num.Float64s) {
-	copy(s.inputs, inputs)
+	copy(s.inputs.GetData(), inputs)
 	s.Layers.Forward()
-	copy(output, s.output)
+	copy(output, s.output.GetData())
 }
 
 func (s *Sequential) Backward(oGrads num.Float64s) {
-	copy(s.oGrads, oGrads)
-	s.Layers.Backward()
-}
-
-func (s *Sequential) Backward123(target num.Float64s) {
-	chunkSize := len(s.output) / s.bSize
-
-	softmax := s.output.Copy()
-	for i := 0; i < len(s.output); i += chunkSize {
-		softmax[i : i+chunkSize].Softmax()
-	}
-
-	k := 1.0 / float64(s.bSize)
-	for i, t := range target {
-		s.oGrads[i] = k * (softmax[i] - t)
-	}
-	s.Layers.Backward()
+	pair := s.output.ForUpdate()
+	copy(pair[1], oGrads)
+	s.output.CalcGrad()
 }
 
 func (s *Sequential) Update(learningRate float64) {
@@ -79,7 +60,7 @@ func (s *Sequential) Update(learningRate float64) {
 		}
 	}
 
-	s.Layers.ResetGrads()
+	s.output.ResetGrad()
 }
 
 func (s *Sequential) LoadFromFile(filename string) error {

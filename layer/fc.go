@@ -22,12 +22,13 @@ type FC struct {
 	inputsObj *num.Data
 	outputObj *num.Data
 
-	// internal buffers
 	Weights num.Float64s // (storable)
 }
 
-func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	l.iSize = len(inputs) / bSize
+func (l *FC) Compile(bSize int, inputs *num.Data) *num.Data {
+	inputsLen := len(inputs.GetData())
+
+	l.iSize = inputsLen / bSize
 	l.bSize = bSize
 
 	weightK := 1.0
@@ -39,25 +40,14 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 	l.Weights = num.NewFloat64sRandNormWeighted(l.iSize*l.oSize, weightK)
 	l.weightObj = num.Wrap(l.Weights, num.NewFloat64s(l.iSize*l.oSize))
 
-	output := num.NewFloat64s(l.oSize * l.bSize)
-	oGrads := num.NewFloat64s(l.oSize * l.bSize)
+	l.inputsObj = inputs
+	l.outputObj = num.New(l.oSize * l.bSize)
 
-	l.inputsObj = num.Wrap(inputs, iGrads)
-	l.outputObj = num.Wrap(output, oGrads)
-
-	return output, oGrads
+	return l.outputObj
 }
 
 func (l *FC) Forward() {
 	l.inputsObj.DotTo(l.outputObj, l.weightObj, l.bSize)
-}
-
-func (l *FC) Backward() {
-	l.outputObj.CalcGrad()
-}
-
-func (l *FC) ResetGrads() {
-	l.outputObj.ResetGrad()
 }
 
 func (l *FC) ForUpdate() num.Nodes {

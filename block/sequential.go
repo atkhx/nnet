@@ -10,34 +10,21 @@ func NewSequentialBlock(layers layer.Layers) *Sequential {
 }
 
 type Sequential struct {
-	inputs num.Float64s
-	iGrads num.Float64s
-
-	output num.Float64s
-	oGrads num.Float64s
+	inputs *num.Data
+	output *num.Data
 
 	Layers layer.Layers
 }
 
-func (s *Sequential) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
+func (s *Sequential) Compile(bSize int, inputs *num.Data) *num.Data {
 	s.inputs = inputs
-	s.iGrads = iGrads
+	s.output = s.Layers.Compile(bSize, inputs)
 
-	s.output, s.oGrads = s.Layers.Compile(bSize, inputs, iGrads)
-
-	return s.output, s.oGrads
+	return s.output
 }
 
 func (s *Sequential) Forward() {
 	s.Layers.Forward()
-}
-
-func (s *Sequential) Backward() {
-	s.Layers.Backward()
-}
-
-func (s *Sequential) ResetGrads() {
-	s.Layers.ResetGrads()
 }
 
 func (s *Sequential) ForUpdate() num.Nodes {

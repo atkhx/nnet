@@ -3,16 +3,10 @@ package layer
 import "github.com/atkhx/nnet/num"
 
 type Layer interface {
+	Compile(bSize int, inputs *num.Data) *num.Data
 	Forward()
-	Backward()
-
-	Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s)
 }
 
 type Updatable interface {
 	ForUpdate() num.Nodes
-}
-
-type WithGrads interface {
-	ResetGrads()
 }

@@ -13,24 +13,13 @@ type Tanh struct {
 	outputObj *num.Data
 }
 
-func (l *Tanh) Compile(_ int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	output := num.NewFloat64s(len(inputs))
-	oGrads := num.NewFloat64s(len(inputs))
+func (l *Tanh) Compile(_ int, inputs *num.Data) *num.Data {
+	l.inputsObj = inputs
+	l.outputObj = num.New(len(inputs.GetData()))
 
-	l.inputsObj = num.Wrap(inputs, iGrads)
-	l.outputObj = num.Wrap(output, oGrads)
-
-	return output, oGrads
+	return l.outputObj
 }
 
 func (l *Tanh) Forward() {
 	l.inputsObj.TanhTo(l.outputObj)
-}
-
-func (l *Tanh) Backward() {
-	l.outputObj.CalcGrad()
-}
-
-func (l *Tanh) ResetGrads() {
-	l.outputObj.ResetGrad()
 }

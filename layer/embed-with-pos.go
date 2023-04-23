@@ -29,16 +29,17 @@ type EmbedWithPos struct {
 
 	tokensByValBuffer *num.Data // buffer for tokens by symbol code
 	tokensByPosBuffer *num.Data // buffer for tokens by symbol position
-	tokensSumBuffer   *num.Data // buffer for sum tokens (val + pos); result object (layer output)
-	inputsObjBuffer   *num.Data
 
-	// internal buffers
+	outputObj *num.Data
+	inputsObj *num.Data
+
 	WeightsVal num.Float64s // (storable)
 	WeightsPos num.Float64s // (storable)
 }
 
-func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	l.iSize = len(inputs) / bSize
+func (l *EmbedWithPos) Compile(bSize int, inputs *num.Data) *num.Data {
+	inputsLen := len(inputs.GetData())
+	l.iSize = inputsLen / bSize
 	l.bSize = bSize
 
 	outputSize := l.featuresCount * l.bSize * l.iSize
@@ -57,9 +58,8 @@ func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Floa
 	}
 
 	{ // buffers to store converted inputs information
-		l.inputsObjBuffer = num.Wrap(inputs, iGrads)
-		l.inputIdxByVal = make([]int, len(inputs))
-		l.inputIdxByPos = make([]int, len(inputs))
+		l.inputIdxByVal = make([]int, inputsLen)
+		l.inputIdxByPos = make([]int, inputsLen)
 	}
 
 	{ // buffers to store intermediate results
@@ -67,16 +67,13 @@ func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Floa
 		l.tokensByPosBuffer = num.New(outputSize)
 	}
 
-	// candidate to clever output object
-	output := make(num.Float64s, outputSize)
-	oGrads := make(num.Float64s, outputSize)
-	l.tokensSumBuffer = num.Wrap(output, oGrads)
-
-	return output, oGrads
+	l.inputsObj = inputs
+	l.outputObj = num.New(outputSize)
+	return l.outputObj
 }
 
 func (l *EmbedWithPos) Forward() {
-	inputs := l.inputsObjBuffer.GetData()
+	inputs := l.inputsObj.GetData()
 	for i, pair := range num.GetRepeatedPosPairs(len(inputs), l.iSize) {
 		l.inputIdxByVal[i] = int(inputs[pair[0]])
 		l.inputIdxByPos[i] = pair[1]
@@ -85,15 +82,7 @@ func (l *EmbedWithPos) Forward() {
 	l.embeddedByValObj.GetEmbeddedTo(l.tokensByValBuffer, l.featuresCount, l.inputIdxByVal)
 	l.embeddedByPosObj.GetEmbeddedTo(l.tokensByPosBuffer, l.featuresCount, l.inputIdxByPos)
 
-	l.tokensByValBuffer.AddTo(l.tokensSumBuffer, l.tokensByPosBuffer)
-}
-
-func (l *EmbedWithPos) Backward() {
-	l.tokensSumBuffer.CalcGrad()
-}
-
-func (l *EmbedWithPos) ResetGrads() {
-	l.tokensSumBuffer.ResetGrad()
+	l.tokensByValBuffer.AddTo(l.outputObj, l.tokensByPosBuffer)
 }
 
 func (l *EmbedWithPos) ForUpdate() num.Nodes {
