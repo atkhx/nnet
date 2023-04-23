@@ -67,6 +67,6 @@ func (l *Embed) ResetGrads() {
 	l.outputObj.ResetGrad()
 }
 
-func (l *Embed) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{{l.Weights, l.wGrads}}
+func (l *Embed) ForUpdate() num.Nodes {
+	return num.Nodes{l.embedObj}
 }

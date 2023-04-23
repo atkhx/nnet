@@ -52,6 +52,6 @@ func (l *Bias) ResetGrads() {
 	l.weightObj.ResetGrad()
 }
 
-func (l *Bias) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{{l.Weights, l.wGrads}}
+func (l *Bias) ForUpdate() num.Nodes {
+	return num.Nodes{l.weightObj}
 }

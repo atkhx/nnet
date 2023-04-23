@@ -32,8 +32,8 @@ func (s Layers) ResetGrads() {
 	}
 }
 
-func (s Layers) ForUpdate() [][2]num.Float64s {
-	result := make([][2]num.Float64s, 0, len(s))
+func (s Layers) ForUpdate() num.Nodes {
+	result := make(num.Nodes, 0, len(s))
 	for _, layer := range s {
 		if l, ok := layer.(Updatable); ok {
 			result = append(result, l.ForUpdate()...)

@@ -104,9 +104,9 @@ func (l *EmbedWithPos) ResetGrads() {
 	l.tokensSumBuffer.ResetGrad()
 }
 
-func (l *EmbedWithPos) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{
-		{l.WeightsVal, l.wGradsVal},
-		{l.WeightsPos, l.wGradsPos},
+func (l *EmbedWithPos) ForUpdate() num.Nodes {
+	return num.Nodes{
+		l.embeddedByValObj,
+		l.embeddedByPosObj,
 	}
 }

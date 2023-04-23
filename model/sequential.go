@@ -72,7 +72,8 @@ func (s *Sequential) Backward123(target num.Float64s) {
 }
 
 func (s *Sequential) Update(learningRate float64) {
-	for _, pair := range s.Layers.ForUpdate() {
+	for _, node := range s.Layers.ForUpdate() {
+		pair := node.ForUpdate()
 		for j := range pair[1] {
 			pair[0][j] -= pair[1][j] * learningRate
 		}

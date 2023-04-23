@@ -40,6 +40,6 @@ func (s *Sequential) ResetGrads() {
 	s.Layers.ResetGrads()
 }
 
-func (s *Sequential) ForUpdate() [][2]num.Float64s {
+func (s *Sequential) ForUpdate() num.Nodes {
 	return s.Layers.ForUpdate()
 }

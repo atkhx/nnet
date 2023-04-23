@@ -62,6 +62,6 @@ func (l *FC) ResetGrads() {
 	l.outputObj.ResetGrad()
 }
 
-func (l *FC) ForUpdate() [][2]num.Float64s {
-	return [][2]num.Float64s{{l.Weights, l.wGrads}}
+func (l *FC) ForUpdate() num.Nodes {
+	return num.Nodes{l.weightObj}
 }

@@ -10,7 +10,7 @@ type Layer interface {
 }
 
 type Updatable interface {
-	ForUpdate() [][2]num.Float64s
+	ForUpdate() num.Nodes
 }
 
 type WithGrads interface {
