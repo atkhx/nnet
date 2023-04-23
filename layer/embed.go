@@ -34,13 +34,12 @@ func (l *Embed) Compile(bSize int, inputs *num.Data) *num.Data {
 	l.iSize = inputsLen / bSize
 	l.bSize = bSize
 
+	embedSize := l.featuresCount * l.alphabetSize
 	outputSize := l.featuresCount * l.bSize * l.iSize
 
 	{ // code embedding table initialization
-		codeEmbeddingSize := l.featuresCount * l.alphabetSize
-
-		l.Weights = num.NewFloat64sRandNorm(codeEmbeddingSize)
-		l.embedObj = num.Wrap(l.Weights, num.NewFloat64s(codeEmbeddingSize))
+		l.Weights = num.NewFloat64sRandNorm(embedSize)
+		l.embedObj = num.Wrap(l.Weights, num.NewFloat64s(embedSize))
 	}
 
 	l.inputsObj = inputs

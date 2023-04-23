@@ -34,12 +34,6 @@ func (s *Sequential) Compile() {
 	s.output = s.Layers.Compile(s.bSize, s.inputs)
 }
 
-func (s *Sequential) NewOutput() num.Float64s {
-	res := s.output.GetData().Copy()
-	res.Fill(0)
-	return res
-}
-
 func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
 	copy(s.inputs.GetData(), inputs)
 	s.Layers.Forward()
