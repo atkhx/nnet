@@ -45,19 +45,17 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	output := seqModel.NewOutput()
 	inp, _ := namesDataset.ReadRandomSample()
 	inputBytes := namesDataset.DecodeFloats(inp...)
 
 	fmt.Println(strings.Repeat("-", 40))
 	fmt.Println(string(namesDataset.Decode(inp.ToInt()...)))
 	fmt.Println(strings.Repeat("-", 40))
-	//fmt.Print(string(namesDataset.Decode(inp.ToInt()...)))
 
 	for j := 0; j < 10000; j++ {
 		inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
-		seqModel.Forward(inputsFloat, output)
+		output := seqModel.Forward(inputsFloat).GetData()
 		output.Softmax()
 		output.CumulativeSum()
 

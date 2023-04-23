@@ -45,17 +45,13 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	output := seqModel.NewOutput()
-
 	for j := 0; j < 100; j++ {
 		inputBytes := bytes.Repeat([]byte{'.'}, namesDataset.GetContextSize())
 		name := ""
 		for k := 0; k < 50; k++ {
 			inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
-			seqModel.Forward(inputsFloat, output)
-			//output.MulScalar(1.0 / output.Sum())
-			//output.AddScalar(-output.Min())
+			output := seqModel.Forward(inputsFloat).GetData()
 			output.Softmax()
 			output.CumulativeSum()
 

@@ -15,7 +15,6 @@ import (
 
 	"github.com/atkhx/nnet/examples/ts/dataset"
 	"github.com/atkhx/nnet/examples/ts/pkg"
-	"github.com/atkhx/nnet/loss"
 )
 
 var filename string
@@ -44,10 +43,6 @@ func main() {
 	namesDataset := dataset.NewDataset(dataset.NamesContextSize, dataset.NamesMiniBatchSize)
 	namesDataset.ParseAlphabet(dataset.TinyShakespeare)
 
-	//inputs, targets := namesDataset.ReadRandomSampleBatch()
-	//fmt.Println(string(namesDataset.DecodeFloats(inputs...)))
-	//fmt.Println(targets)
-
 	seqModel := pkg.CreateNN(
 		namesDataset.GetAlphabetSize(),
 		namesDataset.GetContextSize(),
@@ -75,8 +70,6 @@ func main() {
 		statChunkSize := 1000
 		lossAvg := 0.0
 
-		output := seqModel.NewOutput()
-
 		t := time.Now()
 		for index := 0; index < epochs; index++ {
 			select {
@@ -87,12 +80,11 @@ func main() {
 
 			batchInputs, batchTarget := namesDataset.ReadRandomSampleBatch()
 
-			seqModel.Forward(batchInputs, output)
+			loss := seqModel.Forward(batchInputs).CrossEntropy(batchTarget, namesDataset.GetMiniBatchSize())
+			loss.CalcGrad()
 
-			lossAvg += loss.CrossEntropy(batchTarget, output, namesDataset.GetMiniBatchSize())
-			oGrads := loss.CrossEntropyBackward(batchTarget, output, namesDataset.GetMiniBatchSize())
+			lossAvg += loss.GetData()[0]
 
-			seqModel.Backward(oGrads)
 			seqModel.Update(0.1)
 
 			if index > 0 && index%statChunkSize == 0 {

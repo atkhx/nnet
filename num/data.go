@@ -1,6 +1,8 @@
 package num
 
-import "math"
+import (
+	"math"
+)
 
 type Nodes []*Data
 
@@ -129,6 +131,55 @@ func (d *Data) GetEmbeddedTo(out *Data, featuresCount int, idx []int) {
 			wGrads.Add(out.grad[i*featuresCount : (i+1)*featuresCount])
 		}
 	}
+}
+
+func (d *Data) CrossEntropy(target Float64s, bSize int) (out *Data) {
+	softmax := d.data.Copy()
+	chunkSize := len(softmax) / bSize
+
+	for i := 0; i < len(softmax); i += chunkSize {
+		softmax[i : i+chunkSize].Softmax()
+	}
+
+	actual := softmax.Copy()
+	for i, t := range target {
+		actual[i] = -t * math.Log(actual[i])
+	}
+
+	loss := actual.Sum() / float64(bSize)
+
+	out = New(1)
+	out.data[0] = loss
+	out.srcNodes = Nodes{d}
+	out.calcGrad = func() {
+		k := 1.0 / float64(bSize)
+		for i, t := range target {
+			d.grad[i] = k * (softmax[i] - t)
+		}
+	}
+
+	return
+}
+
+func (d *Data) Regression(target Float64s, bSize int) (out *Data) {
+	loss := 0.0
+	for i, t := range target {
+		loss += math.Pow(d.data[i]-t, 2)
+	}
+	loss = 0.5 * loss / float64(bSize)
+
+	out = New(1)
+	out.data[0] = loss
+	out.srcNodes = Nodes{d}
+	out.calcGrad = func() {
+		oGrads := d.data.Copy()
+		oGrads.AddWeighted(target, -1.0)
+		oGrads.MulScalar(1.0 / float64(bSize))
+
+		d.grad.Add(oGrads)
+	}
+
+	return
 }
 
 func (d *Data) CalcGrad() {

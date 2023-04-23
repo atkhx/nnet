@@ -13,7 +13,6 @@ import (
 
 	"github.com/atkhx/nnet/examples/namesgen-pos/dataset"
 	"github.com/atkhx/nnet/examples/namesgen-pos/pkg"
-	"github.com/atkhx/nnet/loss"
 )
 
 var filename string
@@ -66,8 +65,6 @@ func main() {
 		statChunkSize := 1000
 		lossAvg := 0.0
 
-		output := seqModel.NewOutput()
-
 		for index := 0; index < epochs; index++ {
 			select {
 			case <-ctx.Done():
@@ -77,12 +74,10 @@ func main() {
 
 			batchInputs, batchTarget := namesDataset.ReadRandomSampleBatch()
 
-			seqModel.Forward(batchInputs, output)
+			loss := seqModel.Forward(batchInputs).CrossEntropy(batchTarget, namesDataset.GetMiniBatchSize())
+			loss.CalcGrad()
 
-			lossAvg += loss.CrossEntropy(batchTarget, output, namesDataset.GetMiniBatchSize())
-			oGrads := loss.CrossEntropyBackward(batchTarget, output, namesDataset.GetMiniBatchSize())
-
-			seqModel.Backward(oGrads)
+			lossAvg += loss.GetData()[0]
 			seqModel.Update(0.01)
 
 			if index > 0 && index%statChunkSize == 0 {

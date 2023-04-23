@@ -6,7 +6,6 @@ import (
 
 	"github.com/atkhx/nnet/block"
 	"github.com/atkhx/nnet/layer"
-	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/model"
 	"github.com/atkhx/nnet/num"
 )
@@ -42,7 +41,6 @@ func main() {
 	seqModel.Compile()
 
 	lossAvg := 0.0
-	output := seqModel.NewOutput()
 
 	batchInputs := make(num.Float64s, 0, inputsSize*batchSize)
 	batchTarget := make(num.Float64s, 0, outputSize*batchSize)
@@ -57,12 +55,10 @@ func main() {
 			allTargets[i], allTargets[j] = allTargets[j], allTargets[i]
 		})
 
-		seqModel.Forward(batchInputs, output)
+		loss := seqModel.Forward(batchInputs).Regression(batchTarget, batchSize)
+		loss.CalcGrad()
 
-		lossAvg += loss.Regression(batchTarget, output, batchSize)
-		oGrads := loss.RegressionBackward(batchTarget, output, batchSize)
-
-		seqModel.Backward(oGrads)
+		lossAvg += loss.GetData()[0]
 		seqModel.Update(learningRate)
 
 		if i > 0 && i%statisticsStep == 0 {

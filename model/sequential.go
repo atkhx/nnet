@@ -40,16 +40,10 @@ func (s *Sequential) NewOutput() num.Float64s {
 	return res
 }
 
-func (s *Sequential) Forward(inputs, output num.Float64s) {
+func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
 	copy(s.inputs.GetData(), inputs)
 	s.Layers.Forward()
-	copy(output, s.output.GetData())
-}
-
-func (s *Sequential) Backward(oGrads num.Float64s) {
-	pair := s.output.ForUpdate()
-	copy(pair[1], oGrads)
-	s.output.CalcGrad()
+	return s.output
 }
 
 func (s *Sequential) Update(learningRate float64) {

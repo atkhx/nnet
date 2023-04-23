@@ -5,7 +5,6 @@ import (
 
 	"github.com/atkhx/nnet/block"
 	"github.com/atkhx/nnet/layer"
-	"github.com/atkhx/nnet/loss"
 	"github.com/atkhx/nnet/model"
 	"github.com/atkhx/nnet/num"
 )
@@ -40,17 +39,15 @@ func main() {
 	seqModel.Compile()
 
 	lossAvg := 0.0
-	output := seqModel.NewOutput()
 	for i := 0; i < learningEpochs; i++ {
 		for j := range allInputs {
 			inputs := allInputs[j]
 			target := allTargets[j]
 
-			seqModel.Forward(inputs, output)
-			lossAvg += loss.Regression(target, output, 1)
-			oGrads := loss.RegressionBackward(target, output, 1)
+			loss := seqModel.Forward(inputs).Regression(target, 1)
+			loss.CalcGrad()
 
-			seqModel.Backward(oGrads)
+			lossAvg += loss.GetData()[0]
 			seqModel.Update(learningRate)
 		}
 
