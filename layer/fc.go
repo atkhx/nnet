@@ -24,7 +24,6 @@ type FC struct {
 
 	// internal buffers
 	Weights num.Float64s // (storable)
-	wGrads  num.Float64s
 }
 
 func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
@@ -38,8 +37,7 @@ func (l *FC) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.
 	}
 
 	l.Weights = num.NewFloat64sRandNormWeighted(l.iSize*l.oSize, weightK)
-	l.wGrads = num.NewFloat64s(l.iSize * l.oSize)
-	l.weightObj = num.Wrap(l.Weights, l.wGrads)
+	l.weightObj = num.Wrap(l.Weights, num.NewFloat64s(l.iSize*l.oSize))
 
 	output := num.NewFloat64s(l.oSize * l.bSize)
 	oGrads := num.NewFloat64s(l.oSize * l.bSize)

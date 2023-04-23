@@ -26,7 +26,6 @@ type Embed struct {
 
 	// internal buffers
 	Weights num.Float64s // (storable)
-	wGrads  num.Float64s
 	inputs  num.Float64s
 }
 
@@ -40,9 +39,7 @@ func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, n
 		codeEmbeddingSize := l.featuresCount * l.alphabetSize
 
 		l.Weights = num.NewFloat64sRandNorm(codeEmbeddingSize)
-		l.wGrads = num.NewFloat64s(codeEmbeddingSize)
-
-		l.embedObj = num.Wrap(l.Weights, l.wGrads)
+		l.embedObj = num.Wrap(l.Weights, num.NewFloat64s(codeEmbeddingSize))
 	}
 
 	l.inputs = inputs // we have to store it because we need direct data access

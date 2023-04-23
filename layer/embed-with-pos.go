@@ -33,10 +33,7 @@ type EmbedWithPos struct {
 
 	// internal buffers
 	WeightsVal num.Float64s // (storable)
-	wGradsVal  num.Float64s
-
 	WeightsPos num.Float64s // (storable)
-	wGradsPos  num.Float64s
 
 	// buffers from the previous layer
 	inputs num.Float64s
@@ -52,17 +49,13 @@ func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Floa
 		codeEmbeddingSize := l.featuresCount * l.alphabetSize
 
 		l.WeightsVal = num.NewFloat64sRandNorm(codeEmbeddingSize)
-		l.wGradsVal = make(num.Float64s, codeEmbeddingSize)
-
-		l.embeddedByValObj = num.Wrap(l.WeightsVal, l.wGradsVal)
+		l.embeddedByValObj = num.Wrap(l.WeightsVal, make(num.Float64s, codeEmbeddingSize))
 	}
 
 	{ // position embedding table initialization
 		posEmbeddingSize := l.featuresCount * l.iSize
 		l.WeightsPos = num.NewFloat64sRandNorm(posEmbeddingSize)
-		l.wGradsPos = make(num.Float64s, posEmbeddingSize)
-
-		l.embeddedByPosObj = num.Wrap(l.WeightsPos, l.wGradsPos)
+		l.embeddedByPosObj = num.Wrap(l.WeightsPos, make(num.Float64s, posEmbeddingSize))
 	}
 
 	{ // buffers to store converted inputs information

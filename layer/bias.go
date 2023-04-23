@@ -17,7 +17,6 @@ type Bias struct {
 
 	// internal buffers
 	Weights num.Float64s // (storable)
-	wGrads  num.Float64s
 }
 
 func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
@@ -25,10 +24,7 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 	l.bSize = bSize
 
 	l.Weights = num.NewFloat64s(l.iSize)
-	l.wGrads = num.NewFloat64s(l.iSize)
-
-	// Wrap to cleaver objects
-	l.weightObj = num.Wrap(l.Weights, l.wGrads)
+	l.weightObj = num.Wrap(l.Weights, num.NewFloat64s(l.iSize))
 
 	output := num.NewFloat64s(len(inputs))
 	oGrads := num.NewFloat64s(len(inputs))
