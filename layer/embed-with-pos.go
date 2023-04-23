@@ -30,13 +30,14 @@ type EmbedWithPos struct {
 	tokensByValBuffer *num.Data // buffer for tokens by symbol code
 	tokensByPosBuffer *num.Data // buffer for tokens by symbol position
 	tokensSumBuffer   *num.Data // buffer for sum tokens (val + pos); result object (layer output)
+	inputsObjBuffer   *num.Data
 
 	// internal buffers
 	WeightsVal num.Float64s // (storable)
 	WeightsPos num.Float64s // (storable)
 
 	// buffers from the previous layer
-	inputs num.Float64s
+	//inputs num.Float64s
 }
 
 func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
@@ -59,7 +60,7 @@ func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Floa
 	}
 
 	{ // buffers to store converted inputs information
-		l.inputs = inputs // we have to store it because we need direct data access
+		l.inputsObjBuffer = num.Wrap(inputs, iGrads)
 		l.inputIdxByVal = make([]int, len(inputs))
 		l.inputIdxByPos = make([]int, len(inputs))
 	}
@@ -78,8 +79,9 @@ func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Floa
 }
 
 func (l *EmbedWithPos) Forward() {
-	for i, pair := range num.GetRepeatedPosPairs(len(l.inputs), l.iSize) {
-		l.inputIdxByVal[i] = int(l.inputs[pair[0]])
+	inputs := l.inputsObjBuffer.GetData()
+	for i, pair := range num.GetRepeatedPosPairs(len(inputs), l.iSize) {
+		l.inputIdxByVal[i] = int(inputs[pair[0]])
 		l.inputIdxByPos[i] = pair[1]
 	}
 

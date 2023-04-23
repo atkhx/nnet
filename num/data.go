@@ -149,6 +149,10 @@ func (d *Data) ResetGrad() {
 	}
 }
 
+func (d *Data) GetData() Float64s {
+	return d.data
+}
+
 func (d *Data) ForUpdate() [2]Float64s {
 	return [2]Float64s{d.data, d.grad}
 }

@@ -22,11 +22,11 @@ type Embed struct {
 	bSize int
 
 	embedObj  *num.Data
+	inputsObj *num.Data
 	outputObj *num.Data
 
 	// internal buffers
 	Weights num.Float64s // (storable)
-	inputs  num.Float64s
 }
 
 func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
@@ -42,7 +42,7 @@ func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, n
 		l.embedObj = num.Wrap(l.Weights, num.NewFloat64s(codeEmbeddingSize))
 	}
 
-	l.inputs = inputs // we have to store it because we need direct data access
+	l.inputsObj = num.Wrap(inputs, iGrads)
 
 	// candidate to clever output object
 	output := num.NewFloat64s(outputSize)
@@ -53,7 +53,7 @@ func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, n
 }
 
 func (l *Embed) Forward() {
-	l.embedObj.GetEmbeddedTo(l.outputObj, l.featuresCount, l.inputs.ToInt())
+	l.embedObj.GetEmbeddedTo(l.outputObj, l.featuresCount, l.inputsObj.GetData().ToInt())
 }
 
 func (l *Embed) Backward() {
