@@ -35,9 +35,6 @@ type EmbedWithPos struct {
 	// internal buffers
 	WeightsVal num.Float64s // (storable)
 	WeightsPos num.Float64s // (storable)
-
-	// buffers from the previous layer
-	//inputs num.Float64s
 }
 
 func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
