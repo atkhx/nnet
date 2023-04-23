@@ -2,7 +2,7 @@ package num
 
 import "fmt"
 
-func getRepeatedPosPairs(aLen, bLen int) [][2]int {
+func GetRepeatedPosPairs(aLen, bLen int) [][2]int {
 	mln := max(aLen, bLen)
 	res := make([][2]int, mln)
 	fi, bi := 0, 0

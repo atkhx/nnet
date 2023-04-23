@@ -85,24 +85,6 @@ func (d *Dataset) ParseAlphabet(bytes []byte) {
 	}
 }
 
-//func (d *Dataset) PrepareDataset(rawBytes []byte) {
-//	words := bytes.Split(rawBytes, []byte("\n"))
-//	input := bytes.Repeat([]byte{'.'}, d.contextSize)
-//
-//	for _, word := range words {
-//		word := append(word, '.')
-//		for i := 0; i < len(word)-1; i++ {
-//			input = append(input, word[i])
-//			input = input[1:]
-//
-//			d.inputs = append(d.inputs, d.EncodeToFloats(input...)...)
-//			d.targets = append(d.targets, num.NewOneHotVectors(d.alphabetSize, d.Encode(word[i+1])...)...)
-//		}
-//	}
-//
-//	d.samplesCount = len(d.targets) / d.alphabetSize
-//}
-
 func (d *Dataset) Encode(chars ...byte) []int {
 	indexes := make([]int, len(chars))
 	for i, v := range chars {
@@ -172,16 +154,3 @@ func (d *Dataset) ReadRandomSample() (sampleInputs, sampleTargets num.Float64s) 
 
 	return sampleInputs, sampleTargets
 }
-
-//func (d *Dataset) ReadRandomSampleBatch2() (sampleInputs, sampleTargets num.Float64s) {
-//	pos := rand.Intn(d.GetSamplesCount() - d.miniBatchSize - 1)
-//	inputSampleSize := d.contextSize
-//
-//	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
-//	copy(sampleInputs, d.inputs[pos*inputSampleSize:(pos+d.miniBatchSize)*inputSampleSize])
-//
-//	sampleTargets = make(num.Float64s, d.alphabetSize*d.miniBatchSize)
-//	copy(sampleTargets, d.targets[pos*d.alphabetSize:(pos+d.miniBatchSize)*d.alphabetSize])
-//
-//	return sampleInputs, sampleTargets
-//}

@@ -71,7 +71,7 @@ func Test_getRepeatedPosPairs(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.expected, getRepeatedPosPairs(tc.aLen, tc.bLen))
+			require.Equal(t, tc.expected, GetRepeatedPosPairs(tc.aLen, tc.bLen))
 		})
 	}
 }

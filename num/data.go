@@ -4,6 +4,13 @@ import "math"
 
 type Nodes []*Data
 
+func New(size int) *Data {
+	return &Data{
+		data: make(Float64s, size),
+		grad: make(Float64s, size),
+	}
+}
+
 func Wrap(data, grad Float64s) *Data {
 	return &Data{
 		data: data,
@@ -103,6 +110,23 @@ func (d *Data) TanhTo(out *Data) {
 	out.calcGrad = func() {
 		for i, v := range out.data {
 			d.grad[i] += out.grad[i] * (1 - v*v)
+		}
+	}
+}
+
+func (d *Data) GetEmbeddedTo(out *Data, featuresCount int, idx []int) {
+	for i, pos := range idx {
+		features := d.data[pos*featuresCount : (pos+1)*featuresCount]
+		outBuffer := out.data[i*featuresCount : (i+1)*featuresCount]
+
+		copy(outBuffer, features)
+	}
+
+	out.srcNodes = Nodes{d}
+	out.calcGrad = func() {
+		for i, pos := range idx {
+			wGrads := d.grad[pos*featuresCount : (pos+1)*featuresCount]
+			wGrads.Add(out.grad[i*featuresCount : (i+1)*featuresCount])
 		}
 	}
 }

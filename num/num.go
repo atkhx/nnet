@@ -12,6 +12,22 @@ const (
 	LinearGain  = 1.0
 )
 
+func NewFloat64s(size int) Float64s {
+	return make(Float64s, size)
+}
+
+func NewFloat64sRandNorm(size int) Float64s {
+	res := NewFloat64s(size)
+	res.RandNorm()
+	return res
+}
+
+func NewFloat64sRandNormWeighted(size int, w float64) Float64s {
+	res := NewFloat64s(size)
+	res.RandNormWeighted(w)
+	return res
+}
+
 type Float64s []float64
 
 func (f Float64s) RandNorm() {
@@ -47,7 +63,7 @@ func (f Float64s) CopyZero() Float64s {
 }
 
 func (f Float64s) RepeatAdd(b Float64s) {
-	for _, pair := range getRepeatedPosPairs(len(f), len(b)) {
+	for _, pair := range GetRepeatedPosPairs(len(f), len(b)) {
 		f[pair[0]] += b[pair[1]]
 	}
 }
@@ -55,6 +71,12 @@ func (f Float64s) RepeatAdd(b Float64s) {
 func (f Float64s) Add(b Float64s) {
 	for i, v := range f {
 		f[i] = v + b[i]
+	}
+}
+
+func (f Float64s) Mul(b Float64s) {
+	for i, v := range f {
+		f[i] = v * b[i]
 	}
 }
 
