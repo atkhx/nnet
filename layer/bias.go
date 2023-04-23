@@ -24,14 +24,14 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 	l.iSize = len(inputs) / bSize
 	l.bSize = bSize
 
-	l.Weights = make(num.Float64s, l.iSize)
-	l.wGrads = make(num.Float64s, l.iSize)
+	l.Weights = num.NewFloat64s(l.iSize)
+	l.wGrads = num.NewFloat64s(l.iSize)
 
 	// Wrap to cleaver objects
 	l.weightObj = num.Wrap(l.Weights, l.wGrads)
 
-	output := make(num.Float64s, len(inputs))
-	oGrads := make(num.Float64s, len(inputs))
+	output := num.NewFloat64s(len(inputs))
+	oGrads := num.NewFloat64s(len(inputs))
 
 	l.inputsObj = num.Wrap(inputs, iGrads)
 	l.outputObj = num.Wrap(output, oGrads)

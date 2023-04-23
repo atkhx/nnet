@@ -12,8 +12,8 @@ type ReLu struct {
 }
 
 func (l *ReLu) Compile(_ int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	output := make(num.Float64s, len(inputs))
-	oGrads := make(num.Float64s, len(inputs))
+	output := num.NewFloat64s(len(inputs))
+	oGrads := num.NewFloat64s(len(inputs))
 
 	l.inputsObj = num.Wrap(inputs, iGrads)
 	l.outputObj = num.Wrap(output, oGrads)
