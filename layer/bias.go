@@ -18,14 +18,6 @@ type Bias struct {
 	// internal buffers
 	Weights num.Float64s // (storable)
 	wGrads  num.Float64s
-
-	// buffers from the previous layer
-	inputs num.Float64s
-	iGrads num.Float64s
-
-	// buffers to the next layer
-	output num.Float64s
-	oGrads num.Float64s
 }
 
 func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
@@ -35,19 +27,16 @@ func (l *Bias) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, nu
 	l.Weights = make(num.Float64s, l.iSize)
 	l.wGrads = make(num.Float64s, l.iSize)
 
-	l.inputs = inputs
-	l.iGrads = iGrads
-
-	l.output = make(num.Float64s, l.iSize*l.bSize)
-	l.oGrads = make(num.Float64s, l.iSize*l.bSize)
-
 	// Wrap to cleaver objects
-
 	l.weightObj = num.Wrap(l.Weights, l.wGrads)
-	l.inputsObj = num.Wrap(l.inputs, l.iGrads)
-	l.outputObj = num.Wrap(l.output, l.oGrads)
 
-	return l.output, l.oGrads
+	output := make(num.Float64s, len(inputs))
+	oGrads := make(num.Float64s, len(inputs))
+
+	l.inputsObj = num.Wrap(inputs, iGrads)
+	l.outputObj = num.Wrap(output, oGrads)
+
+	return output, oGrads
 }
 
 func (l *Bias) Forward() {
@@ -59,8 +48,8 @@ func (l *Bias) Backward() {
 }
 
 func (l *Bias) ResetGrads() {
-	l.oGrads.Fill(0)
-	l.wGrads.Fill(0)
+	l.outputObj.ResetGrad()
+	l.weightObj.ResetGrad()
 }
 
 func (l *Bias) ForUpdate() [][2]num.Float64s {

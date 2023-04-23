@@ -1,8 +1,6 @@
 package layer
 
 import (
-	"math"
-
 	"github.com/atkhx/nnet/num"
 )
 
@@ -11,37 +9,28 @@ func NewTanh() *Tanh {
 }
 
 type Tanh struct {
-	// buffers from the previous layer
-	inputs num.Float64s
-	iGrads num.Float64s
-
-	// buffers to the next layer
-	output num.Float64s
-	oGrads num.Float64s
+	inputsObj *num.Data
+	outputObj *num.Data
 }
 
-func (l *Tanh) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	l.inputs = inputs
-	l.iGrads = iGrads
+func (l *Tanh) Compile(_ int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
+	output := make(num.Float64s, len(inputs))
+	oGrads := make(num.Float64s, len(inputs))
 
-	l.output = make(num.Float64s, len(inputs))
-	l.oGrads = make(num.Float64s, len(inputs))
+	l.inputsObj = num.Wrap(inputs, iGrads)
+	l.outputObj = num.Wrap(output, oGrads)
 
-	return l.output, l.oGrads
+	return output, oGrads
 }
 
 func (l *Tanh) Forward() {
-	for i, v := range l.inputs {
-		l.output[i] = math.Tanh(v)
-	}
+	l.inputsObj.TanhTo(l.outputObj)
 }
 
 func (l *Tanh) Backward() {
-	for i, v := range l.output {
-		l.iGrads[i] += l.oGrads[i] * (1 - v*v)
-	}
+	l.outputObj.CalcGrad()
 }
 
 func (l *Tanh) ResetGrads() {
-	l.oGrads.Fill(0)
+	l.outputObj.ResetGrad()
 }

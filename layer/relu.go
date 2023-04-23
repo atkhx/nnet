@@ -7,43 +7,28 @@ func NewReLu() *ReLu {
 }
 
 type ReLu struct {
-	// buffers from the previous layer
-	inputs num.Float64s
-	iGrads num.Float64s
-
-	// buffers to the next layer
-	output num.Float64s
-	oGrads num.Float64s
+	inputsObj *num.Data
+	outputObj *num.Data
 }
 
-func (l *ReLu) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
-	l.inputs = inputs
-	l.iGrads = iGrads
+func (l *ReLu) Compile(_ int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
+	output := make(num.Float64s, len(inputs))
+	oGrads := make(num.Float64s, len(inputs))
 
-	l.output = make(num.Float64s, len(inputs))
-	l.oGrads = make(num.Float64s, len(inputs))
+	l.inputsObj = num.Wrap(inputs, iGrads)
+	l.outputObj = num.Wrap(output, oGrads)
 
-	return l.output, l.oGrads
+	return output, oGrads
 }
 
 func (l *ReLu) Forward() {
-	for i, v := range l.inputs {
-		if v > 0 {
-			l.output[i] = v
-		} else {
-			l.output[i] = 0
-		}
-	}
+	l.inputsObj.ReLuTo(l.outputObj)
 }
 
 func (l *ReLu) Backward() {
-	for i, v := range l.output {
-		if v > 0 {
-			l.iGrads[i] += l.oGrads[i]
-		}
-	}
+	l.outputObj.CalcGrad()
 }
 
 func (l *ReLu) ResetGrads() {
-	l.oGrads.Fill(0)
+	l.outputObj.ResetGrad()
 }

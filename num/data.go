@@ -1,5 +1,7 @@
 package num
 
+import "math"
+
 type Nodes []*Data
 
 func Wrap(data, grad Float64s) *Data {
@@ -60,6 +62,51 @@ func (d *Data) DotTo(out *Data, b *Data, batchSize int) {
 	}
 }
 
+func (d *Data) ReLuTo(out *Data) {
+	for i, v := range d.data {
+		if v > 0 {
+			out.data[i] = v
+		} else {
+			out.data[i] = 0
+		}
+	}
+
+	out.srcNodes = Nodes{d}
+	out.calcGrad = func() {
+		for i, v := range out.data {
+			if v > 0 {
+				d.grad[i] += out.grad[i]
+			}
+		}
+	}
+}
+
+func (d *Data) SigmoidTo(out *Data) {
+	for i, v := range d.data {
+		out.data[i] = 1.0 / (1.0 + math.Exp(-v))
+	}
+
+	out.srcNodes = Nodes{d}
+	out.calcGrad = func() {
+		for i, v := range out.data {
+			d.grad[i] += out.grad[i] * v * (1 - v)
+		}
+	}
+}
+
+func (d *Data) TanhTo(out *Data) {
+	for i, v := range d.data {
+		out.data[i] = math.Tanh(v)
+	}
+
+	out.srcNodes = Nodes{d}
+	out.calcGrad = func() {
+		for i, v := range out.data {
+			d.grad[i] += out.grad[i] * (1 - v*v)
+		}
+	}
+}
+
 func (d *Data) CalcGrad() {
 	if d.calcGrad != nil {
 		d.calcGrad()
@@ -67,5 +114,13 @@ func (d *Data) CalcGrad() {
 
 	for _, node := range d.srcNodes {
 		node.CalcGrad()
+	}
+}
+
+func (d *Data) ResetGrad() {
+	d.grad.Fill(0)
+
+	for _, node := range d.srcNodes {
+		node.ResetGrad()
 	}
 }
