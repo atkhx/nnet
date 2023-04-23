@@ -25,7 +25,7 @@ type Embed struct {
 	iSize int
 	bSize int
 
-	pos []int
+	inputIdxByValue []int
 
 	// internal buffers
 	Weights num.Float64s // (storable)
@@ -55,36 +55,37 @@ func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, n
 	l.output = make(num.Float64s, l.featuresCount*l.iSize*l.bSize)
 	l.oGrads = make(num.Float64s, l.featuresCount*l.iSize*l.bSize)
 
-	l.pos = make([]int, len(inputs))
+	l.inputIdxByValue = make([]int, len(inputs))
 
 	return l.output, l.oGrads
 }
 
 func (l *Embed) Forward() {
 	for i, v := range l.inputs {
-		l.pos[i] = int(v)
+		l.inputIdxByValue[i] = int(v)
 	}
 
 	for b := 0; b < l.bSize; b++ {
-		inputs := l.pos[b*l.iSize : (b+1)*l.iSize]
+		inputIdxByValue := l.inputIdxByValue[b*l.iSize : (b+1)*l.iSize]
+
 		output := l.output[b*l.featuresCount*l.iSize : (b+1)*l.featuresCount*l.iSize]
 
-		for i, pos := range inputs {
-			copy(
-				output[i*l.featuresCount:(i+1)*l.featuresCount],
-				l.Weights[pos*l.featuresCount:(pos+1)*l.featuresCount],
-			)
+		for i, idx := range inputIdxByValue {
+			features := l.Weights[idx*l.featuresCount : (idx+1)*l.featuresCount]
+			output := output[i*l.featuresCount : (i+1)*l.featuresCount]
+
+			copy(output, features)
 		}
 	}
 }
 
 func (l *Embed) Backward() {
 	for b := 0; b < l.bSize; b++ {
-		inputs := l.pos[b*l.iSize : (b+1)*l.iSize]
+		inputs := l.inputIdxByValue[b*l.iSize : (b+1)*l.iSize]
 		oGrads := l.oGrads[b*l.featuresCount*l.iSize : (b+1)*l.featuresCount*l.iSize]
 
-		for i, pos := range inputs {
-			wGrads := l.wGrads[pos*l.featuresCount : (pos+1)*l.featuresCount]
+		for i, idx := range inputs {
+			wGrads := l.wGrads[idx*l.featuresCount : (idx+1)*l.featuresCount]
 			wGrads.Add(oGrads[i*l.featuresCount : (i+1)*l.featuresCount])
 		}
 	}
