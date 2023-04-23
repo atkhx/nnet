@@ -7,12 +7,10 @@ import (
 func NewEmbed(
 	featuresCount int,
 	alphabetSize int,
-	gain float64,
 ) *Embed {
 	return &Embed{
 		alphabetSize:  alphabetSize,
 		featuresCount: featuresCount,
-		gain:          gain,
 	}
 }
 
@@ -20,80 +18,53 @@ type Embed struct {
 	featuresCount int
 	alphabetSize  int
 
-	gain float64
-
 	iSize int
 	bSize int
 
-	inputIdxByValue []int
+	embedObj  *num.Data
+	outputObj *num.Data
 
 	// internal buffers
 	Weights num.Float64s // (storable)
 	wGrads  num.Float64s
-
-	// buffers from the previous layer
-	inputs num.Float64s
-	//iGrads num.Float64s
-
-	// buffers to the next layer
-	output num.Float64s
-	oGrads num.Float64s
+	inputs  num.Float64s
 }
 
 func (l *Embed) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
 	l.iSize = len(inputs) / bSize
 	l.bSize = bSize
 
-	weights := make(num.Float64s, l.alphabetSize*l.featuresCount)
-	weights.RandNorm()
+	outputSize := l.featuresCount * l.bSize * l.iSize
 
-	l.Weights = weights
-	l.wGrads = make(num.Float64s, l.alphabetSize*l.featuresCount)
+	{ // code embedding table initialization
+		codeEmbeddingSize := l.featuresCount * l.alphabetSize
 
-	l.inputs = inputs
+		l.Weights = num.NewFloat64sRandNorm(codeEmbeddingSize)
+		l.wGrads = num.NewFloat64s(codeEmbeddingSize)
 
-	l.output = make(num.Float64s, l.featuresCount*l.iSize*l.bSize)
-	l.oGrads = make(num.Float64s, l.featuresCount*l.iSize*l.bSize)
+		l.embedObj = num.Wrap(l.Weights, l.wGrads)
+	}
 
-	l.inputIdxByValue = make([]int, len(inputs))
+	l.inputs = inputs // we have to store it because we need direct data access
 
-	return l.output, l.oGrads
+	// candidate to clever output object
+	output := num.NewFloat64s(outputSize)
+	oGrads := num.NewFloat64s(outputSize)
+	l.outputObj = num.Wrap(output, oGrads)
+
+	return output, oGrads
 }
 
 func (l *Embed) Forward() {
-	for i, v := range l.inputs {
-		l.inputIdxByValue[i] = int(v)
-	}
-
-	for b := 0; b < l.bSize; b++ {
-		inputIdxByValue := l.inputIdxByValue[b*l.iSize : (b+1)*l.iSize]
-
-		output := l.output[b*l.featuresCount*l.iSize : (b+1)*l.featuresCount*l.iSize]
-
-		for i, idx := range inputIdxByValue {
-			features := l.Weights[idx*l.featuresCount : (idx+1)*l.featuresCount]
-			output := output[i*l.featuresCount : (i+1)*l.featuresCount]
-
-			copy(output, features)
-		}
-	}
+	l.embedObj.GetEmbeddedTo(l.outputObj, l.featuresCount, l.inputs.ToInt())
 }
 
 func (l *Embed) Backward() {
-	for b := 0; b < l.bSize; b++ {
-		inputs := l.inputIdxByValue[b*l.iSize : (b+1)*l.iSize]
-		oGrads := l.oGrads[b*l.featuresCount*l.iSize : (b+1)*l.featuresCount*l.iSize]
-
-		for i, idx := range inputs {
-			wGrads := l.wGrads[idx*l.featuresCount : (idx+1)*l.featuresCount]
-			wGrads.Add(oGrads[i*l.featuresCount : (i+1)*l.featuresCount])
-		}
-	}
+	l.outputObj.CalcGrad()
 }
 
 func (l *Embed) ResetGrads() {
-	l.oGrads.Fill(0)
-	l.wGrads.Fill(0)
+	l.outputObj.ResetGrad()
 }
 
 func (l *Embed) ForUpdate() [][2]num.Float64s {

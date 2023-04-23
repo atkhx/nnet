@@ -40,10 +40,6 @@ type EmbedWithPos struct {
 
 	// buffers from the previous layer
 	inputs num.Float64s
-
-	// buffers to the next layer
-	//output num.Float64s
-	//oGrads num.Float64s
 }
 
 func (l *EmbedWithPos) Compile(bSize int, inputs, iGrads num.Float64s) (num.Float64s, num.Float64s) {
