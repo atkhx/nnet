@@ -11,11 +11,11 @@ func NewFC(size int, gain float64) *FC {
 }
 
 type FC struct {
-	oSize int
-	gain  float64
+	gain float64
 
 	iSize int
 	bSize int
+	oSize int
 
 	// clever objects
 	weightObj *num.Data
