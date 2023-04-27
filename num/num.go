@@ -81,20 +81,20 @@ func (f Float64s) Mul(b Float64s) {
 }
 
 func (f Float64s) AddScalar(b float64) {
-	for i, v := range f {
-		f[i] = v + b
+	for i := range f {
+		f[i] += b
 	}
 }
 
 func (f Float64s) AddWeighted(b Float64s, w float64) {
-	for i, v := range f {
-		f[i] = v + b[i]*w
+	for i, v := range b {
+		f[i] += v * w
 	}
 }
 
 func (f Float64s) MulScalar(b float64) {
-	for i, v := range f {
-		f[i] = v * b
+	for i := range f {
+		f[i] *= b
 	}
 }
 

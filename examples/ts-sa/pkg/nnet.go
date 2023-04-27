@@ -11,18 +11,23 @@ func CreateNN(
 	contextLength int,
 	miniBatchSize int,
 ) *model.Sequential {
-	embeddingFeatures := 32
+	embeddingFeatures := 8
 	hiddenLayerSize := 50
 
 	return model.NewSequential(contextLength, miniBatchSize, layer.Layers{
 		// embedding table
-		layer.NewEmbedWithPos(embeddingFeatures, alphabetSize),
-		layer.NewSAHead(embeddingFeatures, contextLength),
-
+		//layer.NewEmbedWithPos(embeddingFeatures, alphabetSize),
+		//layer.NewEmbed(embeddingFeatures, alphabetSize),
+		layer.NewEmbedSA(embeddingFeatures, alphabetSize),
+		layer.NewLNorm(),
+		//layer.NewSAHead(embeddingFeatures, contextLength),
+		//layer.NewLNorm(),
 		// main hidden layer (iSize needs: contextLength * embeddingFeatures)
-		layer.NewFC(hiddenLayerSize, num.TanhGain),
+		//layer.NewLNorm(),
+
+		layer.NewFC(hiddenLayerSize, num.ReLuGain),
 		layer.NewBias(),
-		layer.NewTanh(),
+		layer.NewReLu(),
 
 		// second hidden layer
 		//layer.NewFC(30, num.TanhGain),
@@ -31,6 +36,6 @@ func CreateNN(
 
 		// output layer
 		layer.NewFC(alphabetSize, num.LinearGain),
-		layer.NewBias(),
+		//layer.NewBias(),
 	})
 }
