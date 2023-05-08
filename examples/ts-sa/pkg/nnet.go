@@ -14,7 +14,7 @@ func CreateNN(
 	embeddingFeatures := 32
 	hiddenLayerSize := 32
 
-	headSize := 8
+	headSize := 32
 
 	inDims := num.Dims{
 		W: contextLength,

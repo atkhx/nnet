@@ -27,29 +27,36 @@ func (input *Data) MatrixMultiply(factor *Data) *Data {
 		oD = factor.Dims.D
 	}
 
+	fTranspose := factor.Transpose()
+
 	output := &Data{
 		Data:     make(Float64s, oW*oH*oD),
 		Grad:     make(Float64s, oW*oH*oD),
 		Dims:     Dims{W: oW, H: oH, D: oD},
-		srcNodes: Nodes{input, factor},
+		srcNodes: Nodes{input, fTranspose},
 	}
 
 	iWH := input.Dims.W * input.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
 
 	output.calcData = func() {
+		fTranspose.Forward()
+
 		offset := 0
 
 		izOffset := 0
 		fzOffset := 0
 
 		for z := 0; z < oD; z++ {
-			for oY := 0; oY < oH; oY++ {
-				for oX := 0; oX < oW; oX++ {
+			for oY := izOffset; oY < izOffset+iWH; oY += input.Dims.W {
+				iData := input.Data[oY : oY+input.Dims.W]
+
+				for oX := fzOffset; oX < fzOffset+fWH; oX += input.Dims.W {
+					fData := fTranspose.Data[oX : oX+input.Dims.W]
 
 					v := 0.0
-					for i, iV := range input.Data[izOffset+oY*input.Dims.W : izOffset+(oY+1)*input.Dims.W] {
-						v += iV * factor.Data[fzOffset+i*factor.Dims.W+oX]
+					for i, iV := range iData {
+						v += iV * fData[i]
 					}
 
 					output.Data[offset] = v
@@ -69,17 +76,19 @@ func (input *Data) MatrixMultiply(factor *Data) *Data {
 		fzOffset := 0
 
 		for z := 0; z < oD; z++ {
-			for oY := 0; oY < oH; oY++ {
-				for oX := 0; oX < oW; oX++ {
+			for oY := izOffset; oY < izOffset+iWH; oY += input.Dims.W {
+				iData := input.Data[oY : oY+input.Dims.W]
+				iGrad := input.Grad[oY : oY+input.Dims.W]
+				for oX := fzOffset; oX < fzOffset+fWH; oX += input.Dims.W {
+					fData := fTranspose.Data[oX : oX+input.Dims.W]
+					fGrad := fTranspose.Grad[oX : oX+input.Dims.W]
+
 					G := output.Grad[offset]
 					offset++
 
-					iData := input.Data[izOffset+oY*input.Dims.W : izOffset+(oY+1)*input.Dims.W]
-					iGrad := input.Grad[izOffset+oY*input.Dims.W : izOffset+(oY+1)*input.Dims.W]
-
 					for i, iV := range iData {
-						factor.Grad[fzOffset+i*factor.Dims.W+oX] += G * iV
-						iGrad[i] += G * factor.Data[fzOffset+i*factor.Dims.W+oX]
+						fGrad[i] += G * iV
+						iGrad[i] += G * fData[i]
 					}
 				}
 			}

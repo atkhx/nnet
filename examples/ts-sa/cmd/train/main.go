@@ -99,7 +99,7 @@ func main() {
 			lossAvg += lossMean.Data[0]
 
 			//seqModel.Update(0.01) // ok for quick learn
-			seqModel.Update(0.001)
+			seqModel.Update(0.00001)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)
