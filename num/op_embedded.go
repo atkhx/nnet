@@ -1,59 +1,30 @@
 package num
 
-func (input *Data) GetEmbedded(tokens *Data) *Data {
-	// alphabetSize := input.Dims.H
-	featuresCount := input.Dims.W
+func (input *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
+	if tEmbeddings.Dims.W != pEmbeddings.Dims.W {
+		panic("features count must be equal")
+	}
 
-	contextSize := tokens.Dims.W
-	tokensCount := tokens.Dims.H
+	featuresCount := tEmbeddings.Dims.W
+
+	contextSize := input.Dims.W
+	tokensCount := input.Dims.H
 
 	output := New(NewDims(
 		featuresCount,
 		contextSize,
 		tokensCount,
-	), input)
-
-	output.calcData = func() {
-		for i, p := range tokens.Data.ToInt() {
-			features := input.Data[p*featuresCount : (p+1)*featuresCount]
-			outBuffer := output.Data[i*featuresCount : (i+1)*featuresCount]
-
-			copy(outBuffer, features)
-		}
-	}
-
-	output.calcGrad = func() {
-		for i, p := range tokens.Data.ToInt() {
-			wGrads := input.Grad[p*featuresCount : (p+1)*featuresCount]
-			oGrads := output.Grad[i*featuresCount : (i+1)*featuresCount]
-
-			for j, g := range oGrads {
-				wGrads[j] += g
-			}
-		}
-	}
-
-	return output
-}
-
-func (input *Data) GetEmbeddedPos(tokens *Data) *Data {
-	featuresCount := input.Dims.W
-
-	contextSize := tokens.Dims.W
-	tokensCount := tokens.Dims.H
-
-	output := New(NewDims(
-		featuresCount,
-		contextSize,
-		tokensCount,
-	), input)
+	), tEmbeddings, pEmbeddings)
 
 	output.calcData = func() {
 		p := 0
-		for i := range tokens.Data {
-			features := input.Data[p*featuresCount : (p+1)*featuresCount]
+		for i, s := range input.Data.ToInt() {
+			tFeatures := tEmbeddings.Data[s*featuresCount : (s+1)*featuresCount]
+			pFeatures := pEmbeddings.Data[p*featuresCount : (p+1)*featuresCount]
+
 			outBuffer := output.Data[i*featuresCount : (i+1)*featuresCount]
-			copy(outBuffer, features)
+			outBuffer.CopyFrom(tFeatures)
+			outBuffer.Add(pFeatures)
 
 			p++
 			if p == contextSize {
@@ -61,15 +32,15 @@ func (input *Data) GetEmbeddedPos(tokens *Data) *Data {
 			}
 		}
 	}
-
 	output.calcGrad = func() {
 		p := 0
-		for i := range tokens.Data {
-			wGrads := input.Grad[p*featuresCount : (p+1)*featuresCount]
-			oGrads := output.Grad[i*featuresCount : (i+1)*featuresCount]
+		for i, s := range input.Data.ToInt() {
+			tGrads := tEmbeddings.Grad[s*featuresCount : (s+1)*featuresCount]
+			pGrads := pEmbeddings.Grad[p*featuresCount : (p+1)*featuresCount]
 
-			for j, g := range oGrads {
-				wGrads[j] += g
+			for j, g := range output.Grad[i*featuresCount : (i+1)*featuresCount] {
+				tGrads[j] += g
+				pGrads[j] += g
 			}
 
 			p++
@@ -78,6 +49,5 @@ func (input *Data) GetEmbeddedPos(tokens *Data) *Data {
 			}
 		}
 	}
-
 	return output
 }
