@@ -6,50 +6,36 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewFC(size int, gain float64) *FC {
-	return &FC{oSize: size, gain: gain}
+func NewFC(dims num.Dims, gain float64) *FC {
+	return &FC{dims: dims, gain: gain}
 }
 
 type FC struct {
+	dims num.Dims
 	gain float64
 
-	iSize int
-	bSize int
-	oSize int
-
-	// clever objects
-	weightObj *num.Data
-	inputsObj *num.Data
+	WeightObj *num.Data
 	outputObj *num.Data
-
-	Weights num.Float64s // (storable)
 }
 
-func (l *FC) Compile(bSize int, inputs *num.Data) *num.Data {
-	inputsLen := len(inputs.GetData())
-
-	l.iSize = inputsLen / bSize
-	l.bSize = bSize
-
+func (l *FC) Compile(inputs *num.Data) *num.Data {
 	weightK := 1.0
+
 	if l.gain > 0 {
-		fanIn := l.iSize * l.bSize
+		fanIn := len(inputs.Data)
 		weightK = l.gain / math.Pow(float64(fanIn), 0.5)
 	}
 
-	l.Weights = num.NewFloat64sRandNormWeighted(l.iSize*l.oSize, weightK)
-	l.weightObj = num.Wrap(l.Weights, num.NewFloat64s(l.iSize*l.oSize))
-
-	l.inputsObj = inputs
-	l.outputObj = num.New(l.oSize * l.bSize)
+	l.WeightObj = num.NewRandNormWeighted(l.dims, weightK)
+	l.outputObj = inputs.MatrixMultiply(l.WeightObj)
 
 	return l.outputObj
 }
 
 func (l *FC) Forward() {
-	l.inputsObj.DotTo(l.outputObj, l.weightObj, l.bSize)
+	l.outputObj.Forward()
 }
 
 func (l *FC) ForUpdate() num.Nodes {
-	return num.Nodes{l.weightObj}
+	return num.Nodes{l.WeightObj}
 }

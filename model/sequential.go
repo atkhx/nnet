@@ -11,44 +11,46 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewSequential(iSize, bSize int, layers []layer.Layer) *Sequential {
+func NewSequential(inDims num.Dims, layers []layer.Layer) *Sequential {
 	return &Sequential{
-		iSize:  iSize,
-		bSize:  bSize,
+		inDims: inDims,
 		Layers: layers,
 	}
 }
 
 type Sequential struct {
-	iSize int
-	bSize int
-
+	inDims num.Dims
 	inputs *num.Data
 	output *num.Data
-
 	Layers layer.Layers
 }
 
-func (s *Sequential) Compile() {
-	s.inputs = num.New(s.iSize * s.bSize)
-	s.output = s.Layers.Compile(s.bSize, s.inputs)
+func (s *Sequential) Compile() *num.Data {
+	s.inputs = num.New(s.inDims)
+	s.output = s.Layers.Compile(s.inputs)
+	return s.output
 }
 
 func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
-	copy(s.inputs.GetData(), inputs)
+	copy(s.inputs.Data, inputs)
 	s.Layers.Forward()
 	return s.output
 }
 
+func (s *Sequential) GetTrainableParamsCount() int {
+	var result int
+	for _, node := range s.Layers.ForUpdate() {
+		result += len(node.Data)
+	}
+	return result
+}
+
 func (s *Sequential) Update(learningRate float64) {
 	for _, node := range s.Layers.ForUpdate() {
-		pair := node.ForUpdate()
-		for j := range pair[1] {
-			pair[0][j] -= pair[1][j] * learningRate
+		for j, g := range node.Grad {
+			node.Data[j] -= g * learningRate
 		}
 	}
-
-	s.output.ResetGrad()
 }
 
 func (s *Sequential) LoadFromFile(filename string) error {

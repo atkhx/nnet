@@ -12,8 +12,8 @@ import (
 var TinyShakespeare []byte
 
 const (
-	NamesContextSize   = 15
-	NamesMiniBatchSize = 30
+	NamesContextSize   = 32
+	NamesMiniBatchSize = 10
 )
 
 func NewDataset(contextSize, miniBatchSize int) *Dataset {

@@ -7,17 +7,14 @@ func NewReLu() *ReLu {
 }
 
 type ReLu struct {
-	inputsObj *num.Data
 	outputObj *num.Data
 }
 
-func (l *ReLu) Compile(_ int, inputs *num.Data) *num.Data {
-	l.inputsObj = inputs
-	l.outputObj = num.New(len(inputs.GetData()))
-
+func (l *ReLu) Compile(inputs *num.Data) *num.Data {
+	l.outputObj = inputs.Relu()
 	return l.outputObj
 }
 
 func (l *ReLu) Forward() {
-	l.inputsObj.ReLuTo(l.outputObj)
+	l.outputObj.Forward()
 }

@@ -6,87 +6,71 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
+// input:      [ featuresCount, contextLength, batchSize ]
+
+// keyWeights: [ headSize, featuresCount, 1 ]
+// keyObject:  [ headSize, contextLength, batchSize ]
+
+// qryWeights: [ headSize, featuresCount, 1 ]
+// qryObject:  [ headSize, contextLength, batchSize ]
+
+// weiObject:  [ keyObject @ qryObject.T ]
+//             [ headSize, contextLength, batchSize ] @ [ contextLength, headSize, batchSize ]
+//          => [ contextLength, contextLength, batchSize ]
+
+// valWeights: [ headSize, featuresCount, 1 ]
+// valObject:  [ headSize, contextLength, batchSize ]
+
+// outObject:  [ weight @ valObject ]
+//             [ contextLength, contextLength, batchSize ] @ [ headSize, contextLength, batchSize ]
+//          => [ headSize, contextLength, batchSize ]
+
 func NewSAHead(
-	embeddingFeatures int,
-	contextLength int,
+	featuresCount int,
+	headSize int,
 ) *SAHead {
 	return &SAHead{
-		embeddingFeatures: embeddingFeatures,
-		contextLength:     contextLength,
-
-		KeyLinear: NewFC(embeddingFeatures, num.LinearGain),
-		QryLinear: NewFC(embeddingFeatures, num.LinearGain),
-		ValLinear: NewFC(embeddingFeatures, num.LinearGain),
+		featuresCount: featuresCount,
+		headSize:      headSize,
 	}
 }
 
 type SAHead struct {
-	embeddingFeatures int
-	contextLength     int
+	featuresCount int
+	headSize      int
 
-	batchSize int
-	iSize     int
+	KeyWeights *num.Data
+	QryWeights *num.Data
+	ValWeights *num.Data
 
-	KeyLinear *FC
-	QryLinear *FC
-	ValLinear *FC
-
-	keyObj *num.Data
-	qryObj *num.Data
-	valObj *num.Data
-	weiObj *num.Data
-
-	inputsObj *num.Data
-	outputObj *num.Data
-
-	k float64
+	outObject *num.Data
 }
 
-func (l *SAHead) Compile(bSize int, inputs *num.Data) *num.Data {
-	l.batchSize = bSize
-	l.inputsObj = inputs
+func (l *SAHead) Compile(inputs *num.Data) *num.Data {
+	weightK := num.LinearGain / math.Pow(float64(len(inputs.Data)), 0.5)
 
-	inputsLen := len(inputs.GetData())
+	l.KeyWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+	l.QryWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+	l.ValWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 
-	l.iSize = inputsLen / bSize
+	l.outObject = inputs.SAHead(
+		l.headSize,
+		l.KeyWeights,
+		l.QryWeights,
+		l.ValWeights,
+	)
 
-	l.keyObj = l.KeyLinear.Compile(bSize, inputs)
-	l.qryObj = l.QryLinear.Compile(bSize, inputs)
-	l.valObj = l.ValLinear.Compile(bSize, inputs)
-
-	l.weiObj = num.New(l.batchSize * l.embeddingFeatures * l.embeddingFeatures)
-	l.outputObj = num.New(bSize * l.embeddingFeatures * l.embeddingFeatures)
-
-	l.k = math.Pow(float64(l.embeddingFeatures), -0.5)
-	return l.outputObj
+	return l.outObject
 }
 
 func (l *SAHead) Forward() {
-	l.KeyLinear.Forward() // keyObj filled
-	l.QryLinear.Forward() // qryObj filled
-	l.ValLinear.Forward() // valObj filled
-
-	// keyObj length = 40 = 5 x 8 (5 smb X 8 features)
-	// qryObj length = 40 = 5 x 8 (5 smb X 8 features)
-	// weiObj length = 64
-
-	l.keyObj.DotTo(l.weiObj, l.qryObj, l.batchSize*l.embeddingFeatures) // weiObj filled
-	//l.weiObj.Print(l.batchSize)
-
-	wei := l.weiObj.MulScalar(l.k)
-	wei = wei.Tril(l.batchSize, math.Inf(-1))
-	//wei.Print(l.batchSize)
-	wei = wei.Softmax(l.batchSize * l.embeddingFeatures)
-	//wei.Print(l.batchSize)
-	//os.Exit(1)
-
-	l.valObj.DotTo(l.outputObj, wei, l.batchSize*l.embeddingFeatures) // outputObj
+	l.outObject.Forward()
 }
 
 func (l *SAHead) ForUpdate() num.Nodes {
 	return num.Nodes{
-		l.keyObj,
-		l.qryObj,
-		l.valObj,
+		l.KeyWeights,
+		l.QryWeights,
+		l.ValWeights,
 	}
 }

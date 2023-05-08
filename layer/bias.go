@@ -2,41 +2,26 @@ package layer
 
 import "github.com/atkhx/nnet/num"
 
-func NewBias() *Bias {
-	return &Bias{}
+func NewBias(dims num.Dims) *Bias {
+	return &Bias{
+		WeightObj: num.New(dims),
+	}
 }
 
 type Bias struct {
-	iSize int
-	bSize int
-
-	// clever objects
-	weightObj *num.Data
-	inputsObj *num.Data
+	WeightObj *num.Data
 	outputObj *num.Data
-
-	Weights num.Float64s // (storable)
 }
 
-func (l *Bias) Compile(bSize int, inputs *num.Data) *num.Data {
-	inputsLen := len(inputs.GetData())
-
-	l.iSize = inputsLen / bSize
-	l.bSize = bSize
-
-	l.Weights = num.NewFloat64s(l.iSize)
-	l.weightObj = num.Wrap(l.Weights, num.NewFloat64s(l.iSize))
-
-	l.inputsObj = inputs
-	l.outputObj = num.New(inputsLen)
-
+func (l *Bias) Compile(inputs *num.Data) *num.Data {
+	l.outputObj = inputs.Add(l.WeightObj)
 	return l.outputObj
 }
 
 func (l *Bias) Forward() {
-	l.inputsObj.AddTo(l.outputObj, l.weightObj)
+	l.outputObj.Forward()
 }
 
 func (l *Bias) ForUpdate() num.Nodes {
-	return num.Nodes{l.weightObj}
+	return num.Nodes{l.WeightObj}
 }

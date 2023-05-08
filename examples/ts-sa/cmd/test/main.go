@@ -55,7 +55,7 @@ func main() {
 	for j := 0; j < 10000; j++ {
 		inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
-		output := seqModel.Forward(inputsFloat).GetData()
+		output := seqModel.Forward(inputsFloat).Data
 		output.Softmax()
 		output.CumulativeSum()
 

@@ -3,7 +3,7 @@ package layer
 import "github.com/atkhx/nnet/num"
 
 type Layer interface {
-	Compile(bSize int, inputs *num.Data) *num.Data
+	Compile(inputs *num.Data) *num.Data
 	Forward()
 }
 

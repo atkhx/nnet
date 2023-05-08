@@ -9,17 +9,14 @@ func NewSigmoid() *Sigmoid {
 }
 
 type Sigmoid struct {
-	inputsObj *num.Data
 	outputObj *num.Data
 }
 
-func (l *Sigmoid) Compile(_ int, inputs *num.Data) *num.Data {
-	l.inputsObj = inputs
-	l.outputObj = num.New(len(inputs.GetData()))
-
+func (l *Sigmoid) Compile(inputs *num.Data) *num.Data {
+	l.outputObj = inputs.Sigmoid()
 	return l.outputObj
 }
 
 func (l *Sigmoid) Forward() {
-	l.inputsObj.SigmoidTo(l.outputObj)
+	l.outputObj.Forward()
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/atkhx/nnet/examples/ts-sa/dataset"
 	"github.com/atkhx/nnet/examples/ts-sa/pkg"
+	"github.com/atkhx/nnet/num"
 )
 
 var filename string
@@ -49,10 +50,17 @@ func main() {
 		namesDataset.GetMiniBatchSize(),
 	)
 
-	seqModel.Compile()
+	modelOutput := seqModel.Compile()
 	if err := seqModel.LoadFromFile(filename); err != nil {
 		log.Fatalln(err)
 	}
+
+	targets := num.New(num.NewDims(namesDataset.GetAlphabetSize(), 1, dataset.NamesMiniBatchSize))
+
+	loss := modelOutput.CrossEntropy(targets)
+	lossMean := loss.Mean()
+
+	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
 
 	defer func() {
 		if err := seqModel.SaveToFile(filename); err != nil {
@@ -79,13 +87,19 @@ func main() {
 			}
 
 			batchInputs, batchTarget := namesDataset.ReadRandomSampleBatch()
+			copy(targets.Data, batchTarget)
 
-			loss := seqModel.Forward(batchInputs).CrossEntropy(batchTarget, namesDataset.GetMiniBatchSize())
-			loss.CalcGrad()
+			seqModel.Forward(batchInputs)
 
-			lossAvg += loss.GetData()[0]
+			loss.Forward()
+			lossMean.Forward()
 
-			seqModel.Update(0.1)
+			lossMean.Backward()
+
+			lossAvg += lossMean.Data[0]
+
+			//seqModel.Update(0.01) // ok for quick learn
+			seqModel.Update(0.001)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

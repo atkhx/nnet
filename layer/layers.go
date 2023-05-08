@@ -4,9 +4,9 @@ import "github.com/atkhx/nnet/num"
 
 type Layers []Layer
 
-func (s Layers) Compile(bSize int, inputs *num.Data) *num.Data {
+func (s Layers) Compile(inputs *num.Data) *num.Data {
 	for _, layer := range s {
-		inputs = layer.Compile(bSize, inputs)
+		inputs = layer.Compile(inputs)
 	}
 
 	return inputs
