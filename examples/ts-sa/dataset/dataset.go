@@ -12,8 +12,8 @@ import (
 var TinyShakespeare []byte
 
 const (
-	NamesContextSize   = 16
-	NamesMiniBatchSize = 8
+	ContextSize   = 32
+	MiniBatchSize = 16
 )
 
 func NewDataset(contextSize, miniBatchSize int) *Dataset {
@@ -36,9 +36,6 @@ type Dataset struct {
 	samplesCount int
 
 	rawBytes []byte
-
-	//inputs  num.Float64s
-	//targets num.Float64s
 }
 
 func (d *Dataset) GetSamplesCount() int {
@@ -118,6 +115,25 @@ func (d *Dataset) DecodeFloats(pos ...float64) []byte {
 }
 
 func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets num.Float64s) {
+	inputSampleSize := d.contextSize
+
+	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
+	sampleTargets = make(num.Float64s, inputSampleSize*d.miniBatchSize)
+
+	for b := 0; b < d.miniBatchSize; b++ {
+		pos := rand.Intn(len(d.rawBytes) - inputSampleSize - 1)
+
+		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
+		copy(sampleInputs, d.EncodeToFloats(d.rawBytes[pos:pos+inputSampleSize]...))
+
+		sampleTargets := sampleTargets[b*inputSampleSize : (b+1)*inputSampleSize]
+		copy(sampleTargets, d.EncodeToFloats(d.rawBytes[pos+1:pos+1+inputSampleSize]...))
+	}
+
+	return sampleInputs, sampleTargets
+}
+
+func (d *Dataset) ReadRandomSampleBatchOld() (sampleInputs, sampleTargets num.Float64s) {
 	inputSampleSize := d.contextSize
 	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
 	sampleTargets = make(num.Float64s, d.alphabetSize*d.miniBatchSize)

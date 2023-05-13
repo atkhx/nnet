@@ -1,7 +1,9 @@
 package layer
 
 import (
+	"fmt"
 	"math"
+	"strings"
 
 	"github.com/atkhx/nnet/num"
 )
@@ -16,6 +18,7 @@ type FC struct {
 
 	WeightObj *num.Data
 	outputObj *num.Data
+	forUpdate num.Nodes
 }
 
 func (l *FC) Compile(inputs *num.Data) *num.Data {
@@ -28,6 +31,10 @@ func (l *FC) Compile(inputs *num.Data) *num.Data {
 
 	l.WeightObj = num.NewRandNormWeighted(l.dims, weightK)
 	l.outputObj = inputs.MatrixMultiply(l.WeightObj)
+	l.forUpdate = num.Nodes{l.WeightObj}
+
+	fmt.Println(strings.Repeat("-", 40))
+	fmt.Println("FC\t", l.WeightObj.Dims, "out", l.outputObj.Dims)
 
 	return l.outputObj
 }
@@ -37,5 +44,5 @@ func (l *FC) Forward() {
 }
 
 func (l *FC) ForUpdate() num.Nodes {
-	return num.Nodes{l.WeightObj}
+	return l.forUpdate
 }

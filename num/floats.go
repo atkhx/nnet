@@ -105,9 +105,8 @@ func (f Float64s) Min() (min float64) {
 }
 
 func (f Float64s) Exp() {
-	max := f.Max()
 	for i, v := range f {
-		f[i] = math.Exp(v - max)
+		f[i] = math.Exp(v)
 	}
 }
 
@@ -119,9 +118,20 @@ func (f Float64s) Sum() (sum float64) {
 }
 
 func (f Float64s) Softmax() {
-	f.Exp()
+	var max float64
+	var sum float64
 
-	sum := f.Sum()
+	for i, v := range f {
+		if i == 0 || max < v {
+			max = v
+		}
+	}
+
+	for i, v := range f {
+		f[i] = math.Exp(v - max)
+		sum += f[i]
+	}
+
 	for i := range f {
 		f[i] /= sum
 	}

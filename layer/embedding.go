@@ -1,6 +1,8 @@
 package layer
 
 import (
+	"fmt"
+
 	"github.com/atkhx/nnet/num"
 )
 
@@ -19,18 +21,22 @@ type Embedding struct {
 	ValEmbedding *num.Data
 	PosEmbedding *num.Data
 
-	output *num.Data
+	outputObj *num.Data
+	forUpdate num.Nodes
 }
 
 func (l *Embedding) Compile(inputs *num.Data) *num.Data {
-	l.output = inputs.GetEmbeddings(l.ValEmbedding, l.PosEmbedding)
-	return l.output
+	l.outputObj = inputs.GetEmbeddings(l.ValEmbedding, l.PosEmbedding)
+	l.forUpdate = num.Nodes{l.ValEmbedding, l.PosEmbedding}
+
+	fmt.Println("Emb\t", l.ValEmbedding.Dims, l.PosEmbedding.Dims, "out", l.outputObj.Dims)
+	return l.outputObj
 }
 
 func (l *Embedding) Forward() {
-	l.output.Forward()
+	l.outputObj.Forward()
 }
 
 func (l *Embedding) ForUpdate() num.Nodes {
-	return num.Nodes{l.ValEmbedding, l.PosEmbedding}
+	return l.forUpdate
 }

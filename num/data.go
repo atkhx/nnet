@@ -65,9 +65,12 @@ func (input *Data) Backward() {
 
 func (input *Data) resetGrads(v float64) {
 	input.Grad.Fill(v)
-	input.srcNodes.Each(func(node *Data) {
+	//input.srcNodes.Each(func(node *Data) {
+	//	node.resetGrads(0)
+	//})
+	for _, node := range input.srcNodes {
 		node.resetGrads(0)
-	})
+	}
 }
 
 func (input *Data) calcGrads() {
@@ -76,9 +79,13 @@ func (input *Data) calcGrads() {
 	}
 
 	input.calcGrad()
-	input.srcNodes.Each(func(node *Data) {
+	for _, node := range input.srcNodes {
 		node.calcGrads()
-	})
+	}
+
+	//input.srcNodes.Each(func(node *Data) {
+	//	node.calcGrads()
+	//})
 }
 
 func (input *Data) StringData() string {

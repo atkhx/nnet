@@ -18,6 +18,16 @@ func (input *Data) Softmax() *Data {
 
 			softmax := output.Data[b : b+chunkSize]
 
+			//for i, softmaxI := range softmax {
+			//	gI := oGrad[i] * softmaxI
+			//	for j, softmaxJ := range softmax {
+			//		if i == j {
+			//			iGrad[j] += gI * (1 - softmaxI)
+			//		} else {
+			//			iGrad[j] -= gI * softmaxJ
+			//		}
+			//	}
+			//}
 			for i := 0; i < len(oGrad); i++ {
 				g := oGrad[i]
 				for j := 0; j < len(oGrad); j++ {

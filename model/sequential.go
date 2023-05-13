@@ -23,11 +23,17 @@ type Sequential struct {
 	inputs *num.Data
 	output *num.Data
 	Layers layer.Layers
+	update num.Nodes
 }
 
 func (s *Sequential) Compile() *num.Data {
 	s.inputs = num.New(s.inDims)
 	s.output = s.Layers.Compile(s.inputs)
+
+	for _, node := range s.Layers.ForUpdate() {
+		s.update = append(s.update, node)
+	}
+
 	return s.output
 }
 
@@ -39,14 +45,14 @@ func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
 
 func (s *Sequential) GetTrainableParamsCount() int {
 	var result int
-	for _, node := range s.Layers.ForUpdate() {
+	for _, node := range s.update {
 		result += len(node.Data)
 	}
 	return result
 }
 
 func (s *Sequential) Update(learningRate float64) {
-	for _, node := range s.Layers.ForUpdate() {
+	for _, node := range s.update {
 		for j, g := range node.Grad {
 			node.Data[j] -= g * learningRate
 		}

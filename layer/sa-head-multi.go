@@ -1,7 +1,9 @@
 package layer
 
 import (
+	"fmt"
 	"math"
+	"strings"
 
 	"github.com/atkhx/nnet/num"
 )
@@ -9,76 +11,83 @@ import (
 func NewSAMultiHead(
 	featuresCount int,
 	headSize int,
+	headsCount int,
 ) *SAMultiHead {
 	return &SAMultiHead{
 		featuresCount: featuresCount,
-		headSize:      headSize / 2,
+		headSize:      headSize,
+		headsCount:    headsCount,
 	}
+}
+
+type SAHeadParams struct {
+	KeyWeights *num.Data
+	QryWeights *num.Data
+	ValWeights *num.Data
+	outputObj  *num.Data
 }
 
 type SAMultiHead struct {
 	featuresCount int
 	headSize      int
+	headsCount    int
 
-	KeyWeights1 *num.Data
-	QryWeights1 *num.Data
-	ValWeights1 *num.Data
-
-	outObject1 *num.Data
-
-	KeyWeights2 *num.Data
-	QryWeights2 *num.Data
-	ValWeights2 *num.Data
-
-	outObject2 *num.Data
+	Heads []SAHeadParams
 
 	concatObj *num.Data
+	forUpdate num.Nodes
 }
 
 func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
 	weightK := num.LinearGain / math.Pow(float64(len(inputs.Data)), 0.5)
 
-	l.KeyWeights1 = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
-	l.QryWeights1 = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
-	l.ValWeights1 = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+	l.Heads = make([]SAHeadParams, l.headsCount)
 
-	l.KeyWeights2 = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
-	l.QryWeights2 = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
-	l.ValWeights2 = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+	outputObjs := make([]*num.Data, 0, l.headsCount)
 
-	l.outObject1 = inputs.SAHead(
-		l.headSize,
-		l.KeyWeights1,
-		l.QryWeights1,
-		l.ValWeights1,
-	)
+	for i := 0; i < l.headsCount; i++ {
+		l.Heads[i].KeyWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+		l.Heads[i].QryWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+		l.Heads[i].ValWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 
-	l.outObject2 = inputs.SAHead(
-		l.headSize,
-		l.KeyWeights2,
-		l.QryWeights2,
-		l.ValWeights2,
-	)
+		l.Heads[i].outputObj = inputs.SAHead(
+			l.headSize,
+			l.Heads[i].KeyWeights,
+			l.Heads[i].QryWeights,
+			l.Heads[i].ValWeights,
+		)
 
-	l.concatObj = l.outObject1.ConcatRows(l.outObject2)
+		outputObjs = append(outputObjs, l.Heads[i].outputObj)
+
+		l.forUpdate = append(l.forUpdate,
+			l.Heads[i].KeyWeights,
+			l.Heads[i].QryWeights,
+			l.Heads[i].ValWeights,
+		)
+	}
+
+	l.concatObj = outputObjs[0].ConcatRows(outputObjs[1:]...)
+
+	fmt.Println(strings.Repeat("-", 40))
+	fmt.Println("SAM\t", "3x", l.Heads[0].KeyWeights.Dims, "out", l.concatObj.Dims, "head count", l.headsCount)
 
 	return l.concatObj
 }
 
+//var wg = sync.WaitGroup{}
+
 func (l *SAMultiHead) Forward() {
-	l.outObject1.Forward()
-	l.outObject2.Forward()
+	//wg.Add(l.headsCount)
+	for i := range l.Heads {
+		//go func(i int) {
+		l.Heads[i].outputObj.Forward()
+		//wg.Done()
+		//}(i)
+	}
+	//wg.Wait()
 	l.concatObj.Forward()
 }
 
 func (l *SAMultiHead) ForUpdate() num.Nodes {
-	return num.Nodes{
-		l.KeyWeights1,
-		l.QryWeights1,
-		l.ValWeights1,
-
-		l.KeyWeights2,
-		l.QryWeights2,
-		l.ValWeights2,
-	}
+	return l.forUpdate
 }

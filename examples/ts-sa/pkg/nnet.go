@@ -11,10 +11,8 @@ func CreateNN(
 	contextLength int,
 	miniBatchSize int,
 ) *model.Sequential {
-	embeddingFeatures := 32
-	hiddenLayerSize := 32
-
-	headSize := 32
+	embeddingFeatures := 8
+	headSize := 16
 
 	inDims := num.Dims{
 		W: contextLength,
@@ -25,32 +23,49 @@ func CreateNN(
 	return model.NewSequential(inDims, layer.Layers{
 		// embedding table
 		layer.NewEmbedding(embeddingFeatures, alphabetSize, contextLength),
-		//layer.NewLNorm(),
 		// out: [ embeddingFeatures, contextLength, batchSize ]
 
+		//------------------------------------------------------------------------
 		// Block 1
 		// SA-MultiHead
-		layer.NewSAHead(embeddingFeatures, headSize),
-		//layer.NewSAMultiHead(embeddingFeatures, headSize),
-		// out: [ headSize, contextLength, batchSize ]
-		layer.NewFC(num.NewDims(hiddenLayerSize, headSize), num.ReLuGain), // we don't use batchSize, to make weights shared
-		layer.NewBias(num.NewDims(hiddenLayerSize, contextLength)),        // we don't use batchSize, to make bias shared
+		layer.NewSAMultiHead(embeddingFeatures, headSize, 4),
+		layer.NewFC(num.NewDims(embeddingFeatures, 4*headSize), num.LinearGain),
+		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
+
+		// Non-linearity in block-1
+		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
+		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
 		layer.NewReLu(),
-		// out: [ hiddenLayerSize, contextLength, batchSize ]
+		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
+		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
 
-		// Block 1
+		//------------------------------------------------------------------------
+		// Block 2
 		// SA-MultiHead
-		//layer.NewSAMultiHead(hiddenLayerSize, headSize),
-		//// out: [ headSize, contextLength, batchSize ]
-		//layer.NewFC(num.NewDims(hiddenLayerSize, headSize), num.ReLuGain), // we don't use batchSize, to make weights shared
-		//layer.NewBias(num.NewDims(hiddenLayerSize, contextLength)),        // we don't use batchSize, to make bias shared
+		//layer.NewSAMultiHead(embeddingFeatures, headSize, 4),
+		//layer.NewFC(num.NewDims(embeddingFeatures, 4*headSize), num.LinearGain),
+		//layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		//// out: [ embeddingFeatures, contextLength, batchSize ]
+		//
+		//// Non-linearity in block-2
+		//layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
+		//layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
 		//layer.NewReLu(),
-		// out: [ hiddenLayerSize, contextLength, batchSize ]
+		//layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
+		//layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
 
-		// Linear layer to make a predictions
-		layer.NewReshape(num.NewDims(hiddenLayerSize*contextLength, 1, miniBatchSize)),
-		//layer.NewLNorm(),
-		layer.NewFC(num.NewDims(alphabetSize, hiddenLayerSize*contextLength), num.LinearGain),
-		layer.NewBias(num.NewDims(alphabetSize)),
+		//------------------------------------------------------------------------
+		// Probabilities
+		layer.NewFC(num.NewDims(alphabetSize, embeddingFeatures), num.LinearGain),
+		layer.NewBias(num.NewDims(alphabetSize, contextLength)),
+		// out: [ alphabetSize, contextLength, batchSize ]
+
+		// Adopt probs to 2D
+		layer.NewReshape(num.NewDims(alphabetSize, miniBatchSize*contextLength)),
+		// out: [ alphabetSize, contextLength * batchSize ]
+		// each row is probabilities for the next symbol
 	})
 }

@@ -2,6 +2,69 @@ package num
 
 import "math"
 
+func (input *Data) CrossEntropyPos(targets *Data) *Data {
+	if targets.Dims.W != 1 {
+		panic("target width must be equal 1")
+	}
+
+	if targets.Dims.H != input.Dims.H {
+		panic("target height must be equal input height")
+	}
+
+	if targets.Dims.D != input.Dims.D {
+		panic("target depth must be equal input depth")
+	}
+
+	oDims := targets.Dims
+	chunkSize := input.Dims.W
+
+	// just buffer to avoid memory allocations
+	softmax := input.Data.CopyZero()
+	//logLikelihood := input.Data.CopyZero()
+
+	output := New(oDims, input)
+	output.calcData = func() {
+		softmax.CopyFrom(input.Data)
+		for i := 0; i < len(softmax); i += chunkSize {
+			softmax[i : i+chunkSize].Softmax()
+		}
+
+		for rowIdx, correctIdx := range targets.Data {
+			for i := 0; i < chunkSize; i++ {
+				//j := rowIdx*chunkSize + i
+				if i == int(correctIdx) {
+					//t := 1.0
+					//logLikelihood[j] = -math.Log(softmax[j])
+					output.Data[rowIdx] = -math.Log(softmax[rowIdx*chunkSize+i])
+					//} else {
+					//t := 0.0
+					//logLikelihood[j] = 0
+				}
+				//logLikelihood[j] = -t * math.Log(softmax[j])
+			}
+		}
+
+		//for i := range output.Data {
+		//	output.Data[i] = logLikelihood[i*chunkSize : (i+1)*chunkSize].Sum()
+		//}
+	}
+
+	output.calcGrad = func() {
+		for rowIdx, correctIdx := range targets.Data {
+			for i := 0; i < chunkSize; i++ {
+				j := rowIdx*chunkSize + i
+				t := 0.0
+				if i == int(correctIdx) {
+					t = 1.0
+				}
+				input.Grad[j] += softmax[j] - t
+			}
+		}
+	}
+
+	return output
+}
+
 func (input *Data) CrossEntropy(targets *Data) *Data {
 	input.Dims.MustBeEqual(targets.Dims)
 	oDims := input.Dims

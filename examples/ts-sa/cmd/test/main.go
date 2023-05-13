@@ -31,7 +31,7 @@ func main() {
 
 	batchSize := 1
 
-	namesDataset := dataset.NewDataset(dataset.NamesContextSize, batchSize)
+	namesDataset := dataset.NewDataset(dataset.ContextSize, batchSize)
 	namesDataset.ParseAlphabet(dataset.TinyShakespeare)
 
 	seqModel := pkg.CreateNN(
@@ -55,7 +55,8 @@ func main() {
 	for j := 0; j < 10000; j++ {
 		inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
-		output := seqModel.Forward(inputsFloat).Data
+		out := seqModel.Forward(inputsFloat)
+		output := out.Data[(dataset.ContextSize-1)*namesDataset.GetAlphabetSize():]
 		output.Softmax()
 		output.CumulativeSum()
 

@@ -41,7 +41,7 @@ func main() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	namesDataset := dataset.NewDataset(dataset.NamesContextSize, dataset.NamesMiniBatchSize)
+	namesDataset := dataset.NewDataset(dataset.ContextSize, dataset.MiniBatchSize)
 	namesDataset.ParseAlphabet(dataset.TinyShakespeare)
 
 	seqModel := pkg.CreateNN(
@@ -55,9 +55,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	targets := num.New(num.NewDims(namesDataset.GetAlphabetSize(), 1, dataset.NamesMiniBatchSize))
+	//targets := num.New(num.NewDims(namesDataset.GetAlphabetSize(), 1, dataset.NamesMiniBatchSize))
+	targets := num.New(num.NewDims(1, dataset.ContextSize*dataset.MiniBatchSize))
 
-	loss := modelOutput.CrossEntropy(targets)
+	loss := modelOutput.CrossEntropyPos(targets)
 	lossMean := loss.Mean()
 
 	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
@@ -92,6 +93,10 @@ func main() {
 			seqModel.Forward(batchInputs)
 
 			loss.Forward()
+
+			//fmt.Println("loss.Dims", loss.Dims)
+			//fmt.Println("loss.Dims", loss.StringData())
+			//os.Exit(1)
 			lossMean.Forward()
 
 			lossMean.Backward()
@@ -99,7 +104,8 @@ func main() {
 			lossAvg += lossMean.Data[0]
 
 			//seqModel.Update(0.01) // ok for quick learn
-			seqModel.Update(0.00001)
+			//seqModel.Update(0.00001)
+			seqModel.Update(0.0001)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)
