@@ -55,7 +55,6 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	//targets := num.New(num.NewDims(namesDataset.GetAlphabetSize(), 1, dataset.NamesMiniBatchSize))
 	targets := num.New(num.NewDims(1, dataset.ContextSize*dataset.MiniBatchSize))
 
 	loss := modelOutput.CrossEntropyPos(targets)
@@ -93,18 +92,10 @@ func main() {
 			seqModel.Forward(batchInputs)
 
 			loss.Forward()
-
-			//fmt.Println("loss.Dims", loss.Dims)
-			//fmt.Println("loss.Dims", loss.StringData())
-			//os.Exit(1)
 			lossMean.Forward()
-
 			lossMean.Backward()
 
 			lossAvg += lossMean.Data[0]
-
-			//seqModel.Update(0.01) // ok for quick learn
-			//seqModel.Update(0.00001)
 			seqModel.Update(0.0001)
 
 			if index > 0 && index%statChunkSize == 0 {
