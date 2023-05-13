@@ -28,6 +28,7 @@ func CreateNN(
 		//------------------------------------------------------------------------
 		// Block 1
 		// SA-MultiHead
+		//layer.NewSAHead(embeddingFeatures, headSize),
 		layer.NewSAMultiHead(embeddingFeatures, headSize, 4),
 		layer.NewFC(num.NewDims(embeddingFeatures, 4*headSize), num.LinearGain),
 		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),

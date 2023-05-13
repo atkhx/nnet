@@ -20,7 +20,6 @@ func (input *Data) CrossEntropyPos(targets *Data) *Data {
 
 	// just buffer to avoid memory allocations
 	softmax := input.Data.CopyZero()
-	//logLikelihood := input.Data.CopyZero()
 
 	output := New(oDims, input)
 	output.calcData = func() {
@@ -31,22 +30,11 @@ func (input *Data) CrossEntropyPos(targets *Data) *Data {
 
 		for rowIdx, correctIdx := range targets.Data {
 			for i := 0; i < chunkSize; i++ {
-				//j := rowIdx*chunkSize + i
 				if i == int(correctIdx) {
-					//t := 1.0
-					//logLikelihood[j] = -math.Log(softmax[j])
 					output.Data[rowIdx] = -math.Log(softmax[rowIdx*chunkSize+i])
-					//} else {
-					//t := 0.0
-					//logLikelihood[j] = 0
 				}
-				//logLikelihood[j] = -t * math.Log(softmax[j])
 			}
 		}
-
-		//for i := range output.Data {
-		//	output.Data[i] = logLikelihood[i*chunkSize : (i+1)*chunkSize].Sum()
-		//}
 	}
 
 	output.calcGrad = func() {

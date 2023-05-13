@@ -13,8 +13,8 @@ func (input *Data) Mean() *Data {
 	}
 
 	output.calcGrad = func() {
-		for i, g := range output.Grad {
-			input.Grad[i] += g * k
+		for i, ig := range input.Grad {
+			input.Grad[i] = ig + output.Grad[0]*k
 		}
 	}
 
