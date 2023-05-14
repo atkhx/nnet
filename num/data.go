@@ -1,5 +1,9 @@
 package num
 
+import (
+	"fmt"
+)
+
 type Nodes []*Data
 
 func (nodes Nodes) Each(fn func(node *Data)) {
@@ -42,6 +46,9 @@ type Data struct {
 	srcNodes Nodes
 	calcData func()
 	calcGrad func()
+
+	operation string
+	label     string
 }
 
 func (input *Data) Copy() *Data {
@@ -59,33 +66,18 @@ func (input *Data) Forward() {
 }
 
 func (input *Data) Backward() {
-	input.resetGrads(1.0)
-	input.calcGrads()
+	input.calcGrad()
+}
+
+func (input *Data) ResetGrads(v float64) {
+	input.resetGrads(v)
 }
 
 func (input *Data) resetGrads(v float64) {
 	input.Grad.Fill(v)
-	//input.srcNodes.Each(func(node *Data) {
-	//	node.resetGrads(0)
-	//})
-	for _, node := range input.srcNodes {
+	input.srcNodes.Each(func(node *Data) {
 		node.resetGrads(0)
-	}
-}
-
-func (input *Data) calcGrads() {
-	if len(input.srcNodes) == 0 {
-		return
-	}
-
-	input.calcGrad()
-	for _, node := range input.srcNodes {
-		node.calcGrads()
-	}
-
-	//input.srcNodes.Each(func(node *Data) {
-	//	node.calcGrads()
-	//})
+	})
 }
 
 func (input *Data) StringData() string {
@@ -94,4 +86,16 @@ func (input *Data) StringData() string {
 
 func (input *Data) StringGrad() string {
 	return input.Grad.String(input.Dims)
+}
+
+func (input *Data) SetOperation(operation string) {
+	input.operation = operation
+}
+
+func (input *Data) SetLabel(label string) {
+	input.label = label
+}
+
+func (input *Data) String() string {
+	return fmt.Sprintf("%s %s", input.operation, input.label)
 }

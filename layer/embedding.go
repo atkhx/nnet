@@ -37,6 +37,10 @@ func (l *Embedding) Forward() {
 	l.outputObj.Forward()
 }
 
+func (l *Embedding) Backward() {
+	l.outputObj.Backward()
+}
+
 func (l *Embedding) ForUpdate() num.Nodes {
 	return l.forUpdate
 }

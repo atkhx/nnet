@@ -11,7 +11,7 @@ func (input *Data) Sub(bData *Data) *Data {
 
 	bzStep := steps.bD * bData.Dims.W * bData.Dims.H
 	byStep := steps.bH * bData.Dims.W
-
+	output.SetOperation("sub")
 	output.calcData = func() {
 		offset := 0
 

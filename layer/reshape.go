@@ -21,3 +21,7 @@ func (l *Reshape) Compile(inputs *num.Data) *num.Data {
 func (l *Reshape) Forward() {
 	l.outputObj.Forward()
 }
+
+func (l *Reshape) Backward() {
+	l.outputObj.Backward()
+}

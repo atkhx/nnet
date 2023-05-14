@@ -39,15 +39,15 @@ func CreateNN(
 		// Block 1
 		// SA-MultiHead
 		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount),
-		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), num.LinearGain),
+		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), num.LinearGain, "after SA"),
 		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
 		// out: [ embeddingFeatures, contextLength, batchSize ]
 
 		// Non-linearity in block
-		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
+		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain, "nonlinIn"),
 		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
 		layer.NewReLu(),
-		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
+		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain, "nonlinOut"),
 		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
 		//out: [ embeddingFeatures, contextLength, batchSize ]
 
@@ -69,7 +69,7 @@ func CreateNN(
 
 		//------------------------------------------------------------------------
 		// Probabilities
-		layer.NewFC(num.NewDims(alphabetSize, embeddingFeatures), num.LinearGain),
+		layer.NewFC(num.NewDims(alphabetSize, embeddingFeatures), num.LinearGain, "probs"),
 		layer.NewBias(num.NewDims(alphabetSize, contextLength)),
 		// out: [ alphabetSize, contextLength, batchSize ]
 

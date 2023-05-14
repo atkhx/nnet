@@ -20,6 +20,7 @@ type Bias struct {
 
 func (l *Bias) Compile(inputs *num.Data) *num.Data {
 	l.outputObj = inputs.Add(l.WeightObj)
+	l.outputObj.SetLabel("bias")
 	l.forUpdate = num.Nodes{l.WeightObj}
 
 	fmt.Println("Bias\t", l.WeightObj.Dims, "out", l.outputObj.Dims)
@@ -28,6 +29,10 @@ func (l *Bias) Compile(inputs *num.Data) *num.Data {
 
 func (l *Bias) Forward() {
 	l.outputObj.Forward()
+}
+
+func (l *Bias) Backward() {
+	l.outputObj.Backward()
 }
 
 func (l *Bias) ForUpdate() num.Nodes {

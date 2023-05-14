@@ -9,6 +9,7 @@ func (input *Data) VarianceByRows(meanData Float64s) *Data {
 
 	k := 1.0 / float64(chunkSize-1)
 
+	output.SetOperation("variance")
 	output.calcData = func() {
 		if meanData == nil {
 			meanData = input.MeanByRows().Data

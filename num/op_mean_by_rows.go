@@ -10,7 +10,7 @@ func (input *Data) MeanByRows() *Data {
 	chunksCount := len(input.Data) / chunkSize
 
 	k := 1.0 / float64(chunkSize)
-
+	output.SetOperation("meanByRows")
 	output.calcData = func() {
 		for i := 0; i < chunksCount; i++ {
 			output.Data[i] = input.Data[i*chunkSize:(i+1)*chunkSize].Sum() * k

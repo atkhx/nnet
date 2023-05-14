@@ -16,6 +16,8 @@ func (input *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
 		tokensCount,
 	), tEmbeddings, pEmbeddings)
 
+	output.SetOperation("embeddings")
+
 	output.calcData = func() {
 		p := 0
 		for i, s := range input.Data.ToInt() {

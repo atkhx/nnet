@@ -20,3 +20,7 @@ func (l *Sigmoid) Compile(inputs *num.Data) *num.Data {
 func (l *Sigmoid) Forward() {
 	l.outputObj.Forward()
 }
+
+func (l *Sigmoid) Backward() {
+	l.outputObj.Backward()
+}

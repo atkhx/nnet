@@ -45,7 +45,7 @@ func (input *Data) CrossEntropyPos(targets *Data) *Data {
 				if i == int(correctIdx) {
 					t = 1.0
 				}
-				input.Grad[j] += softmax[j] - t
+				input.Grad[j] += output.Grad[0] * (softmax[j] - t)
 			}
 		}
 	}
@@ -64,6 +64,8 @@ func (input *Data) CrossEntropy(targets *Data) *Data {
 	logLikelihood := input.Data.CopyZero()
 
 	output := New(oDims, input)
+	output.SetOperation("crossEntropy")
+
 	output.calcData = func() {
 		softmax.CopyFrom(input.Data)
 		for i := 0; i < len(softmax); i += chunkSize {

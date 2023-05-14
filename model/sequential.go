@@ -43,6 +43,10 @@ func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
 	return s.output
 }
 
+func (s *Sequential) Backward() {
+	s.Layers.Backward()
+}
+
 func (s *Sequential) GetTrainableParamsCount() int {
 	var result int
 	for _, node := range s.update {

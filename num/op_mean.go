@@ -4,6 +4,7 @@ func (input *Data) Mean() *Data {
 	output := New(NewDims(), input)
 
 	k := 1.0 / float64(len(input.Data))
+	output.SetOperation("mean")
 	output.calcData = func() {
 		r := 0.0
 		for _, v := range input.Data {

@@ -90,10 +90,13 @@ func main() {
 			loss.Forward()
 			lossMean.Forward()
 			//lossMean.Backward()
+			loss.ResetGrads(1)
 			loss.Backward()
 
+			seqModel.Backward()
+
 			lossAvg += lossMean.Data[0]
-			seqModel.Update(0.0001)
+			seqModel.Update(0.00001)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

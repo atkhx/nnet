@@ -4,6 +4,7 @@ func (input *Data) TriangleLower(zeroVal float64) *Data {
 	WH := input.Dims.W * input.Dims.W
 
 	output := input.Copy()
+	output.SetOperation("triangleLower")
 	output.calcData = func() {
 		output.Data.Fill(zeroVal)
 		for z := 0; z < output.Dims.D; z++ {

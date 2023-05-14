@@ -1,44 +1,55 @@
 package num
 
+import "sync"
+
 func (input *Data) Softmax() *Data {
 	chunkSize := input.Dims.W
+	chunksCount := len(input.Data) / chunkSize
 
 	output := input.Copy()
+	output.SetOperation("softmax")
+
+	wg := sync.WaitGroup{}
+
 	output.calcData = func() {
 		output.Data.CopyFrom(input.Data)
+
+		wg.Add(chunksCount)
 		for i := 0; i < len(output.Data); i += chunkSize {
-			output.Data[i : i+chunkSize].Softmax()
+			go func(i int) {
+				output.Data[i : i+chunkSize].Softmax()
+				wg.Done()
+			}(i)
 		}
+		wg.Wait()
 	}
 
 	output.calcGrad = func() {
+		wg.Add(chunksCount)
+
 		for b := 0; b < len(output.Data); b += chunkSize {
-			oGrad := output.Grad[b : b+chunkSize]
-			iGrad := input.Grad[b : b+chunkSize]
+			go func(b int) {
+				oGrad := output.Grad[b : b+chunkSize]
+				iGrad := input.Grad[b : b+chunkSize]
 
-			softmax := output.Data[b : b+chunkSize]
+				softmax := output.Data[b : b+chunkSize]
 
-			//for i, softmaxI := range softmax {
-			//	gI := oGrad[i] * softmaxI
-			//	for j, softmaxJ := range softmax {
-			//		if i == j {
-			//			iGrad[j] += gI * (1 - softmaxI)
-			//		} else {
-			//			iGrad[j] -= gI * softmaxJ
-			//		}
-			//	}
-			//}
-			for i := 0; i < len(oGrad); i++ {
-				g := oGrad[i]
-				for j := 0; j < len(oGrad); j++ {
-					if i == j {
-						iGrad[j] += g * softmax[i] * (1 - softmax[i])
-					} else {
-						iGrad[j] += -g * softmax[i] * softmax[j]
+				for i, softmaxI := range softmax {
+					gI := oGrad[i] * softmaxI
+					for j, softmaxJ := range softmax {
+						if i == j {
+							iGrad[j] += gI * (1 - softmaxI)
+						} else {
+							iGrad[j] -= gI * softmaxJ
+						}
 					}
 				}
-			}
+
+				wg.Done()
+			}(b)
 		}
+
+		wg.Wait()
 	}
 
 	return output

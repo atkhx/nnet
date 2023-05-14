@@ -28,6 +28,10 @@ func (l *LNorm) Forward() {
 	l.outputObj.Forward()
 }
 
+func (l *LNorm) Backward() {
+	l.outputObj.Backward()
+}
+
 func (l *LNorm) ForUpdate() num.Nodes {
 	return num.Nodes{l.Gamma, l.Beta}
 }

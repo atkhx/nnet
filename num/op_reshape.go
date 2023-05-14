@@ -13,7 +13,7 @@ func (input *Data) Reshape(dims Dims) *Data {
 		calcData: nil,
 		calcGrad: nil,
 	}
-
+	output.SetOperation("reshape")
 	//output := New(dims, input)
 	output.calcData = func() {
 		//output.Data.CopyFrom(input.Data)

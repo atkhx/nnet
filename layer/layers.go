@@ -18,6 +18,12 @@ func (s Layers) Forward() {
 	}
 }
 
+func (s Layers) Backward() {
+	for i := len(s); i > 0; i-- {
+		s[i-1].Backward()
+	}
+}
+
 func (s Layers) ForUpdate() num.Nodes {
 	result := make(num.Nodes, 0, len(s))
 	for _, layer := range s {

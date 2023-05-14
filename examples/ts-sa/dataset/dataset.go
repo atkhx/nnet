@@ -128,29 +128,10 @@ func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets num.Float
 	return sampleInputs, sampleTargets
 }
 
-func (d *Dataset) ReadRandomSampleBatchOld() (sampleInputs, sampleTargets num.Float64s) {
-	inputSampleSize := d.contextSize
-	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
-	sampleTargets = make(num.Float64s, d.alphabetSize*d.miniBatchSize)
-
-	for b := 0; b < d.miniBatchSize; b++ {
-		pos := rand.Intn(len(d.rawBytes) - inputSampleSize - 1)
-
-		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleInputs, d.EncodeToFloats(d.rawBytes[pos:pos+inputSampleSize]...))
-
-		target := num.NewOneHotVectors(d.alphabetSize, d.Encode(d.rawBytes[pos+inputSampleSize])...)
-		sampleTarget := sampleTargets[b*d.alphabetSize : (b+1)*d.alphabetSize]
-		copy(sampleTarget, target)
-	}
-
-	return sampleInputs, sampleTargets
-}
-
 func (d *Dataset) ReadRandomSample() (sampleInputs, sampleTargets num.Float64s) {
 	inputSampleSize := d.contextSize
 	sampleInputs = make(num.Float64s, inputSampleSize)
-	sampleTargets = make(num.Float64s, d.alphabetSize)
+	sampleTargets = make(num.Float64s, inputSampleSize)
 
 	for b := 0; b < 1; b++ {
 		pos := rand.Intn(len(d.rawBytes) - inputSampleSize - 1)
@@ -158,9 +139,8 @@ func (d *Dataset) ReadRandomSample() (sampleInputs, sampleTargets num.Float64s) 
 		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
 		copy(sampleInputs, d.EncodeToFloats(d.rawBytes[pos:pos+inputSampleSize]...))
 
-		target := num.NewOneHotVectors(d.alphabetSize, d.Encode(d.rawBytes[pos+inputSampleSize])...)
-		sampleTarget := sampleTargets[b*d.alphabetSize : (b+1)*d.alphabetSize]
-		copy(sampleTarget, target)
+		sampleTargets := sampleTargets[b*inputSampleSize : (b+1)*inputSampleSize]
+		copy(sampleTargets, d.EncodeToFloats(d.rawBytes[pos+1:pos+1+inputSampleSize]...))
 	}
 
 	return sampleInputs, sampleTargets

@@ -27,10 +27,10 @@ func (input *Data) SAHead(
 	valObject := input.MatrixMultiply(valWeights)
 
 	output := weiSoftmaxObject.MatrixMultiply(valObject)
-	weiSoftmaxObjectMulValObject := output.calcData
+	weiSoftmaxObjectMulValObjectForward := output.calcData
 
 	wg := sync.WaitGroup{}
-
+	output.SetOperation("saHead weiSoftmaxObjectMulValObject")
 	output.calcData = func() {
 		wg.Add(2)
 		go func() {
@@ -61,7 +61,22 @@ func (input *Data) SAHead(
 		}()
 
 		wg.Wait()
-		weiSoftmaxObjectMulValObject()
+		weiSoftmaxObjectMulValObjectForward()
+	}
+
+	weiSoftmaxObjectMulValObjectBackward := output.calcGrad
+	output.calcGrad = func() {
+		weiSoftmaxObjectMulValObjectBackward()
+		weiSoftmaxObject.Backward()
+
+		weiTrilObject.Backward()
+		weiMulObject.Backward()
+		weiObject.Backward()
+		qryObjectT.Backward()
+
+		valObject.Backward()
+		qryObject.Backward()
+		keyObject.Backward()
 	}
 
 	return output

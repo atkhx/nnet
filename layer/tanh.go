@@ -20,3 +20,7 @@ func (l *Tanh) Compile(inputs *num.Data) *num.Data {
 func (l *Tanh) Forward() {
 	l.outputObj.Forward()
 }
+
+func (l *Tanh) Backward() {
+	l.outputObj.Backward()
+}

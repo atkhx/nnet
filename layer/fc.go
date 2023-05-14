@@ -8,13 +8,14 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewFC(dims num.Dims, gain float64) *FC {
-	return &FC{dims: dims, gain: gain}
+func NewFC(dims num.Dims, gain float64, label string) *FC {
+	return &FC{dims: dims, gain: gain, label: label}
 }
 
 type FC struct {
-	dims num.Dims
-	gain float64
+	dims  num.Dims
+	gain  float64
+	label string
 
 	WeightObj *num.Data
 	outputObj *num.Data
@@ -31,6 +32,7 @@ func (l *FC) Compile(inputs *num.Data) *num.Data {
 
 	l.WeightObj = num.NewRandNormWeighted(l.dims, weightK)
 	l.outputObj = inputs.MatrixMultiply(l.WeightObj)
+	l.outputObj.SetLabel(l.label)
 	l.forUpdate = num.Nodes{l.WeightObj}
 
 	fmt.Println(strings.Repeat("-", 40))
@@ -41,6 +43,10 @@ func (l *FC) Compile(inputs *num.Data) *num.Data {
 
 func (l *FC) Forward() {
 	l.outputObj.Forward()
+}
+
+func (l *FC) Backward() {
+	l.outputObj.Backward()
 }
 
 func (l *FC) ForUpdate() num.Nodes {
