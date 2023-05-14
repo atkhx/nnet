@@ -54,17 +54,17 @@ func CreateNN(
 		//------------------------------------------------------------------------
 		// Block 2
 		// SA-MultiHead
-		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount),
-		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), num.LinearGain),
-		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
-
-		// Non-linearity in block
-		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
-		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
-		layer.NewReLu(),
-		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
-		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		//layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount),
+		//layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), num.LinearGain),
+		//layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		//// out: [ embeddingFeatures, contextLength, batchSize ]
+		//
+		//// Non-linearity in block
+		//layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
+		//layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+		//layer.NewReLu(),
+		//layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
+		//layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
 		//out: [ embeddingFeatures, contextLength, batchSize ]
 
 		//------------------------------------------------------------------------

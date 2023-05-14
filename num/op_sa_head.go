@@ -1,6 +1,9 @@
 package num
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 func (input *Data) SAHead(
 	headSize int,
@@ -13,7 +16,6 @@ func (input *Data) SAHead(
 
 	keyObject := input.MatrixMultiply(keyWeights)
 	qryObject := input.MatrixMultiply(qryWeights)
-	valObject := input.MatrixMultiply(valWeights)
 
 	qryObjectT := qryObject.Transpose()
 	weiObject := keyObject.MatrixMultiply(qryObjectT)
@@ -22,21 +24,44 @@ func (input *Data) SAHead(
 	weiTrilObject := weiMulObject.TriangleLower(math.Inf(-1))
 	weiSoftmaxObject := weiTrilObject.Softmax()
 
+	valObject := input.MatrixMultiply(valWeights)
+
 	output := weiSoftmaxObject.MatrixMultiply(valObject)
-	outputCalcDataLast := output.calcData
+	weiSoftmaxObjectMulValObject := output.calcData
+
+	wg := sync.WaitGroup{}
 
 	output.calcData = func() {
-		keyObject.Forward()
-		qryObject.Forward()
-		valObject.Forward()
+		wg.Add(2)
+		go func() {
+			keyObject.Forward()
+			wg.Done()
+		}()
 
-		qryObjectT.Forward()
-		weiObject.Forward()
-		weiMulObject.Forward()
-		weiTrilObject.Forward()
-		weiSoftmaxObject.Forward()
+		go func() {
+			qryObject.Forward()
+			wg.Done()
+		}()
 
-		outputCalcDataLast()
+		wg.Wait()
+
+		wg.Add(2)
+		go func() {
+			valObject.Forward()
+			wg.Done()
+		}()
+
+		go func() {
+			qryObjectT.Forward()
+			weiObject.Forward()
+			weiMulObject.Forward()
+			weiTrilObject.Forward()
+			weiSoftmaxObject.Forward()
+			wg.Done()
+		}()
+
+		wg.Wait()
+		weiSoftmaxObjectMulValObject()
 	}
 
 	return output

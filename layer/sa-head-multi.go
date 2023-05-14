@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 
 	"github.com/atkhx/nnet/num"
 )
@@ -36,6 +37,8 @@ type SAMultiHead struct {
 
 	concatObj *num.Data
 	forUpdate num.Nodes
+
+	wg sync.WaitGroup
 }
 
 func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
@@ -74,17 +77,16 @@ func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
 	return l.concatObj
 }
 
-//var wg = sync.WaitGroup{}
-
 func (l *SAMultiHead) Forward() {
-	//wg.Add(l.headsCount)
+	l.wg.Add(l.headsCount)
 	for i := range l.Heads {
-		//go func(i int) {
-		l.Heads[i].outputObj.Forward()
-		//wg.Done()
-		//}(i)
+		go func(i int) {
+			l.Heads[i].outputObj.Forward()
+			l.wg.Done()
+		}(i)
 	}
-	//wg.Wait()
+	l.wg.Wait()
+
 	l.concatObj.Forward()
 }
 
