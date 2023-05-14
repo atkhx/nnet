@@ -20,7 +20,6 @@ type Bias struct {
 
 func (l *Bias) Compile(inputs *num.Data) *num.Data {
 	l.outputObj = inputs.Add(l.WeightObj)
-	l.outputObj.SetLabel("bias")
 	l.forUpdate = num.Nodes{l.WeightObj}
 
 	fmt.Println("Bias\t", l.WeightObj.Dims, "out", l.outputObj.Dims)

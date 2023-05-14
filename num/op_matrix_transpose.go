@@ -6,7 +6,6 @@ func (input *Data) Transpose() (outMatrix *Data) {
 	output := input.Copy()
 	output.Dims.W = input.Dims.H
 	output.Dims.H = input.Dims.W
-	output.SetOperation("transpose")
 	output.calcData = func() {
 		for d := 0; d < len(input.Data); d += WH {
 			for y := 0; y < input.Dims.H; y++ {

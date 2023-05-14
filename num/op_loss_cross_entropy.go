@@ -64,8 +64,6 @@ func (input *Data) CrossEntropy(targets *Data) *Data {
 	logLikelihood := input.Data.CopyZero()
 
 	output := New(oDims, input)
-	output.SetOperation("crossEntropy")
-
 	output.calcData = func() {
 		softmax.CopyFrom(input.Data)
 		for i := 0; i < len(softmax); i += chunkSize {
@@ -80,7 +78,6 @@ func (input *Data) CrossEntropy(targets *Data) *Data {
 			output.Data[i] = logLikelihood[i*chunkSize : (i+1)*chunkSize].Sum()
 		}
 	}
-
 	output.calcGrad = func() {
 		for i, t := range targets.Data {
 			input.Grad[i] += softmax[i] - t

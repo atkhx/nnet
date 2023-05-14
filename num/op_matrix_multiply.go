@@ -144,7 +144,7 @@ func (input *Data) MatrixMultiply(factor *Data) *Data {
 		Dims:     Dims{W: oW, H: oH, D: oD},
 		srcNodes: Nodes{input, fTranspose},
 	}
-	output.SetOperation("matrixMultiply")
+
 	iWH := input.Dims.W * input.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
 

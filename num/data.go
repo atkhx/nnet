@@ -1,9 +1,5 @@
 package num
 
-import (
-	"fmt"
-)
-
 type Nodes []*Data
 
 func (nodes Nodes) Each(fn func(node *Data)) {
@@ -46,9 +42,6 @@ type Data struct {
 	srcNodes Nodes
 	calcData func()
 	calcGrad func()
-
-	operation string
-	label     string
 }
 
 func (input *Data) Copy() *Data {
@@ -86,16 +79,4 @@ func (input *Data) StringData() string {
 
 func (input *Data) StringGrad() string {
 	return input.Grad.String(input.Dims)
-}
-
-func (input *Data) SetOperation(operation string) {
-	input.operation = operation
-}
-
-func (input *Data) SetLabel(label string) {
-	input.label = label
-}
-
-func (input *Data) String() string {
-	return fmt.Sprintf("%s %s", input.operation, input.label)
 }

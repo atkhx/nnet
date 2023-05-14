@@ -6,11 +6,9 @@ func (input *Data) Softmax() *Data {
 	chunkSize := input.Dims.W
 	chunksCount := len(input.Data) / chunkSize
 
-	output := input.Copy()
-	output.SetOperation("softmax")
-
 	wg := sync.WaitGroup{}
 
+	output := input.Copy()
 	output.calcData = func() {
 		output.Data.CopyFrom(input.Data)
 

@@ -22,8 +22,6 @@ func (input *Data) LNorm(gamma, beta *Data) *Data {
 		outputCalcDataOrigin()
 	}
 
-	output.SetOperation("lnorm")
-
 	// todo correct calcGrad func
 
 	return output

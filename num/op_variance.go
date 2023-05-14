@@ -4,12 +4,10 @@ func (input *Data) VarianceByRows(meanData Float64s) *Data {
 	oDims := input.Dims
 	oDims.W = 1
 
-	output := New(oDims, input)
 	chunkSize := input.Dims.W
-
 	k := 1.0 / float64(chunkSize-1)
 
-	output.SetOperation("variance")
+	output := New(oDims, input)
 	output.calcData = func() {
 		if meanData == nil {
 			meanData = input.MeanByRows().Data

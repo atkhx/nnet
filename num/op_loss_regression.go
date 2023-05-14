@@ -8,7 +8,6 @@ func (input *Data) Regression(targets *Data) *Data {
 	oDims.W = 1
 
 	output := New(oDims, input)
-	output.SetOperation("regression")
 	output.calcData = func() {
 		for z := 0; z < input.Dims.D; z++ {
 			for y := 0; y < input.Dims.H; y++ {

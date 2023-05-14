@@ -21,7 +21,6 @@ func (input *Data) ConcatRows(bData ...*Data) *Data {
 	)
 
 	output := New(oDims, append(Nodes{input}, bData...)...)
-	output.SetOperation("concat")
 
 	output.calcData = func() {
 		oOffset := 0

@@ -30,7 +30,6 @@ func (input *Data) SAHead(
 	weiSoftmaxObjectMulValObjectForward := output.calcData
 
 	wg := sync.WaitGroup{}
-	output.SetOperation("saHead weiSoftmaxObjectMulValObject")
 	output.calcData = func() {
 		wg.Add(2)
 		go func() {

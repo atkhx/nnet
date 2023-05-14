@@ -12,7 +12,6 @@ func (input *Data) Add(bData *Data) *Data {
 	bzStep := steps.bD * bData.Dims.W * bData.Dims.H
 	byStep := steps.bH * bData.Dims.W
 
-	output.SetOperation("add")
 	output.calcData = func() {
 		offset := 0
 

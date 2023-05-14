@@ -4,7 +4,6 @@ import "math"
 
 func (input *Data) Exp() (outMatrix *Data) {
 	output := input.Copy()
-	output.SetOperation("exp")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			output.Data[i] = math.Exp(x)
@@ -20,7 +19,6 @@ func (input *Data) Exp() (outMatrix *Data) {
 
 func (input *Data) Log() (outMatrix *Data) {
 	output := input.Copy()
-	output.SetOperation("log")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			output.Data[i] = math.Log(x)
@@ -36,7 +34,6 @@ func (input *Data) Log() (outMatrix *Data) {
 
 func (input *Data) Pow(n float64) *Data {
 	output := input.Copy()
-	output.SetOperation("pow")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			output.Data[i] = math.Pow(x, n)
@@ -52,7 +49,6 @@ func (input *Data) Pow(n float64) *Data {
 
 func (input *Data) Sqrt() (outMatrix *Data) {
 	output := input.Copy()
-	output.SetOperation("sqrt")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			output.Data[i] = math.Sqrt(x)
@@ -68,7 +64,6 @@ func (input *Data) Sqrt() (outMatrix *Data) {
 
 func (input *Data) Sigmoid() *Data {
 	output := input.Copy()
-	output.SetOperation("sigmoid")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			output.Data[i] = 1.0 / (1.0 + math.Exp(-x))
@@ -84,7 +79,6 @@ func (input *Data) Sigmoid() *Data {
 
 func (input *Data) Tanh() *Data {
 	output := input.Copy()
-	output.SetOperation("tanh")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			output.Data[i] = math.Tanh(x)
@@ -100,7 +94,6 @@ func (input *Data) Tanh() *Data {
 
 func (input *Data) Relu() *Data {
 	output := input.Copy()
-	output.SetOperation("relu")
 	output.calcData = func() {
 		for i, x := range input.Data {
 			if x > 0 {
