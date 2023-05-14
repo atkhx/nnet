@@ -11,11 +11,6 @@ import (
 //go:embed tinyshakespeare.txt
 var TinyShakespeare []byte
 
-const (
-	ContextSize   = 32
-	MiniBatchSize = 16
-)
-
 func NewDataset(contextSize, miniBatchSize int) *Dataset {
 	result := &Dataset{
 		contextSize:   contextSize,

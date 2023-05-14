@@ -41,21 +41,17 @@ func main() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	namesDataset := dataset.NewDataset(dataset.ContextSize, dataset.MiniBatchSize)
+	namesDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
 	namesDataset.ParseAlphabet(dataset.TinyShakespeare)
 
-	seqModel := pkg.CreateNN(
-		namesDataset.GetAlphabetSize(),
-		namesDataset.GetContextSize(),
-		namesDataset.GetMiniBatchSize(),
-	)
+	seqModel := pkg.CreateNN(namesDataset.GetAlphabetSize(), pkg.MiniBatchSize)
 
 	modelOutput := seqModel.Compile()
 	if err := seqModel.LoadFromFile(filename); err != nil {
 		log.Fatalln(err)
 	}
 
-	targets := num.New(num.NewDims(1, dataset.ContextSize*dataset.MiniBatchSize))
+	targets := num.New(num.NewDims(1, pkg.ContextLength*pkg.MiniBatchSize))
 
 	loss := modelOutput.CrossEntropyPos(targets)
 	lossMean := loss.Mean()
@@ -97,7 +93,7 @@ func main() {
 			loss.Backward()
 
 			lossAvg += lossMean.Data[0]
-			seqModel.Update(0.0001)
+			seqModel.Update(0.001)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)
