@@ -30,52 +30,58 @@ func CreateNN(
 		D: 1,
 	}
 
-	return model.NewSequential(inDims, layer.Layers{
-		// embedding table
-		layer.NewEmbedding(embeddingFeatures, alphabetSize, contextLength),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
+	initWeight := &layer.InitWeightFixed{0.02}
 
+	return model.NewSequential(inDims, layer.Layers{
 		//------------------------------------------------------------------------
-		// Block 1
-		// SA-MultiHead
-		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount),
-		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), num.LinearGain),
+		//---Embedding table------------------------------------------------------
+		layer.NewEmbedding(embeddingFeatures, alphabetSize, contextLength, initWeight),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
+		//layer.NewDebug(10000),
+		//---Block 1---SA-MultiHead-----------------------------------------------
+		// layer.NewDebug(),
+		layer.NewLNorm(),
+		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
 		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
 		// out: [ embeddingFeatures, contextLength, batchSize ]
-
-		// Non-linearity in block
-		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
+		layer.NewLNorm(),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
+		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
 		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
 		layer.NewReLu(),
-		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
+		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
 		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
 		//out: [ embeddingFeatures, contextLength, batchSize ]
 
-		//------------------------------------------------------------------------
-		// Block 2
-		// SA-MultiHead
-		//layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount),
-		//layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), num.LinearGain),
-		//layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
-		//// out: [ embeddingFeatures, contextLength, batchSize ]
-		//
-		//// Non-linearity in block
-		//layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), num.ReLuGain),
-		//layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
-		//layer.NewReLu(),
-		//layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), num.LinearGain),
-		//layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		//---Block 2---SA-MultiHead-----------------------------------------------
+		// layer.NewDebug(),
+		layer.NewLNorm(),
+		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
+		layer.NewLNorm(),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
+		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+		layer.NewReLu(),
+		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
 		//out: [ embeddingFeatures, contextLength, batchSize ]
 
-		//------------------------------------------------------------------------
-		// Probabilities
-		layer.NewFC(num.NewDims(alphabetSize, embeddingFeatures), num.LinearGain),
+		//---Probabilities--------------------------------------------------------
+		//layer.NewDebug(8000),
+		layer.NewLNorm(),
+		layer.NewFC(num.NewDims(alphabetSize, embeddingFeatures), initWeight),
+		//layer.NewLNorm(),
 		layer.NewBias(num.NewDims(alphabetSize, contextLength)),
 		// out: [ alphabetSize, contextLength, batchSize ]
 
-		// Adopt probs to 2D
+		//---Adopt probs to 2D----------------------------------------------------
 		layer.NewReshape(num.NewDims(alphabetSize, miniBatchSize*contextLength)),
 		// out: [ alphabetSize, contextLength * batchSize ]
 		// each row is probabilities for the next symbol
+		//------------------------------------------------------------------------
 	})
 }

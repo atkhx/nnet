@@ -58,6 +58,10 @@ func (input *Data) Sqrt() (outMatrix *Data) {
 		for i, x := range input.Data {
 			input.Grad[i] += output.Grad[i] * 0.5 * math.Pow(x, -0.5)
 		}
+
+		//for i, y := range output.Data {
+		//	input.Grad[i] += output.Grad[i] * 0.5 / y
+		//}
 	}
 	return output
 }

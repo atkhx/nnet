@@ -6,16 +6,12 @@ func (input *Data) Mean() *Data {
 	k := 1.0 / float64(len(input.Data))
 
 	output.calcData = func() {
-		r := 0.0
-		for _, v := range input.Data {
-			r += v
-		}
-		output.Data[0] = r * k
+		output.Data[0] = input.Data.Mean()
 	}
 
 	output.calcGrad = func() {
-		for i, ig := range input.Grad {
-			input.Grad[i] = ig + output.Grad[0]*k
+		for i := range input.Data {
+			input.Grad[i] += output.Grad[0] * k
 		}
 	}
 

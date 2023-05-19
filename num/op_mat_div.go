@@ -1,93 +1,30 @@
 package num
 
+import (
+	"math"
+)
+
 func (input *Data) Div(bData *Data) *Data {
-	oDims := input.Dims.GetDimsByMax(bData.Dims)
-	steps := input.Dims.GetBroadCastSteps(bData.Dims)
-
-	output := New(oDims, input, bData)
-
-	izStep := steps.aD * input.Dims.W * input.Dims.H
-	iyStep := steps.aH * input.Dims.W
-
-	bzStep := steps.bD * bData.Dims.W * bData.Dims.H
-	byStep := steps.bH * bData.Dims.W
-
+	config := BroadCast(input, bData)
+	output := New(config.oDims, input, bData)
+	square := bData.Data.CopyZero()
 	output.calcData = func() {
-		offset := 0
-
-		izOffset := 0
-		bzOffset := 0
-		for oZ := 0; oZ < oDims.D; oZ++ {
-
-			iyOffset := 0
-			byOffset := 0
-			for oY := 0; oY < oDims.H; oY++ {
-
-				ixOffset := 0
-				bxOffset := 0
-				for oX := 0; oX < oDims.W; oX++ {
-					iV := input.Data[izOffset+iyOffset+ixOffset]
-					bV := bData.Data[bzOffset+byOffset+bxOffset]
-
-					output.Data[offset] = iV / bV
-					offset++
-
-					ixOffset += steps.aW
-					bxOffset += steps.bW
-				}
-
-				iyOffset += iyStep
-				byOffset += byStep
-			}
-
-			izOffset += izStep
-			bzOffset += bzStep
-		}
+		config.BroadCast(func(ax, bx, offset int) {
+			output.Data[offset] = input.Data[ax] / bData.Data[bx]
+		})
 	}
-
-	bSquare := bData.Data.Copy()
-
 	output.calcGrad = func() {
-		bSquare.CopyFrom(input.Data)
-		for k, v := range bSquare {
-			bSquare[k] = -1.0 / (v * v)
+		for k, v := range bData.Data {
+			square[k] = -math.Pow(v, -2.0)
 		}
+		config.BroadCast(func(ax, bx, offset int) {
+			iV := input.Data[ax]
+			bV := bData.Data[bx]
+			gV := output.Grad[offset]
 
-		offset := 0
-
-		izOffset := 0
-		bzOffset := 0
-		for oZ := 0; oZ < oDims.D; oZ++ {
-
-			iyOffset := 0
-			byOffset := 0
-			for oY := 0; oY < oDims.H; oY++ {
-
-				ixOffset := 0
-				bxOffset := 0
-				for oX := 0; oX < oDims.W; oX++ {
-					iV := input.Data[izOffset+iyOffset+ixOffset]
-					bV := bData.Data[bzOffset+byOffset+bxOffset]
-
-					bSquareValue := bSquare[bzOffset+byOffset+bxOffset]
-
-					input.Grad[izOffset+iyOffset+ixOffset] += output.Grad[offset] * (1.0 / bV)
-					bData.Grad[bzOffset+byOffset+bxOffset] += output.Grad[offset] * (iV * bSquareValue)
-
-					offset++
-
-					ixOffset += steps.aW
-					bxOffset += steps.bW
-				}
-
-				iyOffset += iyStep
-				byOffset += byStep
-			}
-
-			izOffset += izStep
-			bzOffset += bzStep
-		}
+			input.Grad[ax] += gV * (1.0 / bV)
+			bData.Grad[bx] += gV * iV * square[bx]
+		})
 	}
-
 	return output
 }

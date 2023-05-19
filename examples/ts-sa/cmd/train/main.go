@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -22,8 +21,6 @@ var filename string
 var epochs int
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
-
 	flag.StringVar(&filename, "c", "./examples/ts-sa/config.json", "nn config file")
 	flag.IntVar(&epochs, "e", 5_000_000, "epochs count")
 	flag.Parse()
@@ -96,7 +93,7 @@ func main() {
 			seqModel.Backward()
 
 			lossAvg += lossMean.Data[0]
-			seqModel.Update(0.00001)
+			seqModel.Update(0.0001)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

@@ -1,8 +1,6 @@
 package layer
 
 import (
-	"math"
-
 	"github.com/atkhx/nnet/num"
 )
 
@@ -28,14 +26,18 @@ import (
 func NewSAHead(
 	featuresCount int,
 	headSize int,
+	initWeights InitWeights,
 ) *SAHead {
 	return &SAHead{
 		featuresCount: featuresCount,
 		headSize:      headSize,
+		initWeights:   initWeights,
 	}
 }
 
 type SAHead struct {
+	initWeights InitWeights
+
 	featuresCount int
 	headSize      int
 
@@ -47,7 +49,7 @@ type SAHead struct {
 }
 
 func (l *SAHead) Compile(inputs *num.Data) *num.Data {
-	weightK := num.LinearGain / math.Pow(float64(len(inputs.Data)), 0.5)
+	weightK := l.initWeights.GetNormK(len(inputs.Data))
 
 	l.KeyWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 	l.QryWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)

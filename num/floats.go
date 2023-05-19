@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 )
 
 func NewFloat64s(size int) Float64s {
@@ -110,6 +111,23 @@ func (f Float64s) Exp() {
 	}
 }
 
+func (f Float64s) Mean() (sum float64) {
+	return f.Sum() / float64(len(f))
+}
+
+func (f Float64s) Std() float64 {
+	mean := f.Mean()
+
+	out := 0.0
+	for _, v := range f {
+		out += math.Pow(v-mean, 2)
+	}
+	out /= float64(len(f))
+	out = math.Sqrt(out)
+
+	return out
+}
+
 func (f Float64s) Sum() (sum float64) {
 	for _, v := range f {
 		sum += v
@@ -180,13 +198,14 @@ func (f Float64s) String(dims Dims) string {
 	var result string
 	var offset int
 
-	result += "[\n"
+	result += strings.Repeat("-", 40) + "\n"
+	//result += "[\n"
 	for z := 0; z < dims.D; z++ {
 		if z > 0 {
 			result += "\n"
 		}
 
-		result += "  [\n"
+		//result += "  [\n"
 		for y := 0; y < dims.H; y++ {
 			if y > 0 {
 				result += "\n"
@@ -198,13 +217,14 @@ func (f Float64s) String(dims Dims) string {
 					result += " "
 				}
 
-				result += fmt.Sprintf("%.5f ", v)
+				result += fmt.Sprintf("%.20f ", v)
 				offset++
 			}
 		}
-		result += "\n  ]"
+		//result += "\n"
+		//result += "\n  ]"
 	}
-	result += "\n]"
+	//result += "\n]"
 
 	return result
 }

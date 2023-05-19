@@ -2,27 +2,43 @@ package num
 
 func (input *Data) LNorm(gamma, beta *Data) *Data {
 	mean := input.MeanByRows()
-	vars := input.VarianceByRows(mean.Data)
-	sqrt := vars.Sqrt()
 	xSub := input.Sub(mean)
 
+	vars := input.VarianceByRows(mean.Data)
+	sqrt := vars.Sqrt()
 	xDiv := xSub.Div(sqrt)
-	xMul := xDiv.Mul(gamma)
+	//xMul := xDiv.Mul(gamma)
+	xMul := gamma.Mul(xDiv)
 
 	output := xMul.Add(beta)
-	outputCalcDataOrigin := output.calcData
+	outputCalcDataForward := output.calcData
 
 	output.calcData = func() {
 		mean.Forward()
+		xSub.Forward()
+
 		vars.Forward()
 		sqrt.Forward()
-		xSub.Forward()
+		//sqrt.Data.AddScalar(1e-5)
+
 		xDiv.Forward()
 		xMul.Forward()
-		outputCalcDataOrigin()
+		outputCalcDataForward()
 	}
 
-	// todo correct calcGrad func
+	outputCalcDataBackward := output.calcGrad
+	output.calcGrad = func() {
+		outputCalcDataBackward()
+
+		xMul.Backward()
+		xDiv.Backward()
+
+		sqrt.Backward()
+		vars.Backward()
+		xSub.Backward()
+		mean.Backward()
+
+	}
 
 	return output
 }

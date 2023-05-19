@@ -2,19 +2,19 @@ package layer
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/atkhx/nnet/num"
 )
 
-func NewFC(dims num.Dims, gain float64) *FC {
-	return &FC{dims: dims, gain: gain}
+func NewFC(dims num.Dims, initWeights InitWeights) *FC {
+	return &FC{dims: dims, initWeights: initWeights}
 }
 
 type FC struct {
+	initWeights InitWeights
+
 	dims num.Dims
-	gain float64
 
 	WeightObj *num.Data
 	outputObj *num.Data
@@ -22,12 +22,7 @@ type FC struct {
 }
 
 func (l *FC) Compile(inputs *num.Data) *num.Data {
-	weightK := 1.0
-
-	if l.gain > 0 {
-		fanIn := len(inputs.Data)
-		weightK = l.gain / math.Pow(float64(fanIn), 0.5)
-	}
+	weightK := l.initWeights.GetNormK(len(inputs.Data))
 
 	l.WeightObj = num.NewRandNormWeighted(l.dims, weightK)
 	l.outputObj = inputs.MatrixMultiply(l.WeightObj)

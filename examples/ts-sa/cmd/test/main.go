@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/atkhx/nnet/examples/ts-sa/dataset"
 	"github.com/atkhx/nnet/examples/ts-sa/pkg"
@@ -20,8 +18,6 @@ func init() {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	var err error
 	defer func() {
 		if err != nil {

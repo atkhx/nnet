@@ -13,11 +13,18 @@ func (input *Data) MeanByRows() *Data {
 
 	output.calcData = func() {
 		for i := 0; i < chunksCount; i++ {
-			output.Data[i] = input.Data[i*chunkSize:(i+1)*chunkSize].Sum() * k
+			//output.Data[i] = input.Data[i*chunkSize:(i+1)*chunkSize].Sum() * k
+			output.Data[i] = input.Data[i*chunkSize : (i+1)*chunkSize].Mean()
 		}
 	}
 
 	output.calcGrad = func() {
+		for i := 0; i < chunksCount; i++ {
+			g := output.Grad[i] * k
+			for j := i * chunkSize; j < (i+1)*chunkSize; j++ {
+				input.Grad[j] += g
+			}
+		}
 		input.Grad.AddWeighted(output.Grad, k)
 	}
 

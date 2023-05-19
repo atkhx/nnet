@@ -1,84 +1,18 @@
 package num
 
 func (input *Data) Mul(bData *Data) *Data {
-	oDims := input.Dims.GetDimsByMax(bData.Dims)
-	steps := input.Dims.GetBroadCastSteps(bData.Dims)
-
-	output := New(oDims, input, bData)
-
-	izStep := steps.aD * input.Dims.W * input.Dims.H
-	iyStep := steps.aH * input.Dims.W
-
-	bzStep := steps.bD * bData.Dims.W * bData.Dims.H
-	byStep := steps.bH * bData.Dims.W
-
+	config := BroadCast(input, bData)
+	output := New(config.oDims, input, bData)
 	output.calcData = func() {
-		offset := 0
-
-		izOffset := 0
-		bzOffset := 0
-		for oZ := 0; oZ < oDims.D; oZ++ {
-
-			iyOffset := 0
-			byOffset := 0
-			for oY := 0; oY < oDims.H; oY++ {
-
-				ixOffset := 0
-				bxOffset := 0
-				for oX := 0; oX < oDims.W; oX++ {
-					iV := input.Data[izOffset+iyOffset+ixOffset]
-					bV := bData.Data[bzOffset+byOffset+bxOffset]
-
-					output.Data[offset] = iV * bV
-					offset++
-
-					ixOffset += steps.aW
-					bxOffset += steps.bW
-				}
-
-				iyOffset += iyStep
-				byOffset += byStep
-			}
-
-			izOffset += izStep
-			bzOffset += bzStep
-		}
+		config.BroadCast(func(ax, bx, offset int) {
+			output.Data[offset] = input.Data[ax] * bData.Data[bx]
+		})
 	}
-
 	output.calcGrad = func() {
-		offset := 0
-
-		izOffset := 0
-		bzOffset := 0
-		for oZ := 0; oZ < oDims.D; oZ++ {
-
-			iyOffset := 0
-			byOffset := 0
-			for oY := 0; oY < oDims.H; oY++ {
-
-				ixOffset := 0
-				bxOffset := 0
-				for oX := 0; oX < oDims.W; oX++ {
-					iV := input.Data[izOffset+iyOffset+ixOffset]
-					bV := bData.Data[bzOffset+byOffset+bxOffset]
-
-					input.Grad[izOffset+iyOffset+ixOffset] += output.Grad[offset] * bV
-					bData.Grad[bzOffset+byOffset+bxOffset] += output.Grad[offset] * iV
-
-					offset++
-
-					ixOffset += steps.aW
-					bxOffset += steps.bW
-				}
-
-				iyOffset += iyStep
-				byOffset += byStep
-			}
-
-			izOffset += izStep
-			bzOffset += bzStep
-		}
+		config.BroadCast(func(ax, bx, offset int) {
+			input.Grad[ax] += output.Grad[offset] * bData.Data[bx]
+			bData.Grad[bx] += output.Grad[offset] * input.Data[ax]
+		})
 	}
-
 	return output
 }

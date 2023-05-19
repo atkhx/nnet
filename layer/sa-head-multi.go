@@ -2,7 +2,6 @@ package layer
 
 import (
 	"fmt"
-	"math"
 	"strings"
 	"sync"
 
@@ -13,11 +12,13 @@ func NewSAMultiHead(
 	featuresCount int,
 	headSize int,
 	headsCount int,
+	initWeights InitWeights,
 ) *SAMultiHead {
 	return &SAMultiHead{
 		featuresCount: featuresCount,
 		headSize:      headSize,
 		headsCount:    headsCount,
+		initWeights:   initWeights,
 	}
 }
 
@@ -29,6 +30,8 @@ type SAHeadParams struct {
 }
 
 type SAMultiHead struct {
+	initWeights InitWeights
+
 	featuresCount int
 	headSize      int
 	headsCount    int
@@ -42,7 +45,7 @@ type SAMultiHead struct {
 }
 
 func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
-	weightK := num.LinearGain / math.Pow(float64(len(inputs.Data)), 0.5)
+	weightK := l.initWeights.GetNormK(len(inputs.Data))
 
 	l.Heads = make([]SAHeadParams, l.headsCount)
 
@@ -92,6 +95,7 @@ func (l *SAMultiHead) Forward() {
 
 func (l *SAMultiHead) Backward() {
 	l.concatObj.Backward()
+
 	l.wg.Add(l.headsCount)
 	for i := range l.Heads {
 		go func(i int) {
