@@ -10,9 +10,9 @@ const (
 	ContextLength = 64
 	MiniBatchSize = 16
 
-	EmbeddingFeatures = 32
-	HeadSize          = 8
-	HeadsCount        = 4
+	EmbeddingFeatures = 384
+	HeadSize          = 64
+	HeadsCount        = 6
 )
 
 func CreateNN(
@@ -64,6 +64,102 @@ func CreateNN(
 		),
 
 		//---Block 2---SA-MultiHead-----------------------------------------------
+		// layer.NewDebug(),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+				layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+				layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+				layer.NewReLu(),
+				layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				//out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+
+		//---Block 3---SA-MultiHead-----------------------------------------------
+		// layer.NewDebug(),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+				layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+				layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+				layer.NewReLu(),
+				layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				//out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+
+		//---Block 4---SA-MultiHead-----------------------------------------------
+		// layer.NewDebug(),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+				layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+				layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+				layer.NewReLu(),
+				layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				//out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+
+		//---Block 5---SA-MultiHead-----------------------------------------------
+		// layer.NewDebug(),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+				layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+				layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+				layer.NewReLu(),
+				layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				//out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+
+		//---Block 6---SA-MultiHead-----------------------------------------------
 		// layer.NewDebug(),
 		layer.NewResidual(
 			layer.Layers{

@@ -68,7 +68,7 @@ func main() {
 			trainStopped <- true
 		}()
 
-		statChunkSize := 1000
+		statChunkSize := 10
 		lossAvg := 0.0
 
 		t := time.Now()

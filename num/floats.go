@@ -155,6 +155,46 @@ func (f Float64s) Softmax() {
 	}
 }
 
+func (f Float64s) SoftmaxK(k float64) {
+	var max float64
+	var sum float64
+
+	for i, v := range f {
+		if i == 0 || max < v {
+			max = v
+		}
+	}
+
+	for i, v := range f {
+		f[i] = math.Exp(k * (v - max))
+		sum += f[i]
+	}
+
+	for i := range f {
+		f[i] /= sum
+	}
+}
+
+func (f Float64s) SoftmaxKTo(out Float64s, k float64) {
+	var max float64
+	var sum float64
+
+	for i, v := range f {
+		if i == 0 || max < v {
+			max = v
+		}
+	}
+
+	for i, v := range f {
+		out[i] = math.Exp(k * (v - max))
+		sum += out[i]
+	}
+
+	for i := range out {
+		out[i] /= sum
+	}
+}
+
 func (f Float64s) CumulativeSum() {
 	for i := 1; i < len(f); i++ {
 		f[i] += f[i-1]
