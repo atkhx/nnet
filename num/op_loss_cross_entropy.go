@@ -2,28 +2,28 @@ package num
 
 import "math"
 
-func (input *Data) CrossEntropyPos(targets *Data) *Data {
+func (aData *Data) CrossEntropyPos(targets *Data) *Data {
 	if targets.Dims.W != 1 {
 		panic("target width must be equal 1")
 	}
 
-	if targets.Dims.H != input.Dims.H {
-		panic("target height must be equal input height")
+	if targets.Dims.H != aData.Dims.H {
+		panic("target height must be equal aData height")
 	}
 
-	if targets.Dims.D != input.Dims.D {
-		panic("target depth must be equal input depth")
+	if targets.Dims.D != aData.Dims.D {
+		panic("target depth must be equal aData depth")
 	}
 
 	oDims := targets.Dims
-	chunkSize := input.Dims.W
+	chunkSize := aData.Dims.W
 
 	// just buffer to avoid memory allocations
-	softmax := input.Data.CopyZero()
+	softmax := aData.Data.CopyZero()
 
-	output := New(oDims, input)
+	output := New(oDims, aData)
 	output.calcData = func() {
-		softmax.CopyFrom(input.Data)
+		softmax.CopyFrom(aData.Data)
 		for i := 0; i < len(softmax); i += chunkSize {
 			softmax[i : i+chunkSize].Softmax()
 		}
@@ -45,7 +45,7 @@ func (input *Data) CrossEntropyPos(targets *Data) *Data {
 				if i == int(correctIdx) {
 					t = 1.0
 				}
-				input.Grad[j] += output.Grad[0] * (softmax[j] - t)
+				aData.Grad[j] += output.Grad[0] * (softmax[j] - t)
 			}
 		}
 	}
@@ -53,19 +53,19 @@ func (input *Data) CrossEntropyPos(targets *Data) *Data {
 	return output
 }
 
-func (input *Data) CrossEntropy(targets *Data) *Data {
-	input.Dims.MustBeEqual(targets.Dims)
-	oDims := input.Dims
+func (aData *Data) CrossEntropy(targets *Data) *Data {
+	aData.Dims.MustBeEqual(targets.Dims)
+	oDims := aData.Dims
 	oDims.W = 1
-	chunkSize := input.Dims.W
+	chunkSize := aData.Dims.W
 
 	// just buffer to avoid memory allocations
-	softmax := input.Data.CopyZero()
-	logLikelihood := input.Data.CopyZero()
+	softmax := aData.Data.CopyZero()
+	logLikelihood := aData.Data.CopyZero()
 
-	output := New(oDims, input)
+	output := New(oDims, aData)
 	output.calcData = func() {
-		softmax.CopyFrom(input.Data)
+		softmax.CopyFrom(aData.Data)
 		for i := 0; i < len(softmax); i += chunkSize {
 			softmax[i : i+chunkSize].Softmax()
 		}
@@ -80,7 +80,7 @@ func (input *Data) CrossEntropy(targets *Data) *Data {
 	}
 	output.calcGrad = func() {
 		for i, t := range targets.Data {
-			input.Grad[i] += softmax[i] - t
+			aData.Grad[i] += softmax[i] - t
 		}
 	}
 

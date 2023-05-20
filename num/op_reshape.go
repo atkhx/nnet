@@ -1,24 +1,24 @@
 package num
 
-func (input *Data) Reshape(dims Dims) *Data {
-	if input.Dims.Size() != dims.Size() {
+func (aData *Data) Reshape(dims Dims) *Data {
+	if aData.Dims.Size() != dims.Size() {
 		panic("total dimension size must be equal with original")
 	}
 
 	output := &Data{
-		Data:     input.Data,
-		Grad:     input.Grad,
+		Data:     aData.Data,
+		Grad:     aData.Grad,
 		Dims:     dims,
-		srcNodes: Nodes{input},
+		srcNodes: Nodes{aData},
 		calcData: nil,
 		calcGrad: nil,
 	}
-	//output := New(dims, input)
+	//output := New(dims, aData)
 	output.calcData = func() {
-		//output.Data.CopyFrom(input.Data)
+		//output.Data.CopyFrom(aData.Data)
 	}
 	output.calcGrad = func() {
-		//input.Grad.CopyFrom(output.Grad)
+		//aData.Grad.CopyFrom(output.Grad)
 	}
 	return output
 }

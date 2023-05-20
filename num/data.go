@@ -1,5 +1,9 @@
 package num
 
+import (
+	"fmt"
+)
+
 type Nodes []*Data
 
 func (nodes Nodes) Each(fn func(node *Data)) {
@@ -11,6 +15,20 @@ func (nodes Nodes) Each(fn func(node *Data)) {
 func New(dims Dims, srcNodes ...*Data) *Data {
 	return &Data{
 		Data: make(Float64s, dims.Size()),
+		Grad: make(Float64s, dims.Size()),
+		Dims: dims,
+
+		srcNodes: srcNodes,
+	}
+}
+
+func NewWithValues(dims Dims, values Float64s, srcNodes ...*Data) *Data {
+	if len(values) != dims.Size() {
+		panic("invalid values size")
+	}
+
+	return &Data{
+		Data: values,
 		Grad: make(Float64s, dims.Size()),
 		Dims: dims,
 
@@ -44,39 +62,63 @@ type Data struct {
 	calcGrad func()
 }
 
-func (input *Data) Copy() *Data {
+func (aData *Data) Copy() *Data {
 	return &Data{
-		Data: make(Float64s, len(input.Data)),
-		Grad: make(Float64s, len(input.Data)),
-		Dims: input.Dims,
+		Data: make(Float64s, len(aData.Data)),
+		Grad: make(Float64s, len(aData.Data)),
+		Dims: aData.Dims,
 
-		srcNodes: Nodes{input},
+		srcNodes: Nodes{aData},
 	}
 }
 
-func (input *Data) Forward() {
-	input.calcData()
+func (aData *Data) Forward() {
+	aData.calcData()
 }
 
-func (input *Data) Backward() {
-	input.calcGrad()
+func (aData *Data) Backward() {
+	aData.calcGrad()
 }
 
-func (input *Data) ResetGrads(v float64) {
-	input.resetGrads(v)
+func (aData *Data) ResetGrads(v float64) {
+	var resetGrads func(node *Data, v float64)
+
+	visitedNodes := map[*Data]struct{}{}
+	resetGrads = func(node *Data, v float64) {
+		visitedNodes[node] = struct{}{}
+		node.Grad.Fill(v)
+		for _, srcNode := range node.srcNodes {
+			if _, ok := visitedNodes[srcNode]; !ok {
+				resetGrads(srcNode, 0)
+			}
+		}
+	}
+
+	resetGrads(aData, v)
+	//aData.checkGradsIsEmpty(v)
+	//os.Exit(1)
 }
 
-func (input *Data) resetGrads(v float64) {
-	input.Grad.Fill(v)
-	input.srcNodes.Each(func(node *Data) {
-		node.resetGrads(0)
-	})
+func (aData *Data) checkGradsIsEmpty(v float64) {
+	var checkGrads func(node *Data, v float64)
+	checkGrads = func(node *Data, v float64) {
+		for _, val := range node.Grad {
+			if val != v {
+				panic(fmt.Errorf("node grad is not empty, expected %v, actual %v", v, val))
+			}
+		}
+		for _, srcNode := range node.srcNodes {
+			checkGrads(srcNode, 0)
+		}
+	}
+
+	checkGrads(aData, v)
 }
 
-func (input *Data) StringData() string {
-	return input.Data.String(input.Dims)
+func (aData *Data) StringData() string {
+	return aData.Data.String(aData.Dims)
 }
 
-func (input *Data) StringGrad() string {
-	return input.Grad.String(input.Dims)
+func (aData *Data) StringGrad() string {
+	return aData.Grad.String(aData.Dims)
 }

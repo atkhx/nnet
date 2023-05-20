@@ -217,7 +217,7 @@ func (f Float64s) String(dims Dims) string {
 					result += " "
 				}
 
-				result += fmt.Sprintf("%.20f ", v)
+				result += fmt.Sprintf("%.7f ", v)
 				offset++
 			}
 		}

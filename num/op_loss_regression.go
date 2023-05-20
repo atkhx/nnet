@@ -2,31 +2,31 @@ package num
 
 import "math"
 
-func (input *Data) Regression(targets *Data) *Data {
-	input.Dims.MustBeEqual(targets.Dims)
-	oDims := input.Dims
+func (aData *Data) Regression(targets *Data) *Data {
+	aData.Dims.MustBeEqual(targets.Dims)
+	oDims := aData.Dims
 	oDims.W = 1
 
-	output := New(oDims, input)
+	output := New(oDims, aData)
 	output.calcData = func() {
-		for z := 0; z < input.Dims.D; z++ {
-			for y := 0; y < input.Dims.H; y++ {
+		for z := 0; z < aData.Dims.D; z++ {
+			for y := 0; y < aData.Dims.H; y++ {
 
 				r := 0.0
-				for x := 0; x < input.Dims.W; x++ {
-					c := z*input.Dims.H*input.Dims.W + y*input.Dims.W + x
-					r += math.Pow(input.Data[c]-targets.Data[c], 2)
+				for x := 0; x < aData.Dims.W; x++ {
+					c := z*aData.Dims.H*aData.Dims.W + y*aData.Dims.W + x
+					r += math.Pow(aData.Data[c]-targets.Data[c], 2)
 				}
 				r *= 0.5
 
-				output.Data[z*input.Dims.H*input.Dims.W+y*input.Dims.W] = r
+				output.Data[z*aData.Dims.H*aData.Dims.W+y*aData.Dims.W] = r
 			}
 		}
 	}
 
 	output.calcGrad = func() {
 		for i, t := range targets.Data {
-			input.Grad[i] += input.Data[i] - t
+			aData.Grad[i] += aData.Data[i] - t
 		}
 	}
 

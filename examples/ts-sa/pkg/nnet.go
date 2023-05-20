@@ -30,6 +30,7 @@ func CreateNN(
 		D: 1,
 	}
 
+	//initWeight := &layer.InitWeightFixed{0.005}
 	initWeight := &layer.InitWeightFixed{0.02}
 
 	return model.NewSequential(inDims, layer.Layers{
@@ -40,35 +41,51 @@ func CreateNN(
 		//layer.NewDebug(10000),
 		//---Block 1---SA-MultiHead-----------------------------------------------
 		// layer.NewDebug(),
-		layer.NewLNorm(),
-		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
-		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
-		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
-		layer.NewLNorm(),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
-		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
-		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
-		layer.NewReLu(),
-		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
-		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
-		//out: [ embeddingFeatures, contextLength, batchSize ]
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+				layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+				layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+				layer.NewReLu(),
+				layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				//out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
 
 		//---Block 2---SA-MultiHead-----------------------------------------------
 		// layer.NewDebug(),
-		layer.NewLNorm(),
-		layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
-		layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
-		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
-		layer.NewLNorm(),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
-		layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
-		layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
-		layer.NewReLu(),
-		layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
-		layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
-		//out: [ embeddingFeatures, contextLength, batchSize ]
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+				layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
+		layer.NewResidual(
+			layer.Layers{
+				layer.NewLNorm(),
+				// out: [ embeddingFeatures, contextLength, batchSize ]
+				layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+				layer.NewReLu(),
+				layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
+				layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+				//out: [ embeddingFeatures, contextLength, batchSize ]
+			},
+		),
 
 		//---Probabilities--------------------------------------------------------
 		//layer.NewDebug(8000),

@@ -1,13 +1,12 @@
 package num
 
-func (input *Data) LNorm(gamma, beta *Data) *Data {
-	mean := input.MeanByRows()
-	xSub := input.Sub(mean)
+func (aData *Data) LNorm(gamma, beta *Data) *Data {
+	mean := aData.MeanByRows()
+	xSub := aData.Sub(mean)
+	vars := aData.VarianceByRows(mean.Data)
 
-	vars := input.VarianceByRows(mean.Data)
 	sqrt := vars.Sqrt()
 	xDiv := xSub.Div(sqrt)
-	//xMul := xDiv.Mul(gamma)
 	xMul := gamma.Mul(xDiv)
 
 	output := xMul.Add(beta)
@@ -19,7 +18,6 @@ func (input *Data) LNorm(gamma, beta *Data) *Data {
 
 		vars.Forward()
 		sqrt.Forward()
-		//sqrt.Data.AddScalar(1e-5)
 
 		xDiv.Forward()
 		xMul.Forward()
@@ -37,7 +35,6 @@ func (input *Data) LNorm(gamma, beta *Data) *Data {
 		vars.Backward()
 		xSub.Backward()
 		mean.Backward()
-
 	}
 
 	return output

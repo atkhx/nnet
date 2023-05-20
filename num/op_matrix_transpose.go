@@ -1,25 +1,25 @@
 package num
 
-func (input *Data) Transpose() (outMatrix *Data) {
-	WH := input.Dims.W * input.Dims.H
+func (aData *Data) Transpose() (outMatrix *Data) {
+	WH := aData.Dims.W * aData.Dims.H
 
-	output := input.Copy()
-	output.Dims.W = input.Dims.H
-	output.Dims.H = input.Dims.W
+	output := aData.Copy()
+	output.Dims.W = aData.Dims.H
+	output.Dims.H = aData.Dims.W
 	output.calcData = func() {
-		for d := 0; d < len(input.Data); d += WH {
-			for y := 0; y < input.Dims.H; y++ {
-				for x := 0; x < input.Dims.W; x++ {
-					output.Data[d+x*input.Dims.H+y] = input.Data[d+y*input.Dims.W+x]
+		for d := 0; d < len(aData.Data); d += WH {
+			for y := 0; y < aData.Dims.H; y++ {
+				for x := 0; x < aData.Dims.W; x++ {
+					output.Data[d+x*aData.Dims.H+y] = aData.Data[d+y*aData.Dims.W+x]
 				}
 			}
 		}
 	}
 	output.calcGrad = func() {
-		for d := 0; d < len(input.Data); d += WH {
-			for y := 0; y < input.Dims.H; y++ {
-				for x := 0; x < input.Dims.W; x++ {
-					input.Grad[d+y*input.Dims.W+x] += output.Grad[d+x*input.Dims.H+y]
+		for d := 0; d < len(aData.Data); d += WH {
+			for y := 0; y < aData.Dims.H; y++ {
+				for x := 0; x < aData.Dims.W; x++ {
+					aData.Grad[d+y*aData.Dims.W+x] += output.Grad[d+x*aData.Dims.H+y]
 				}
 			}
 		}

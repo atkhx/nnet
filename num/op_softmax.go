@@ -2,15 +2,15 @@ package num
 
 import "sync"
 
-func (input *Data) Softmax() *Data {
-	chunkSize := input.Dims.W
-	chunksCount := len(input.Data) / chunkSize
+func (aData *Data) Softmax() *Data {
+	chunkSize := aData.Dims.W
+	chunksCount := len(aData.Data) / chunkSize
 
 	wg := sync.WaitGroup{}
 
-	output := input.Copy()
+	output := aData.Copy()
 	output.calcData = func() {
-		output.Data.CopyFrom(input.Data)
+		output.Data.CopyFrom(aData.Data)
 
 		wg.Add(chunksCount)
 		for i := 0; i < len(output.Data); i += chunkSize {
@@ -28,7 +28,7 @@ func (input *Data) Softmax() *Data {
 		for b := 0; b < len(output.Data); b += chunkSize {
 			go func(b int) {
 				oGrad := output.Grad[b : b+chunkSize]
-				iGrad := input.Grad[b : b+chunkSize]
+				iGrad := aData.Grad[b : b+chunkSize]
 
 				softmax := output.Data[b : b+chunkSize]
 

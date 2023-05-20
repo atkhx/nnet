@@ -24,6 +24,7 @@ func GetBroadCastSteps(aDims, bDims Dims) (steps Steps) {
 	steps.aW, steps.bW = GetBroadCastStep(aDims.W, bDims.W, "width")
 	steps.aH, steps.bH = GetBroadCastStep(aDims.H, bDims.H, "height")
 	steps.aD, steps.bD = GetBroadCastStep(aDims.D, bDims.D, "depth")
+
 	return
 }
 
@@ -50,7 +51,7 @@ type broadCastConfig struct {
 	oDims Dims
 }
 
-func (cfg broadCastConfig) BroadCast(fn func(ax, bx, oCoord int)) {
+func (cfg broadCastConfig) BroadCast(fn func(aOffset, bOffset, oOffset int)) {
 	offset := 0
 	azOffset := 0
 	bzOffset := 0

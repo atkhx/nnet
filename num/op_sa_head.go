@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-func (input *Data) SAHead(
+func (aData *Data) SAHead(
 	headSize int,
 
 	keyWeights *Data,
@@ -14,8 +14,8 @@ func (input *Data) SAHead(
 ) *Data {
 	k := math.Pow(float64(headSize), -0.5)
 
-	keyObject := input.MatrixMultiply(keyWeights)
-	qryObject := input.MatrixMultiply(qryWeights)
+	keyObject := aData.MatrixMultiply(keyWeights)
+	qryObject := aData.MatrixMultiply(qryWeights)
 
 	qryObjectT := qryObject.Transpose()
 	weiObject := keyObject.MatrixMultiply(qryObjectT)
@@ -24,7 +24,7 @@ func (input *Data) SAHead(
 	weiTrilObject := weiMulObject.TriangleLower(math.Inf(-1))
 	weiSoftmaxObject := weiTrilObject.Softmax()
 
-	valObject := input.MatrixMultiply(valWeights)
+	valObject := aData.MatrixMultiply(valWeights)
 
 	output := weiSoftmaxObject.MatrixMultiply(valObject)
 	weiSoftmaxObjectMulValObjectForward := output.calcData

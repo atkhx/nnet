@@ -93,7 +93,7 @@ func main() {
 			seqModel.Backward()
 
 			lossAvg += lossMean.Data[0]
-			seqModel.Update(0.0001)
+			seqModel.Update(0.0003)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

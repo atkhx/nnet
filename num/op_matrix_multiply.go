@@ -2,28 +2,28 @@ package num
 
 import "sync"
 
-func (input *Data) MatrixMultiply2(factor *Data) *Data {
-	if input.Dims.W != factor.Dims.H {
-		panic("input width must be equal factor height")
+func (aData *Data) MatrixMultiply2(factor *Data) *Data {
+	if aData.Dims.W != factor.Dims.H {
+		panic("aData width must be equal factor height")
 	}
 
 	izStep := 1
 	fzStep := 1
 
-	if input.Dims.D != factor.Dims.D {
+	if aData.Dims.D != factor.Dims.D {
 		switch {
-		case input.Dims.D == 1:
+		case aData.Dims.D == 1:
 			izStep = 0
 		case factor.Dims.D == 1:
 			fzStep = 0
 		default:
-			panic("input's and factor's dept must be equal or one of them must be 1")
+			panic("aData's and factor's dept must be equal or one of them must be 1")
 		}
 	}
 
-	oH := input.Dims.H
+	oH := aData.Dims.H
 	oW := factor.Dims.W
-	oD := input.Dims.D
+	oD := aData.Dims.D
 
 	if factor.Dims.D > oD {
 		oD = factor.Dims.D
@@ -35,10 +35,10 @@ func (input *Data) MatrixMultiply2(factor *Data) *Data {
 		Data:     make(Float64s, oW*oH*oD),
 		Grad:     make(Float64s, oW*oH*oD),
 		Dims:     Dims{W: oW, H: oH, D: oD},
-		srcNodes: Nodes{input, fTranspose},
+		srcNodes: Nodes{aData, fTranspose},
 	}
 
-	iWH := input.Dims.W * input.Dims.H
+	iWH := aData.Dims.W * aData.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
 
 	output.calcData = func() {
@@ -55,13 +55,13 @@ func (input *Data) MatrixMultiply2(factor *Data) *Data {
 		for z := 0; z < oD; z++ {
 			fData := fTranspose.Data[fzOffset : fzOffset+fWH]
 
-			for oY := izOffset; oY < izOffset+iWH; oY += input.Dims.W {
-				iData := input.Data[oY : oY+input.Dims.W]
+			for oY := izOffset; oY < izOffset+iWH; oY += aData.Dims.W {
+				iData := aData.Data[oY : oY+aData.Dims.W]
 
 				for _, fV := range fData {
 					v += iData[iI] * fV
 
-					if iI++; iI == input.Dims.W {
+					if iI++; iI == aData.Dims.W {
 						output.Data[offset] = v
 						offset++
 
@@ -83,13 +83,13 @@ func (input *Data) MatrixMultiply2(factor *Data) *Data {
 		fzOffset := 0
 
 		for z := 0; z < oD; z++ {
-			for oY := izOffset; oY < izOffset+iWH; oY += input.Dims.W {
-				iData := input.Data[oY : oY+input.Dims.W]
-				iGrad := input.Grad[oY : oY+input.Dims.W]
+			for oY := izOffset; oY < izOffset+iWH; oY += aData.Dims.W {
+				iData := aData.Data[oY : oY+aData.Dims.W]
+				iGrad := aData.Grad[oY : oY+aData.Dims.W]
 
-				for oX := fzOffset; oX < fzOffset+fWH; oX += input.Dims.W {
-					fData := fTranspose.Data[oX : oX+input.Dims.W]
-					fGrad := fTranspose.Grad[oX : oX+input.Dims.W]
+				for oX := fzOffset; oX < fzOffset+fWH; oX += aData.Dims.W {
+					fData := fTranspose.Data[oX : oX+aData.Dims.W]
+					fGrad := fTranspose.Grad[oX : oX+aData.Dims.W]
 
 					G := output.Grad[offset]
 					offset++
@@ -109,28 +109,28 @@ func (input *Data) MatrixMultiply2(factor *Data) *Data {
 	return output
 }
 
-func (input *Data) MatrixMultiply(factor *Data) *Data {
-	if input.Dims.W != factor.Dims.H {
-		panic("input width must be equal factor height")
+func (aData *Data) MatrixMultiply(factor *Data) *Data {
+	if aData.Dims.W != factor.Dims.H {
+		panic("aData width must be equal factor height")
 	}
 
 	izStep := 1
 	fzStep := 1
 
-	if input.Dims.D != factor.Dims.D {
+	if aData.Dims.D != factor.Dims.D {
 		switch {
-		case input.Dims.D == 1:
+		case aData.Dims.D == 1:
 			izStep = 0
 		case factor.Dims.D == 1:
 			fzStep = 0
 		default:
-			panic("input's and factor's dept must be equal or one of them must be 1")
+			panic("aData's and factor's dept must be equal or one of them must be 1")
 		}
 	}
 
-	oH := input.Dims.H
+	oH := aData.Dims.H
 	oW := factor.Dims.W
-	oD := input.Dims.D
+	oD := aData.Dims.D
 
 	if factor.Dims.D > oD {
 		oD = factor.Dims.D
@@ -142,10 +142,10 @@ func (input *Data) MatrixMultiply(factor *Data) *Data {
 		Data:     make(Float64s, oW*oH*oD),
 		Grad:     make(Float64s, oW*oH*oD),
 		Dims:     Dims{W: oW, H: oH, D: oD},
-		srcNodes: Nodes{input, fTranspose},
+		srcNodes: Nodes{aData, fTranspose},
 	}
 
-	iWH := input.Dims.W * input.Dims.H
+	iWH := aData.Dims.W * aData.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
 
 	wg := sync.WaitGroup{}
@@ -161,10 +161,10 @@ func (input *Data) MatrixMultiply(factor *Data) *Data {
 	bufferSize := 64
 	forwardChan := make(chan forwardArgs, bufferSize)
 	forwardFunc := func(a forwardArgs) {
-		for oY := a.izOffset; oY < a.izOffset+iWH; oY += input.Dims.W {
-			iData := input.Data[oY : oY+input.Dims.W]
-			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += input.Dims.W {
-				fData := fTranspose.Data[oX : oX+input.Dims.W]
+		for oY := a.izOffset; oY < a.izOffset+iWH; oY += aData.Dims.W {
+			iData := aData.Data[oY : oY+aData.Dims.W]
+			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += aData.Dims.W {
+				fData := fTranspose.Data[oX : oX+aData.Dims.W]
 
 				v := 0.0
 				for i, iV := range iData {
@@ -181,13 +181,13 @@ func (input *Data) MatrixMultiply(factor *Data) *Data {
 
 	backwardChan := make(chan backwardArgs, bufferSize)
 	backwardFunc := func(a backwardArgs) {
-		for oY := a.izOffset; oY < a.izOffset+iWH; oY += input.Dims.W {
-			iData := input.Data[oY : oY+input.Dims.W]
-			iGrad := input.Grad[oY : oY+input.Dims.W]
+		for oY := a.izOffset; oY < a.izOffset+iWH; oY += aData.Dims.W {
+			iData := aData.Data[oY : oY+aData.Dims.W]
+			iGrad := aData.Grad[oY : oY+aData.Dims.W]
 
-			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += input.Dims.W {
-				fData := fTranspose.Data[oX : oX+input.Dims.W]
-				fGrad := fTranspose.Grad[oX : oX+input.Dims.W]
+			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += aData.Dims.W {
+				fData := fTranspose.Data[oX : oX+aData.Dims.W]
+				fGrad := fTranspose.Grad[oX : oX+aData.Dims.W]
 
 				G := output.Grad[a.offset]
 				a.offset++

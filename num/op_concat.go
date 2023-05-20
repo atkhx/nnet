@@ -1,11 +1,11 @@
 package num
 
-func (input *Data) ConcatRows(bData ...*Data) *Data {
-	if input.Dims.H != bData[0].Dims.H {
+func (aData *Data) ConcatRows(bData ...*Data) *Data {
+	if aData.Dims.H != bData[0].Dims.H {
 		panic("height dimension must be equals")
 	}
 
-	if input.Dims.D != bData[0].Dims.D {
+	if aData.Dims.D != bData[0].Dims.D {
 		panic("depth dimension must be equals")
 	}
 
@@ -15,12 +15,12 @@ func (input *Data) ConcatRows(bData ...*Data) *Data {
 	}
 
 	oDims := NewDims(
-		input.Dims.W+width,
-		input.Dims.H,
-		input.Dims.D,
+		aData.Dims.W+width,
+		aData.Dims.H,
+		aData.Dims.D,
 	)
 
-	output := New(oDims, append(Nodes{input}, bData...)...)
+	output := New(oDims, append(Nodes{aData}, bData...)...)
 
 	output.calcData = func() {
 		oOffset := 0
@@ -28,9 +28,9 @@ func (input *Data) ConcatRows(bData ...*Data) *Data {
 		bOffset := 0
 
 		for i := 0; i < output.Dims.D*output.Dims.H; i++ {
-			// copy input data
-			copy(output.Data[oOffset:oOffset+input.Dims.W], input.Data[iOffset:iOffset+input.Dims.W])
-			oOffset += input.Dims.W
+			// copy aData data
+			copy(output.Data[oOffset:oOffset+aData.Dims.W], aData.Data[iOffset:iOffset+aData.Dims.W])
+			oOffset += aData.Dims.W
 
 			for _, b := range bData {
 				// copy bData data
@@ -38,7 +38,7 @@ func (input *Data) ConcatRows(bData ...*Data) *Data {
 				oOffset += b.Dims.W
 			}
 
-			iOffset += input.Dims.W
+			iOffset += aData.Dims.W
 			bOffset += bData[0].Dims.W
 		}
 	}
@@ -49,16 +49,16 @@ func (input *Data) ConcatRows(bData ...*Data) *Data {
 		bOffset := 0
 
 		for i := 0; i < output.Dims.D*output.Dims.H; i++ {
-			// copy input grads
-			input.Grad[iOffset : iOffset+input.Dims.W].Add(output.Grad[oOffset : oOffset+input.Dims.W])
-			oOffset += input.Dims.W
+			// copy aData grads
+			aData.Grad[iOffset : iOffset+aData.Dims.W].Add(output.Grad[oOffset : oOffset+aData.Dims.W])
+			oOffset += aData.Dims.W
 			for _, b := range bData {
 				// copy bData data
 				b.Grad[bOffset : bOffset+b.Dims.W].Add(output.Grad[oOffset : oOffset+b.Dims.W])
 				oOffset += b.Dims.W
 			}
 
-			iOffset += input.Dims.W
+			iOffset += aData.Dims.W
 			bOffset += bData[0].Dims.W
 		}
 	}

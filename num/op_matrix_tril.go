@@ -1,16 +1,16 @@
 package num
 
-func (input *Data) TriangleLower(zeroVal float64) *Data {
-	WH := input.Dims.W * input.Dims.W
+func (aData *Data) TriangleLower(zeroVal float64) *Data {
+	WH := aData.Dims.W * aData.Dims.W
 
-	output := input.Copy()
+	output := aData.Copy()
 	output.calcData = func() {
 		output.Data.Fill(zeroVal)
 		for z := 0; z < output.Dims.D; z++ {
 			for y := 0; y < output.Dims.H; y++ {
 				for x := 0; x <= y; x++ {
-					coordinate := z*WH + y*input.Dims.W + x
-					output.Data[coordinate] = input.Data[coordinate]
+					coordinate := z*WH + y*aData.Dims.W + x
+					output.Data[coordinate] = aData.Data[coordinate]
 				}
 			}
 		}
@@ -20,8 +20,8 @@ func (input *Data) TriangleLower(zeroVal float64) *Data {
 		for z := 0; z < output.Dims.D; z++ {
 			for y := 0; y < output.Dims.H; y++ {
 				for x := 0; x <= y; x++ {
-					coordinate := z*WH + y*input.Dims.W + x
-					input.Grad[coordinate] += output.Grad[coordinate]
+					coordinate := z*WH + y*aData.Dims.W + x
+					aData.Grad[coordinate] += output.Grad[coordinate]
 				}
 			}
 		}

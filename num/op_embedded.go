@@ -1,14 +1,14 @@
 package num
 
-func (input *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
+func (aData *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
 	if tEmbeddings.Dims.W != pEmbeddings.Dims.W {
 		panic("features count must be equal")
 	}
 
 	featuresCount := tEmbeddings.Dims.W
 
-	contextSize := input.Dims.W
-	tokensCount := input.Dims.H
+	contextSize := aData.Dims.W
+	tokensCount := aData.Dims.H
 
 	output := New(NewDims(
 		featuresCount,
@@ -18,7 +18,7 @@ func (input *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
 
 	output.calcData = func() {
 		p := 0
-		for i, s := range input.Data.ToInt() {
+		for i, s := range aData.Data.ToInt() {
 			tFeatures := tEmbeddings.Data[s*featuresCount : (s+1)*featuresCount]
 			pFeatures := pEmbeddings.Data[p*featuresCount : (p+1)*featuresCount]
 
@@ -34,7 +34,7 @@ func (input *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
 	}
 	output.calcGrad = func() {
 		p := 0
-		for i, s := range input.Data.ToInt() {
+		for i, s := range aData.Data.ToInt() {
 			tGrads := tEmbeddings.Grad[s*featuresCount : (s+1)*featuresCount]
 			pGrads := pEmbeddings.Grad[p*featuresCount : (p+1)*featuresCount]
 

@@ -48,6 +48,8 @@ func (l *Embedding) Forward() {
 
 func (l *Embedding) Backward() {
 	l.outputObj.Backward()
+	//fmt.Println(l.outputObj.StringGrad())
+	//os.Exit(1)
 }
 
 func (l *Embedding) ForUpdate() num.Nodes {
