@@ -40,8 +40,8 @@ func CreateNN(
 				layer.Layers{
 					layer.NewLNorm(),
 					layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
-					layer.NewFC(num.NewDims(embeddingFeatures, headsCount*headSize), initWeight),
-					layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+					layer.NewLinear(embeddingFeatures, initWeight),
+					layer.NewBias(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 				},
 			),
@@ -49,11 +49,11 @@ func CreateNN(
 				layer.Layers{
 					layer.NewLNorm(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
-					layer.NewFC(num.NewDims(4*embeddingFeatures, embeddingFeatures), initWeight),
-					layer.NewBias(num.NewDims(4*embeddingFeatures, contextLength)),
+					layer.NewLinear(4*embeddingFeatures, initWeight),
+					layer.NewBias(),
 					layer.NewReLu(),
-					layer.NewFC(num.NewDims(embeddingFeatures, 4*embeddingFeatures), initWeight),
-					layer.NewBias(num.NewDims(embeddingFeatures, contextLength)),
+					layer.NewLinear(embeddingFeatures, initWeight),
+					layer.NewBias(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 				},
 			),
@@ -70,17 +70,17 @@ func CreateNN(
 	//---SA Blocks-----------------------------------------------
 	layers = append(layers, SABlock()...)
 	layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
 	// out: [ embeddingFeatures, contextLength, batchSize ]
 
 	//---Probabilities--------------------------------------------------------
 	layers = append(layers,
 		layer.NewLNorm(),
-		layer.NewFC(num.NewDims(alphabetSize, embeddingFeatures), initWeight),
-		layer.NewBias(num.NewDims(alphabetSize, contextLength)),
+		// Linear
+		// in: [ embeddingFeatures, contextLength, batchSize ]
+		// wt: [ alphabetSize, embeddingFeatures ]
+		// out: [ alphabetSize, contextLength, batchSize ]
+		layer.NewLinear(alphabetSize, initWeight),
+		layer.NewBias(),
 		// out: [ alphabetSize, contextLength, batchSize ]
 	)
 

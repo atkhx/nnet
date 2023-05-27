@@ -4,10 +4,8 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewBias(dims num.Dims) *Bias {
-	return &Bias{
-		WeightObj: num.New(dims),
-	}
+func NewBias() *Bias {
+	return &Bias{}
 }
 
 type Bias struct {
@@ -17,6 +15,7 @@ type Bias struct {
 }
 
 func (l *Bias) Compile(inputs *num.Data) *num.Data {
+	l.WeightObj = num.New(num.NewDims(inputs.Dims.W, inputs.Dims.H))
 	l.outputObj = inputs.Add(l.WeightObj)
 	l.forUpdate = num.Nodes{l.WeightObj}
 
