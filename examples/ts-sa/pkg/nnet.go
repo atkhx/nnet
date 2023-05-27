@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/model"
 	"github.com/atkhx/nnet/num"
@@ -31,7 +32,7 @@ func CreateNN(
 		D: 1,
 	}
 
-	initWeight := &layer.InitWeightFixed{0.02}
+	initWeight := &initializer.InitWeightFixed{NormK: 0.02}
 
 	SABlock := func() layer.Layers {
 		return []layer.Layer{

@@ -1,15 +1,16 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
 
-func NewFC(dims num.Dims, initWeights InitWeights) *FC {
+func NewFC(dims num.Dims, initWeights initializer.Initializer) *FC {
 	return &FC{dims: dims, initWeights: initWeights}
 }
 
 type FC struct {
-	initWeights InitWeights
+	initWeights initializer.Initializer
 
 	dims num.Dims
 

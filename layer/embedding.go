@@ -1,6 +1,7 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
 
@@ -8,7 +9,7 @@ func NewEmbedding(
 	featuresCount int,
 	alphabetSize int,
 	contextSize int,
-	initWeights InitWeights,
+	initWeights initializer.Initializer,
 ) *Embedding {
 	return &Embedding{
 		ValEmbedding: num.NewRandNorm(num.NewDims(featuresCount, alphabetSize)),
@@ -18,7 +19,7 @@ func NewEmbedding(
 }
 
 type Embedding struct {
-	initWeights InitWeights
+	initWeights initializer.Initializer
 
 	ValEmbedding *num.Data
 	PosEmbedding *num.Data

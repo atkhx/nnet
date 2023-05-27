@@ -1,32 +1,14 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
-
-// input:      [ featuresCount, contextLength, batchSize ]
-
-// keyWeights: [ headSize, featuresCount, 1 ]
-// keyObject:  [ headSize, contextLength, batchSize ]
-
-// qryWeights: [ headSize, featuresCount, 1 ]
-// qryObject:  [ headSize, contextLength, batchSize ]
-
-// weiObject:  [ keyObject @ qryObject.T ]
-//             [ headSize, contextLength, batchSize ] @ [ contextLength, headSize, batchSize ]
-//          => [ contextLength, contextLength, batchSize ]
-
-// valWeights: [ headSize, featuresCount, 1 ]
-// valObject:  [ headSize, contextLength, batchSize ]
-
-// outObject:  [ weight @ valObject ]
-//             [ contextLength, contextLength, batchSize ] @ [ headSize, contextLength, batchSize ]
-//          => [ headSize, contextLength, batchSize ]
 
 func NewSAHead(
 	featuresCount int,
 	headSize int,
-	initWeights InitWeights,
+	initWeights initializer.Initializer,
 ) *SAHead {
 	return &SAHead{
 		featuresCount: featuresCount,
@@ -36,7 +18,7 @@ func NewSAHead(
 }
 
 type SAHead struct {
-	initWeights InitWeights
+	initWeights initializer.Initializer
 
 	featuresCount int
 	headSize      int

@@ -3,6 +3,7 @@ package layer
 import (
 	"sync"
 
+	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
 
@@ -10,7 +11,7 @@ func NewSAMultiHead(
 	featuresCount int,
 	headSize int,
 	headsCount int,
-	initWeights InitWeights,
+	initWeights initializer.Initializer,
 ) *SAMultiHead {
 	return &SAMultiHead{
 		featuresCount: featuresCount,
@@ -28,7 +29,7 @@ type SAHeadParams struct {
 }
 
 type SAMultiHead struct {
-	initWeights InitWeights
+	initWeights initializer.Initializer
 
 	featuresCount int
 	headSize      int
