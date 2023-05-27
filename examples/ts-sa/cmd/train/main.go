@@ -15,7 +15,6 @@ import (
 	"github.com/atkhx/nnet/examples/ts-sa/dataset"
 	"github.com/atkhx/nnet/examples/ts-sa/pkg"
 	"github.com/atkhx/nnet/num"
-	"github.com/atkhx/nnet/trainer"
 )
 
 var filename string
@@ -62,10 +61,6 @@ func main() {
 		}
 	}()
 
-	optimizer := trainer.New(
-		seqModel.GetUpdateNodes(),
-	)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	trainStopped := make(chan any)
 	go func() {
@@ -97,8 +92,7 @@ func main() {
 			seqModel.Backward()
 
 			lossAvg += lossMean.Data[0]
-			//seqModel.Update(0.0003)
-			optimizer.UpdateWeights()
+			seqModel.Update()
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

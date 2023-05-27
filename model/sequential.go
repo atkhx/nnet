@@ -11,10 +11,13 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewSequential(inDims num.Dims, layers layer.Layers) *Sequential {
+type Optimizer func(nodes num.Nodes) func()
+
+func NewSequential(inDims num.Dims, layers layer.Layers, optimizer Optimizer) *Sequential {
 	return &Sequential{
-		inDims: inDims,
-		Layers: layers,
+		inDims:    inDims,
+		Layers:    layers,
+		optimizer: optimizer,
 	}
 }
 
@@ -24,6 +27,9 @@ type Sequential struct {
 	output *num.Data
 	Layers layer.Layers
 	update num.Nodes
+
+	optimizer  Optimizer
+	updateFunc func()
 }
 
 func (s *Sequential) Compile() *num.Data {
@@ -34,6 +40,7 @@ func (s *Sequential) Compile() *num.Data {
 		s.update = append(s.update, node)
 	}
 
+	s.updateFunc = s.optimizer(s.update)
 	return s.output
 }
 
@@ -59,12 +66,8 @@ func (s *Sequential) GetUpdateNodes() num.Nodes {
 	return s.update
 }
 
-func (s *Sequential) Update(learningRate float64) {
-	for _, node := range s.update {
-		for j, g := range node.Grad {
-			node.Data[j] -= g * learningRate
-		}
-	}
+func (s *Sequential) Update() {
+	s.updateFunc()
 }
 
 func (s *Sequential) LoadFromFile(filename string) error {

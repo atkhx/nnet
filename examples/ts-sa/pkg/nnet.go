@@ -4,6 +4,7 @@ import (
 	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/model"
 	"github.com/atkhx/nnet/num"
+	"github.com/atkhx/nnet/optimizer"
 )
 
 const (
@@ -88,5 +89,5 @@ func CreateNN(
 		// out: [ alphabetSize, contextLength * batchSize ]
 	)
 
-	return model.NewSequential(inDims, layers)
+	return model.NewSequential(inDims, layers, optimizer.Adadelta(optimizer.Ro, optimizer.Eps))
 }
