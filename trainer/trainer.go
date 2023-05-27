@@ -2,112 +2,47 @@
 package trainer
 
 import (
-	"github.com/atkhx/nnet/data"
+	"github.com/atkhx/nnet/num"
 )
 
-func New(net Net, loss LossFunc, opts ...Option) Trainer {
-	res := &trainer{net: net, lossFunc: loss}
+func New(update num.Nodes, opts ...Option) *Trainer {
+	res := &Trainer{update: update}
 	applyOptions(res, defaults...)
 	applyOptions(res, opts...)
-
-	res.batchRate = 1 / float64(res.batchSize)
-	res.method.Init(res.getWeightsCount())
+	res.method.Init(res.getParamsCount())
 	return res
 }
 
-type trainer struct {
-	Trainer
-
-	net Net
-
-	lossFunc  LossFunc
-	lossValue float64
-
-	batchSize  int
-	batchIndex int
-	batchRate  float64
-
+type Trainer struct {
 	l1Decay float64
 	l2Decay float64
 
+	update num.Nodes
 	method Method
 }
 
-func (t *trainer) GetLossFunc() LossFunc {
-	return t.lossFunc
-}
-
-func (t *trainer) GetLossValue() float64 {
-	return t.lossValue
-}
-
-func (t *trainer) getWeightsCount() (weightsCount int) {
-	for i := 0; i < t.net.GetLayersCount(); i++ {
-		if iLayer, ok := t.net.GetLayer(i).(TrainableLayer); ok && iLayer.IsTrainable() {
-			_, g := iLayer.GetWeightsWithGradient()
-			weightsCount += len(g.Data)
-
-			_, g = iLayer.GetBiasesWithGradient()
-			weightsCount += len(g.Data)
-		}
+func (t *Trainer) getParamsCount() (weightsCount int) {
+	for _, node := range t.update {
+		weightsCount += len(node.Data)
 	}
 	return
 }
 
-func (t *trainer) Forward(inputs, target *data.Data) *data.Data {
-	// we copy output for return, because
-	// firstly it's refers to inner layer property output
-	// and could be changed on next Forward (or Backward, who knows)
+func (t *Trainer) UpdateWeights() {
+	offset := 0
 
-	output := t.net.Forward(inputs).Copy()
-	deltas := t.lossFunc.GetDeltas(target, output)
+	for _, node := range t.update {
+		for j := 0; j < len(node.Data); j++ {
+			l1grad := t.l1Decay
+			if node.Data[j] <= 0 {
+				l1grad = -l1grad
+			}
 
-	t.lossValue = t.lossFunc.GetError(target.Data, output.Data)
+			l2grad := t.l2Decay * node.Data[j]
+			gradient := l2grad + l1grad + node.Grad[j]
 
-	t.net.Backward(deltas)
-	t.batchIndex++
-	return output
-}
-
-func (t *trainer) ForwardFn(forwardFn func()) {
-	forwardFn()
-	t.batchIndex++
-}
-
-func (t *trainer) UpdateWeights() {
-	if t.batchIndex != t.batchSize {
-		return
-	}
-
-	t.batchIndex = 0
-
-	k := 0
-	for i := 0; i < t.net.GetLayersCount(); i++ {
-		iLayer, ok := t.net.GetLayer(i).(TrainableLayer)
-		if ok && iLayer.IsTrainable() {
-			w, g := iLayer.GetWeightsWithGradient()
-			t.updateWeights(k, w, g)
-			k += len(g.Data)
-
-			w, g = iLayer.GetBiasesWithGradient()
-			t.updateWeights(k, w, g)
-			k += len(g.Data)
-
-			iLayer.ResetGradients()
+			node.Data[j] += t.method.GetDelta(offset+j, gradient)
 		}
-	}
-}
-
-func (t *trainer) updateWeights(offset int, w, g *data.Data) {
-	for j := 0; j < len(w.Data); j++ {
-		l1grad := t.l1Decay
-		if w.Data[j] <= 0 {
-			l1grad = -l1grad
-		}
-
-		l2grad := t.l2Decay * w.Data[j]
-		gradient := (l2grad + l1grad + g.Data[j]) * t.batchRate
-
-		w.Data[j] += t.method.GetDelta(offset+j, gradient)
+		offset += len(node.Data)
 	}
 }

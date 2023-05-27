@@ -2,7 +2,7 @@ package trainer
 
 import "github.com/atkhx/nnet/trainer/methods"
 
-func applyOptions(trainer *trainer, options ...Option) {
+func applyOptions(trainer *Trainer, options ...Option) {
 	for _, opt := range options {
 		opt(trainer)
 	}
@@ -10,31 +10,24 @@ func applyOptions(trainer *trainer, options ...Option) {
 
 var defaults = []Option{
 	WithMethod(methods.Adadelta(Ro, Eps)),
-	WithBatchSize(1),
 }
 
-type Option func(trainer *trainer)
+type Option func(trainer *Trainer)
 
 func WithMethod(method Method) Option {
-	return func(trainer *trainer) {
+	return func(trainer *Trainer) {
 		trainer.method = method
 	}
 }
 
 func WithL1Decay(l1decay float64) Option {
-	return func(trainer *trainer) {
+	return func(trainer *Trainer) {
 		trainer.l1Decay = l1decay
 	}
 }
 
 func WithL2Decay(l2decay float64) Option {
-	return func(trainer *trainer) {
+	return func(trainer *Trainer) {
 		trainer.l2Decay = l2decay
-	}
-}
-
-func WithBatchSize(batchSize int) Option {
-	return func(trainer *trainer) {
-		trainer.batchSize = batchSize
 	}
 }
