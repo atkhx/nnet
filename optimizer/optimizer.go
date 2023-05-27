@@ -9,10 +9,6 @@ import (
 const (
 	Ro  = 0.95
 	Eps = 0.000001
-
-	// todo check if it useful
-	l1Decay = 0.0
-	l2Decay = 0.0
 )
 
 type getGradDeltaFn func(k int, gradient float64) float64
@@ -24,15 +20,7 @@ func NewOptimizer(newGetGradDelta func(nodes num.Nodes) getGradDeltaFn) func(nod
 			offset := 0
 			for _, node := range nodes {
 				for j := 0; j < len(node.Data); j++ {
-					l1grad := l1Decay
-					if node.Data[j] <= 0 {
-						l1grad = -l1grad
-					}
-
-					l2grad := l2Decay * node.Data[j]
-					gradient := l2grad + l1grad + node.Grad[j]
-
-					node.Data[j] += getGradDelta(offset+j, gradient)
+					node.Data[j] += getGradDelta(offset+j, node.Grad[j])
 				}
 				offset += len(node.Data)
 			}
