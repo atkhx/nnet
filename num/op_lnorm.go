@@ -6,7 +6,8 @@ func (aData *Data) LNorm(gamma, beta *Data) *Data {
 	vars := aData.VarianceByRows(mean.Data)
 
 	sqrt := vars.Sqrt()
-	xDiv := xSub.Div(sqrt)
+	sqrtEps := sqrt.AddScalar(0.000001)
+	xDiv := xSub.Div(sqrtEps)
 	xMul := gamma.Mul(xDiv)
 
 	output := xMul.Add(beta)
@@ -18,6 +19,7 @@ func (aData *Data) LNorm(gamma, beta *Data) *Data {
 
 		vars.Forward()
 		sqrt.Forward()
+		sqrtEps.Forward()
 
 		xDiv.Forward()
 		xMul.Forward()
@@ -31,6 +33,7 @@ func (aData *Data) LNorm(gamma, beta *Data) *Data {
 		xMul.Backward()
 		xDiv.Backward()
 
+		sqrtEps.Backward()
 		sqrt.Backward()
 		vars.Backward()
 		xSub.Backward()

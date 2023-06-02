@@ -13,12 +13,12 @@ func (aData *Data) Reshape(dims Dims) *Data {
 		calcData: nil,
 		calcGrad: nil,
 	}
-	//output := New(dims, aData)
+	// output := New(dims, aData)
 	output.calcData = func() {
-		//output.Data.CopyFrom(aData.Data)
+		// output.Data.CopyFrom(aData.Data)
 	}
 	output.calcGrad = func() {
-		//aData.Grad.CopyFrom(output.Grad)
+		// aData.Grad.CopyFrom(output.Grad)
 	}
 	return output
 }

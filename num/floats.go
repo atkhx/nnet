@@ -149,11 +149,11 @@ func (f Float64s) Softmax() {
 	var max float64
 	var sum float64
 
-	//for i, v := range f {
-	//	if i == 0 || max < v {
-	//		max = v
-	//	}
-	//}
+	for i, v := range f {
+		if i == 0 || max < v {
+			max = v
+		}
+	}
 
 	for i, v := range f {
 		f[i] = math.Exp(v - max)
@@ -186,18 +186,17 @@ func (f Float64s) SoftmaxK(k float64) {
 }
 
 func (f Float64s) SoftmaxKTo(out Float64s, k float64) {
-	//var max float64
+	var max float64
 	var sum float64
 
-	//for i, v := range f {
-	//	if i == 0 || max < v {
-	//		max = v
-	//	}
-	//}
+	for i, v := range f {
+		if i == 0 || max < v {
+			max = v
+		}
+	}
 
 	for i, v := range f {
-		//out[i] = math.Exp(k * (v - max))
-		out[i] = math.Exp(k * v)
+		out[i] = math.Exp(k * (v - max))
 		sum += out[i]
 	}
 
@@ -214,7 +213,7 @@ func (f Float64s) CumulativeSum() {
 
 func (f Float64s) Multinomial() (r int) {
 	// f - distribution
-	v := rand.Float64() * f[len(f)-1]
+	v := rand.Float64() * f[len(f)-1] //nolint:gosec
 	for i, w := range f {
 		if v <= w {
 			return i
@@ -250,13 +249,13 @@ func (f Float64s) String(dims Dims) string {
 	var offset int
 
 	result += strings.Repeat("-", 40) + "\n"
-	//result += "[\n"
+	// result += "[\n"
 	for z := 0; z < dims.D; z++ {
 		if z > 0 {
 			result += "\n"
 		}
 
-		//result += "  [\n"
+		// result += "  [\n"
 		for y := 0; y < dims.H; y++ {
 			if y > 0 {
 				result += "\n"
@@ -272,10 +271,10 @@ func (f Float64s) String(dims Dims) string {
 				offset++
 			}
 		}
-		//result += "\n"
-		//result += "\n  ]"
+		// result += "\n"
+		// result += "\n  ]"
 	}
-	//result += "\n]"
+	// result += "\n]"
 
 	return result
 }

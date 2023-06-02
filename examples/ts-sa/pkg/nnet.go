@@ -12,9 +12,9 @@ const (
 	ContextLength = 64
 	MiniBatchSize = 16
 
-	EmbeddingFeatures = 384
+	EmbeddingFeatures = 256
 	HeadSize          = 64
-	HeadsCount        = 6
+	HeadsCount        = 4
 )
 
 func CreateNN(
@@ -75,10 +75,6 @@ func CreateNN(
 	//---Probabilities--------------------------------------------------------
 	layers = append(layers,
 		layer.NewLNorm(),
-		// Linear
-		// in: [ embeddingFeatures, contextLength, batchSize ]
-		// wt: [ alphabetSize, embeddingFeatures ]
-		// out: [ alphabetSize, contextLength, batchSize ]
 		layer.NewLinear(alphabetSize, initWeight),
 		layer.NewBias(),
 		// out: [ alphabetSize, contextLength, batchSize ]

@@ -36,11 +36,12 @@ func (s *Sequential) Compile() *num.Data {
 	s.inputs = num.New(s.inDims)
 	s.output = s.Layers.Compile(s.inputs)
 
-	for _, node := range s.Layers.ForUpdate() {
-		s.update = append(s.update, node)
-	}
-
+	s.update = append(s.update, s.Layers.ForUpdate()...)
 	s.updateFunc = s.optimizer(s.update)
+	return s.output
+}
+
+func (s *Sequential) GetOutput() *num.Data {
 	return s.output
 }
 

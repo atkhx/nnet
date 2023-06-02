@@ -21,3 +21,15 @@ func NewOneHotVectors(colsCount int, hots ...int) Float64s {
 
 	return data
 }
+
+func GetMinMaxValues(data []float64) (min, max float64) {
+	for i := 0; i < len(data); i++ {
+		if i == 0 || min > data[i] {
+			min = data[i]
+		}
+		if i == 0 || max < data[i] {
+			max = data[i]
+		}
+	}
+	return
+}

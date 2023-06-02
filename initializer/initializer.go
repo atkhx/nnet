@@ -10,10 +10,10 @@ const (
 )
 
 var (
-	KaimingNormalReLU    = KaimingNormal{Gain: reLuGain}
-	KaimingNormalTanh    = KaimingNormal{Gain: tanhGain}
-	KaimingNormalSigmoid = KaimingNormal{Gain: sigmoidGain}
-	KaimingNormalLinear  = KaimingNormal{Gain: linearGain}
+	KaimingNormalReLU    = KaimingNormal{gain: reLuGain}
+	KaimingNormalTanh    = KaimingNormal{gain: tanhGain}
+	KaimingNormalSigmoid = KaimingNormal{gain: sigmoidGain}
+	KaimingNormalLinear  = KaimingNormal{gain: linearGain}
 )
 
 type Initializer interface {
@@ -29,9 +29,9 @@ func (wi InitWeightFixed) GetNormK(fanIn int) float64 {
 }
 
 type KaimingNormal struct {
-	Gain float64
+	gain float64
 }
 
 func (wi KaimingNormal) GetNormK(fanIn int) float64 {
-	return wi.Gain / math.Sqrt(float64(fanIn))
+	return wi.gain / math.Sqrt(float64(fanIn))
 }

@@ -95,11 +95,11 @@ func (aData *Data) ResetGrads(v float64) {
 	}
 
 	resetGrads(aData, v)
-	//aData.checkGradsIsEmpty(v)
-	//os.Exit(1)
+	// aData.checkGradsIsEmpty(v)
+	// os.Exit(1)
 }
 
-func (aData *Data) checkGradsIsEmpty(v float64) {
+func (aData *Data) checkGradsIsEmpty(v float64) { //nolint:unused
 	var checkGrads func(node *Data, v float64)
 	checkGrads = func(node *Data, v float64) {
 		for _, val := range node.Grad {

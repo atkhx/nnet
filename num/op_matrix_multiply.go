@@ -109,7 +109,7 @@ func (aData *Data) MatrixMultiply2(factor *Data) *Data {
 	return output
 }
 
-func (aData *Data) MatrixMultiply(factor *Data) *Data {
+func (aData *Data) MatrixMultiply(factor *Data) *Data { //nolint:gocyclo
 	if aData.Dims.W != factor.Dims.H {
 		panic("aData width must be equal factor height")
 	}

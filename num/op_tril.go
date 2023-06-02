@@ -31,7 +31,7 @@ func (aData *Data) TriangleLower(zeroVal float64) *Data {
 	return output
 }
 
-func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data {
+func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:gocyclo
 	if aData.Dims.W != factor.Dims.H {
 		panic("aData width must be equal factor height")
 	}
@@ -86,10 +86,8 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data {
 		y := 0
 		for oY := a.izOffset; oY < a.izOffset+iWH; oY += aData.Dims.W {
 			y++
-			//iData := aData.Data[oY : oY+aData.Dims.W]
 			iData := aData.Data[oY : oY+y]
 			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += aData.Dims.W {
-				//fData := fTranspose.Data[oX : oX+aData.Dims.W]
 				fData := fTranspose.Data[oX : oX+y]
 
 				v := 0.0
@@ -112,8 +110,6 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data {
 			y++
 			iData := aData.Data[oY : oY+y]
 			iGrad := aData.Grad[oY : oY+y]
-			//iData := aData.Data[oY : oY+aData.Dims.W]
-			//iGrad := aData.Grad[oY : oY+aData.Dims.W]
 
 			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += aData.Dims.W {
 				fData := fTranspose.Data[oX : oX+y]
@@ -238,11 +234,9 @@ func (aData *Data) TriangleLowerMatrixMultiply2(factor *Data) *Data {
 			y := 0
 			for oY := izOffset; oY < izOffset+iWH; oY += aData.Dims.W {
 				y++
-				//iData := aData.Data[oY : oY+aData.Dims.W]
 				iData := aData.Data[oY : oY+y]
 
 				for oX := fzOffset; oX < fzOffset+fWH; oX += aData.Dims.W {
-					//fData := fTranspose.Data[oX : oX+aData.Dims.W]
 					fData := fTranspose.Data[oX : oX+y]
 
 					v := 0.0
@@ -272,13 +266,9 @@ func (aData *Data) TriangleLowerMatrixMultiply2(factor *Data) *Data {
 				y++
 				iData := aData.Data[oY : oY+y]
 				iGrad := aData.Grad[oY : oY+y]
-				//iData := aData.Data[oY : oY+aData.Dims.W]
-				//iGrad := aData.Grad[oY : oY+aData.Dims.W]
 				for oX := fzOffset; oX < fzOffset+fWH; oX += aData.Dims.W {
 					fData := fTranspose.Data[oX : oX+y]
 					fGrad := fTranspose.Grad[oX : oX+y]
-					//fData := fTranspose.Data[oX : oX+aData.Dims.W]
-					//fGrad := fTranspose.Grad[oX : oX+aData.Dims.W]
 
 					G := output.Grad[offset]
 					offset++

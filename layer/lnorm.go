@@ -16,10 +16,14 @@ type LNorm struct {
 }
 
 func (l *LNorm) Compile(inputs *num.Data) *num.Data {
-	l.Gamma = num.New(num.NewDims(inputs.Dims.W))
+	// l.Gamma = num.New(num.NewDims(1, inputs.Dims.H))
+	// l.Gamma = num.New(num.NewDims(inputs.Dims.W))
+	l.Gamma = num.New(num.NewDims(1))
 	l.Gamma.Data.Fill(1)
 
-	l.Beta = num.New(num.NewDims(inputs.Dims.W))
+	// l.Beta = num.New(num.NewDims(1, inputs.Dims.H))
+	// l.Beta = num.New(num.NewDims(inputs.Dims.W))
+	l.Beta = num.New(num.NewDims(1))
 	l.outputObj = inputs.LNorm(l.Gamma, l.Beta)
 
 	l.update = num.Nodes{l.Gamma, l.Beta}
