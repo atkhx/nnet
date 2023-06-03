@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/atkhx/nnet/dataset"
 	"github.com/atkhx/nnet/num"
 )
 
@@ -21,7 +22,7 @@ const (
 	SampleSize    = ImageSizeRGB + 1
 )
 
-var labels = []string{
+var cifarLabels = []string{
 	"plane",
 	"auto",
 	"bird",
@@ -39,7 +40,7 @@ const (
 	TestImagesFileName  = "cifar10-test-data.bin"
 )
 
-func CreateTrainingDataset(datasetPath string) (*dataset, error) {
+func CreateTrainingDataset(datasetPath string) (*Dataset, error) {
 	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TrainImagesFileName)
 
 	result, err := Open(imagesFileName, true)
@@ -49,7 +50,7 @@ func CreateTrainingDataset(datasetPath string) (*dataset, error) {
 	return result, nil
 }
 
-func CreateTestingDataset(datasetPath string) (*dataset, error) {
+func CreateTestingDataset(datasetPath string) (*Dataset, error) {
 	imagesFileName := fmt.Sprintf("%s/%s", strings.TrimRight(datasetPath, " /"), TestImagesFileName)
 
 	result, err := Open(imagesFileName, true)
@@ -59,7 +60,7 @@ func CreateTestingDataset(datasetPath string) (*dataset, error) {
 	return result, nil
 }
 
-func Open(filename string, rgb bool) (*dataset, error) {
+func Open(filename string, rgb bool) (*Dataset, error) {
 	b, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -67,11 +68,11 @@ func Open(filename string, rgb bool) (*dataset, error) {
 
 	imagesCount := len(b) / SampleSize
 
-	var images []float64
+	var images num.Float64s
 
 	//nolint:gomnd
 	if rgb {
-		images = make([]float64, imagesCount*ImageSizeRGB)
+		images = num.NewFloat64s(imagesCount * ImageSizeRGB)
 		for i := 0; i < imagesCount; i++ {
 			imageOffset := i * ImageSizeRGB
 			sampleOffset := i * SampleSize
@@ -80,7 +81,7 @@ func Open(filename string, rgb bool) (*dataset, error) {
 			}
 		}
 	} else {
-		images = make([]float64, imagesCount*ImageSizeGray)
+		images = num.NewFloat64s(imagesCount * ImageSizeGray)
 		for i := 0; i < imagesCount; i++ {
 			imageOffset := i * ImageSizeGray
 			sampleOffset := i * SampleSize
@@ -100,20 +101,20 @@ func Open(filename string, rgb bool) (*dataset, error) {
 		labelsIdx[i] = b[i*SampleSize]
 	}
 
-	d := &dataset{
+	d := &Dataset{
 		labelsIdx:   labelsIdx,
 		images:      images,
 		imagesCount: imagesCount,
 
-		targets: NewSeparateOneHotVectors(len(labels)),
-		labels:  labels,
+		targets: num.NewSeparateOneHotVectors(len(cifarLabels)),
+		labels:  cifarLabels,
 
 		rgb: rgb,
 	}
 	return d, nil
 }
 
-type dataset struct {
+type Dataset struct {
 	labels  []string
 	targets []*num.Data
 	images  []float64
@@ -124,45 +125,34 @@ type dataset struct {
 	rgb bool
 }
 
-func (d *dataset) GetSamplesCount() int {
+func (d *Dataset) GetSamplesCount() int {
 	return d.imagesCount
 }
 
-func (d *dataset) GetLabels() []string {
+func (d *Dataset) GetClasses() []string {
 	return d.labels
 }
 
-func (d *dataset) GetLabel(index int) (string, error) {
-	if index > -1 && index < len(d.labels) {
-		return d.labels[index], nil
-	}
-	return "", ErrorIndexOutOfRange
-}
-
-func (d *dataset) GetTargets() []*num.Data {
-	return d.targets
-}
-
-func (d *dataset) GetTarget(index int) (*num.Data, error) {
+func (d *Dataset) GetTarget(index int) (*num.Data, error) {
 	if index > -1 && index < len(d.targets) {
 		return d.targets[index], nil
 	}
 	return nil, ErrorIndexOutOfRange
 }
 
-func (d *dataset) GetTargetsByIndexes(index ...int) (*num.Data, error) {
-	return NewOneHotVectors(len(d.targets), index...), nil
+func (d *Dataset) GetTargetsByIndexes(index ...int) (*num.Data, error) {
+	return num.NewOneHotVectors(len(d.targets), index...), nil
 }
 
-func (d *dataset) ReadSample(index int) (input, target *num.Data, err error) {
+func (d *Dataset) ReadSample(index int) (dataset.Sample, error) {
 	label := d.labelsIdx[index]
 
-	target, err = d.GetTarget(int(label))
+	target, err := d.GetTarget(int(label))
 	if err != nil {
-		err = fmt.Errorf("get target %d failed: %w", label, err)
-		return
+		return dataset.Sample{}, fmt.Errorf("get target %d failed: %w", label, err)
 	}
 
+	var input *num.Data
 	//nolint:gomnd
 	if d.rgb {
 		input = num.NewWithValues(
@@ -176,26 +166,25 @@ func (d *dataset) ReadSample(index int) (input, target *num.Data, err error) {
 		)
 	}
 
-	return
+	return dataset.Sample{
+		Input:  input,
+		Target: target,
+	}, nil
 }
 
-func (d *dataset) ReadRandomSampleBatch(batchSize int) (input, target *num.Data, err error) {
-	var images [][]float64
-	var labels []int
+func (d *Dataset) ReadRandomSampleBatch(batchSize int) (dataset.Sample, error) {
+	images := make([]num.Float64s, 0, batchSize)
+	labels := make([]int, 0, batchSize)
 
 	for i := 0; i < batchSize; i++ {
 		index := rand.Intn(d.GetSamplesCount()) //nolint:gosec
-		label := int(d.labelsIdx[index])
 
-		var image []float64
 		if d.rgb {
-			image = d.images[index*ImageSizeRGB : (index+1)*ImageSizeRGB]
+			images = append(images, d.images[index*ImageSizeRGB:(index+1)*ImageSizeRGB])
 		} else {
-			image = d.images[index*ImageSizeGray : (index+1)*ImageSizeGray]
+			images = append(images, d.images[index*ImageSizeGray:(index+1)*ImageSizeGray])
 		}
-
-		images = append(images, image)
-		labels = append(labels, label)
+		labels = append(labels, int(d.labelsIdx[index]))
 	}
 
 	var chansCount = 1
@@ -203,58 +192,13 @@ func (d *dataset) ReadRandomSampleBatch(batchSize int) (input, target *num.Data,
 		chansCount = 3
 	}
 
-	input = FromImages(ImageWidth, ImageHeight, chansCount, images...)
-
-	target, err = d.GetTargetsByIndexes(labels...)
+	target, err := d.GetTargetsByIndexes(labels...)
 	if err != nil {
-		err = fmt.Errorf("get targets failed: %w", err)
-		return
+		return dataset.Sample{}, fmt.Errorf("get targets failed: %w", err)
 	}
 
-	return
-}
-
-func NewSeparateOneHotVectors(colsCount int) (vectors []*num.Data) {
-	for i := 0; i < colsCount; i++ {
-		data := num.NewFloat64s(colsCount)
-		data[i] = 1.0
-		vectors = append(vectors, num.NewWithValues(num.NewDims(colsCount), data))
-	}
-	return
-}
-
-func NewOneHotVectors(colsCount int, hots ...int) (outMatrix *num.Data) {
-	rowsCount := len(hots)
-
-	data := make([]float64, 0, colsCount*len(hots))
-
-	for row := 0; row < rowsCount; row++ {
-		vector := make([]float64, colsCount)
-		vector[hots[row]] = 1
-
-		data = append(data, vector...)
-	}
-
-	return num.NewWithValues(num.NewDims(colsCount, rowsCount), data)
-}
-
-func FromImages(w, h, d int, images ...[]float64) (outData *num.Data) {
-	if len(images) < 1 {
-		panic("images data is required")
-	}
-
-	if len(images[0]) != w*h*d {
-		panic(fmt.Sprintf("image data length is not equal %d * %d * %d", w, h, d))
-	}
-
-	whd := w * h * d
-	data := num.NewFloat64s(whd * len(images))
-
-	offset := 0
-	for _, image := range images {
-		copy(data[offset:offset+whd], image)
-		offset += whd
-	}
-
-	return num.NewWithValues(num.NewDims(w*h, d, len(images)), data)
+	return dataset.Sample{
+		Input:  num.FromImages(ImageWidth, ImageHeight, chansCount, images...),
+		Target: target,
+	}, nil
 }

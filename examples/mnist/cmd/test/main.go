@@ -84,17 +84,17 @@ func main() {
 			default:
 			}
 
-			inputs, target, err := dataset.ReadSample(sampleIndex)
+			sample, err := dataset.ReadSample(sampleIndex)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			copy(targets.Data, target.Data)
-			seqModel.Forward(inputs.Data)
+			copy(targets.Data, sample.Target.Data)
+			seqModel.Forward(sample.Input.Data)
 
 			loss.Forward()
 
 			outputIndex, _ := modelOutput.Data.MaxKeyVal()
-			targetIndex, _ := target.Data.MaxKeyVal()
+			targetIndex, _ := sample.Target.Data.MaxKeyVal()
 
 			if outputIndex == targetIndex {
 				success++

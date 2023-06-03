@@ -52,7 +52,7 @@ type Conv struct {
 func (l *Conv) Compile(inputs *num.Data) *num.Data {
 	channels := inputs.Dims.H
 
-	weightK := l.initWeights.GetNormK(l.filterSize * l.filterSize * channels * inputs.Dims.D)
+	weightK := l.initWeights.GetNormK(l.filterSize * l.filterSize * channels)
 
 	l.WeightObj = num.NewRandNormWeighted(num.NewDims(l.filterSize*l.filterSize, channels, l.filtersCount), weightK)
 	l.BiasesObj = num.New(num.NewDims(1, 1, l.filtersCount))

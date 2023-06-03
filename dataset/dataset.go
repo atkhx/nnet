@@ -2,15 +2,18 @@ package dataset
 
 import "github.com/atkhx/nnet/num"
 
+type Sample struct {
+	Input, Target *num.Data
+}
+
 type Dataset interface {
 	GetSamplesCount() int
+	ReadSample(index int) (sample Sample, err error)
+	ReadRandomSampleBatch(batchSize int) (sample Sample, err error)
+}
 
-	GetLabels() []string
-	GetTargets() []*num.Data
+type ClassifierDataset interface {
+	Dataset
 
-	GetLabel(index int) (string, error)
-	GetTarget(index int) (*num.Data, error)
-
-	ReadSample(index int) (input, target *num.Data, err error)
-	ReadRandomSampleBatch(batchSize int) (input, target *num.Data, err error)
+	GetClasses() []string
 }

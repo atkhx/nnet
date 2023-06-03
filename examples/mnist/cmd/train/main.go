@@ -83,12 +83,12 @@ func main() {
 			default:
 			}
 
-			batchInputs, batchTarget, err := dataset.ReadRandomSampleBatch(batchSize)
+			sample, err := dataset.ReadRandomSampleBatch(batchSize)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			copy(targets.Data, batchTarget.Data)
-			seqModel.Forward(batchInputs.Data)
+			copy(targets.Data, sample.Target.Data)
+			seqModel.Forward(sample.Input.Data)
 
 			loss.Forward()
 			lossMean.Forward()
