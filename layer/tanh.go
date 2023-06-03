@@ -9,10 +9,12 @@ func NewTanh() *Tanh {
 }
 
 type Tanh struct {
+	inputsObj *num.Data
 	outputObj *num.Data
 }
 
 func (l *Tanh) Compile(inputs *num.Data) *num.Data {
+	l.inputsObj = inputs
 	l.outputObj = inputs.Tanh()
 	return l.outputObj
 }
@@ -23,4 +25,12 @@ func (l *Tanh) Forward() {
 
 func (l *Tanh) Backward() {
 	l.outputObj.Backward()
+}
+
+func (l *Tanh) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *Tanh) GetOutput() *num.Data {
+	return l.outputObj
 }

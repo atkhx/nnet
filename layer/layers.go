@@ -33,3 +33,11 @@ func (s Layers) ForUpdate() num.Nodes {
 	}
 	return result
 }
+
+func (s Layers) GetInputs() *num.Data {
+	return s[0].GetInputs()
+}
+
+func (s Layers) GetOutput() *num.Data {
+	return s[len(s)-1].GetOutput()
+}

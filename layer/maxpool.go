@@ -25,10 +25,12 @@ type MaxPooling struct {
 	Stride     int
 	Padding    int
 
+	inputsObj *num.Data
 	outputObj *num.Data
 }
 
 func (l *MaxPooling) Compile(inputs *num.Data) *num.Data {
+	l.inputsObj = inputs
 	l.outputObj = inputs.MaxPooling(l.iWidth, l.iHeight, l.FilterSize, l.Padding, l.Stride)
 	return l.outputObj
 }
@@ -39,4 +41,12 @@ func (l *MaxPooling) Forward() {
 
 func (l *MaxPooling) Backward() {
 	l.outputObj.Backward()
+}
+
+func (l *MaxPooling) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *MaxPooling) GetOutput() *num.Data {
+	return l.outputObj
 }

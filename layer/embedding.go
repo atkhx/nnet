@@ -24,6 +24,7 @@ type Embedding struct {
 	ValEmbedding *num.Data
 	PosEmbedding *num.Data
 
+	inputsObj *num.Data
 	outputObj *num.Data
 	forUpdate num.Nodes
 }
@@ -34,6 +35,7 @@ func (l *Embedding) Compile(inputs *num.Data) *num.Data {
 	l.ValEmbedding.MulScalar(normK)
 	l.PosEmbedding.MulScalar(normK)
 
+	l.inputsObj = inputs
 	l.outputObj = inputs.GetEmbeddings(l.ValEmbedding, l.PosEmbedding)
 	l.forUpdate = num.Nodes{l.ValEmbedding, l.PosEmbedding}
 
@@ -50,4 +52,12 @@ func (l *Embedding) Backward() {
 
 func (l *Embedding) ForUpdate() num.Nodes {
 	return l.forUpdate
+}
+
+func (l *Embedding) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *Embedding) GetOutput() *num.Data {
+	return l.outputObj
 }

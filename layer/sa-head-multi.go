@@ -37,6 +37,7 @@ type SAMultiHead struct {
 
 	Heads []SAHeadParams
 
+	inputsObj *num.Data
 	concatObj *num.Data
 	forUpdate num.Nodes
 
@@ -71,6 +72,7 @@ func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
 		)
 	}
 
+	l.inputsObj = inputs
 	l.concatObj = outputObjs[0].ConcatRows(outputObjs[1:]...)
 
 	return l.concatObj
@@ -104,4 +106,12 @@ func (l *SAMultiHead) Backward() {
 
 func (l *SAMultiHead) ForUpdate() num.Nodes {
 	return l.forUpdate
+}
+
+func (l *SAMultiHead) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *SAMultiHead) GetOutput() *num.Data {
+	return l.concatObj
 }

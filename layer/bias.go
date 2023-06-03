@@ -10,12 +10,15 @@ func NewBias() *Bias {
 
 type Bias struct {
 	WeightObj *num.Data
+
+	inputsObj *num.Data
 	outputObj *num.Data
 	forUpdate num.Nodes
 }
 
 func (l *Bias) Compile(inputs *num.Data) *num.Data {
 	l.WeightObj = num.New(num.NewDims(inputs.Dims.W, inputs.Dims.H))
+	l.inputsObj = inputs
 	l.outputObj = inputs.Add(l.WeightObj)
 	l.forUpdate = num.Nodes{l.WeightObj}
 
@@ -32,4 +35,12 @@ func (l *Bias) Backward() {
 
 func (l *Bias) ForUpdate() num.Nodes {
 	return l.forUpdate
+}
+
+func (l *Bias) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *Bias) GetOutput() *num.Data {
+	return l.outputObj
 }

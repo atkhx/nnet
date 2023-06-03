@@ -27,6 +27,7 @@ type SAHead struct {
 	QryWeights *num.Data
 	ValWeights *num.Data
 
+	inputsObj *num.Data
 	outObject *num.Data
 }
 
@@ -37,6 +38,7 @@ func (l *SAHead) Compile(inputs *num.Data) *num.Data {
 	l.QryWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 	l.ValWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 
+	l.inputsObj = inputs
 	l.outObject = inputs.SAHead(
 		l.headSize,
 		l.KeyWeights,
@@ -61,4 +63,12 @@ func (l *SAHead) ForUpdate() num.Nodes {
 		l.QryWeights,
 		l.ValWeights,
 	}
+}
+
+func (l *SAHead) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *SAHead) GetOutput() *num.Data {
+	return l.outObject
 }

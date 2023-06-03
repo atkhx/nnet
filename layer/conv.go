@@ -43,11 +43,10 @@ type Conv struct {
 
 	WeightObj *num.Data
 	BiasesObj *num.Data
+
+	inputsObj *num.Data
 	outputObj *num.Data
 	forUpdate num.Nodes
-
-	Inputs *num.Data
-	Output *num.Data
 }
 
 func (l *Conv) Compile(inputs *num.Data) *num.Data {
@@ -61,9 +60,7 @@ func (l *Conv) Compile(inputs *num.Data) *num.Data {
 	l.outputObj = inputs.Conv(l.imageWidth, l.imageHeight, l.filterSize, l.padding, l.stride, l.WeightObj, l.BiasesObj)
 	l.forUpdate = num.Nodes{l.WeightObj, l.BiasesObj}
 
-	l.Inputs = inputs
-	l.Output = l.outputObj
-
+	l.inputsObj = inputs
 	return l.outputObj
 }
 
@@ -77,4 +74,12 @@ func (l *Conv) Backward() {
 
 func (l *Conv) ForUpdate() num.Nodes {
 	return l.forUpdate
+}
+
+func (l *Conv) GetInputs() *num.Data {
+	return l.inputsObj
+}
+
+func (l *Conv) GetOutput() *num.Data {
+	return l.outputObj
 }
