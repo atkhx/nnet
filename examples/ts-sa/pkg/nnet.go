@@ -41,7 +41,6 @@ func CreateNN(
 					layer.NewLNorm(),
 					layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
 					layer.NewLinear(embeddingFeatures, initWeight),
-					layer.NewBias(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 				},
 			),
@@ -50,10 +49,8 @@ func CreateNN(
 					layer.NewLNorm(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 					layer.NewLinear(4*embeddingFeatures, initWeight),
-					layer.NewBias(),
 					layer.NewReLu(),
 					layer.NewLinear(embeddingFeatures, initWeight),
-					layer.NewBias(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 				},
 			),
@@ -76,7 +73,6 @@ func CreateNN(
 	layers = append(layers,
 		layer.NewLNorm(),
 		layer.NewLinear(alphabetSize, initWeight),
-		layer.NewBias(),
 		// out: [ alphabetSize, contextLength, batchSize ]
 	)
 

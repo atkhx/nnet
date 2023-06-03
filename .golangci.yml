@@ -156,8 +156,8 @@ run:
   # default value is empty list, but next dirs are always skipped independently
   # of this option's value:
   #   	vendor$, third_party$, testdata$, examples$
-  skip-dirs:
-    - vendor/*
+#  skip-dirs:
+#    - vendor$
 
 issues:
   exclude:
