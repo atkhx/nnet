@@ -40,10 +40,8 @@ func (aData *Data) MatrixMultiply2(factor *Data) *Data {
 
 	iWH := aData.Dims.W * aData.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
-
+	output.Name = "matrixMultiply2"
 	output.calcData = func() {
-		fTranspose.Forward()
-
 		offset := 0
 
 		izOffset := 0
@@ -216,8 +214,9 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data { //nolint:gocyclo
 		}()
 	}
 
+	output.Name = "matrixMultiply"
 	output.calcData = func() {
-		fTranspose.Forward()
+		//fTranspose.Forward()
 
 		offset := 0
 		izOffset := 0
@@ -251,7 +250,7 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data { //nolint:gocyclo
 
 		wg.Wait()
 
-		fTranspose.Backward()
+		//fTranspose.Backward()
 	}
 
 	return output

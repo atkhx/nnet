@@ -17,8 +17,7 @@ type Linear struct {
 	BiasesObj *num.Data
 
 	inputsObj *num.Data
-	outputMM  *num.Data
-	outputBO  *num.Data
+	outputObj *num.Data
 	forUpdate num.Nodes
 }
 
@@ -29,22 +28,10 @@ func (l *Linear) Compile(inputs *num.Data) *num.Data {
 	l.BiasesObj = num.New(num.NewDims(l.featuresCount))
 
 	l.inputsObj = inputs
-	l.outputMM = inputs.MatrixMultiply(l.WeightObj)
-	l.outputBO = l.outputMM.Add(l.BiasesObj)
-
+	l.outputObj = inputs.MatrixMultiply(l.WeightObj).Add(l.BiasesObj)
 	l.forUpdate = num.Nodes{l.WeightObj, l.BiasesObj}
 
-	return l.outputMM
-}
-
-func (l *Linear) Forward() {
-	l.outputMM.Forward()
-	l.outputBO.Forward()
-}
-
-func (l *Linear) Backward() {
-	l.outputBO.Backward()
-	l.outputMM.Backward()
+	return l.outputObj
 }
 
 func (l *Linear) ForUpdate() num.Nodes {
@@ -56,5 +43,5 @@ func (l *Linear) GetInputs() *num.Data {
 }
 
 func (l *Linear) GetOutput() *num.Data {
-	return l.outputBO
+	return l.outputObj
 }

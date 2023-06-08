@@ -41,19 +41,24 @@ func (s *Sequential) Compile() *num.Data {
 	return s.output
 }
 
+func (s *Sequential) GetInput() *num.Data {
+	return s.inputs
+}
+
 func (s *Sequential) GetOutput() *num.Data {
 	return s.output
 }
 
-func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
-	copy(s.inputs.Data, inputs)
-	s.Layers.Forward()
-	return s.output
-}
-
-func (s *Sequential) Backward() {
-	s.Layers.Backward()
-}
+//
+//func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
+//	copy(s.inputs.Data, inputs)
+//	s.Layers.Forward()
+//	return s.output
+//}
+//
+//func (s *Sequential) Backward() {
+//	s.Layers.Backward()
+//}
 
 func (s *Sequential) GetTrainableParamsCount() int {
 	var result int

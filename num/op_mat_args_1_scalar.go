@@ -2,6 +2,7 @@ package num
 
 func (aData *Data) AddScalar(k float64) *Data {
 	output := aData.Copy()
+	output.Name = "addScalar"
 	output.calcData = func() {
 		output.Data.CopyFrom(aData.Data)
 		output.Data.AddScalar(k)
@@ -16,6 +17,7 @@ func (aData *Data) AddScalar(k float64) *Data {
 
 func (aData *Data) MulScalar(k float64) *Data {
 	output := aData.Copy()
+	output.Name = "mulScalar"
 	output.calcData = func() {
 		output.Data.CopyFrom(aData.Data)
 		output.Data.MulScalar(k)

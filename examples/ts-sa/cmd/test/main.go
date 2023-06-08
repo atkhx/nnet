@@ -35,10 +35,13 @@ func main() {
 		batchSize,
 	)
 
-	seqModel.Compile()
+	output := seqModel.Compile()
 	if err := seqModel.LoadFromFile(filename); err != nil {
 		log.Fatalln(err)
 	}
+
+	forwardNodes := output.GetForwardNodes()
+	fmt.Println("forwardNodes", len(forwardNodes))
 
 	inp, _ := namesDataset.ReadRandomSample()
 	inputBytes := namesDataset.DecodeFloats(inp...)
@@ -50,8 +53,12 @@ func main() {
 	for j := 0; j < 10000; j++ {
 		inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
-		out := seqModel.Forward(inputsFloat)
-		output := out.Data[(pkg.ContextLength-1)*namesDataset.GetAlphabetSize():]
+		copy(seqModel.GetInput().Data, inputsFloat)
+		forwardNodes.Forward()
+
+		//out := seqModel.Forward(inputsFloat)
+
+		output := output.Data[(pkg.ContextLength-1)*namesDataset.GetAlphabetSize():]
 		output.Softmax()
 		output.CumulativeSum()
 

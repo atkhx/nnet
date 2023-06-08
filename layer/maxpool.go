@@ -35,14 +35,6 @@ func (l *MaxPooling) Compile(inputs *num.Data) *num.Data {
 	return l.outputObj
 }
 
-func (l *MaxPooling) Forward() {
-	l.outputObj.Forward()
-}
-
-func (l *MaxPooling) Backward() {
-	l.outputObj.Backward()
-}
-
 func (l *MaxPooling) GetInputs() *num.Data {
 	return l.inputsObj
 }

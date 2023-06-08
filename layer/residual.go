@@ -21,16 +21,6 @@ func (l *Residual) Compile(inputs *num.Data) *num.Data {
 	return l.outputObj
 }
 
-func (l *Residual) Forward() {
-	l.Layers.Forward()
-	l.outputObj.Forward()
-}
-
-func (l *Residual) Backward() {
-	l.outputObj.Backward()
-	l.Layers.Backward()
-}
-
 func (l *Residual) ForUpdate() num.Nodes {
 	return l.Layers.ForUpdate()
 }

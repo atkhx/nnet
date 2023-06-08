@@ -12,7 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/atkhx/nnet/examples/ts-sa/dataset"
+	"github.com/atkhx/nnet/examples/ts-sa/metrics"
 	"github.com/atkhx/nnet/examples/ts-sa/pkg"
 	"github.com/atkhx/nnet/num"
 )
@@ -36,6 +39,11 @@ func main() {
 
 	go func() {
 		log.Println(http.ListenAndServe(":6060", nil))
+	}()
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println(http.ListenAndServe(":8181", nil))
 	}()
 
 	namesDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
@@ -63,6 +71,16 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	trainStopped := make(chan any)
+
+	//forwardNodes := lossMean.GetForwardNodes()
+	forwardNodes := lossMean.GetForwardNodesLayers()
+	//backwardNodes := loss.GetBackwardNodes()
+	backwardNodes := loss.GetBackwardNodesLayers()
+	resetGradsNodes := loss.GetResetGradsNodes()
+	fmt.Println("forwardNodes", len(forwardNodes))
+	fmt.Println("backwardNodes", len(backwardNodes))
+	fmt.Println("resetGradsNodes", len(resetGradsNodes))
+
 	go func() {
 		defer func() {
 			trainStopped <- true
@@ -72,7 +90,9 @@ func main() {
 		lossAvg := 0.0
 
 		t := time.Now()
+
 		for index := 0; index < epochs; index++ {
+			t1 := time.Now()
 			select {
 			case <-ctx.Done():
 				return
@@ -82,20 +102,32 @@ func main() {
 			batchInputs, batchTarget := namesDataset.ReadRandomSampleBatch()
 			copy(targets.Data, batchTarget)
 
-			seqModel.Forward(batchInputs)
+			//seqModel.Forward(batchInputs)
+			copy(seqModel.GetInput().Data, batchInputs)
 
-			loss.Forward()
-			lossMean.Forward()
+			//loss.Forward()
+			//lossMean.Forward()
+			//loss.ResetGrads(1)
+			//lossMean.ResetGrads(1)
 			//lossMean.Backward()
-			loss.ResetGrads(1)
-			loss.Backward()
-			seqModel.Backward()
+			//loss.Backward()
+			//seqModel.Backward()
+
+			//lossMean.ResetGrads(1)
+			forwardNodes.Forward()
+			resetGradsNodes.ResetGrad()
+			backwardNodes.Backward()
+
+			metrics.Loss.Set(loss.Data[0])
+			metrics.LossMean.Set(lossMean.Data[0])
+			metrics.TrainDuration.Add(float64(time.Since(t1).Milliseconds()))
 
 			lossAvg += lossMean.Data[0]
 			seqModel.Update()
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)
+				metrics.AvgLossMean.Set(lossAvg)
 				fmt.Println(
 					fmt.Sprintf("loss: %.8f", lossAvg), "\t",
 					"index:", index, "\t",

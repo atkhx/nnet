@@ -19,14 +19,6 @@ func (l *Sigmoid) Compile(inputs *num.Data) *num.Data {
 	return l.outputObj
 }
 
-func (l *Sigmoid) Forward() {
-	l.outputObj.Forward()
-}
-
-func (l *Sigmoid) Backward() {
-	l.outputObj.Backward()
-}
-
 func (l *Sigmoid) GetInputs() *num.Data {
 	return l.inputsObj
 }

@@ -13,6 +13,7 @@ func (aData *Data) MaxPooling(iWidth, iHeight, fSize, padding, stride int) *Data
 	output := New(NewDims(oWidth*oHeight, channels, imagesCount), aData)
 	coords := make([]int, oWidth*oHeight*channels*imagesCount)
 
+	output.Name = "maxPooling"
 	output.calcData = func() {
 		for imageIndex := 0; imageIndex < imagesCount; imageIndex++ {
 			imageOffset := imageIndex * iSquare * channels

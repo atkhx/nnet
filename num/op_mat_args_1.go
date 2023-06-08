@@ -5,6 +5,7 @@ import "math"
 func (aData *Data) Add(bData *Data) *Data {
 	config := BroadCast(aData, bData)
 	output := New(config.oDims, aData, bData)
+	output.Name = "add"
 	output.calcData = func() {
 		config.BroadCast(func(ax, bx, offset int) {
 			output.Data[offset] = aData.Data[ax] + bData.Data[bx]
@@ -22,6 +23,7 @@ func (aData *Data) Add(bData *Data) *Data {
 func (aData *Data) Sub(bData *Data) *Data {
 	config := BroadCast(aData, bData)
 	output := New(config.oDims, aData, bData)
+	output.Name = "sub"
 	output.calcData = func() {
 		config.BroadCast(func(ax, bx, offset int) {
 			output.Data[offset] = aData.Data[ax] - bData.Data[bx]
@@ -40,6 +42,7 @@ func (aData *Data) Sub(bData *Data) *Data {
 func (aData *Data) Mul(bData *Data) *Data {
 	config := BroadCast(aData, bData)
 	output := New(config.oDims, aData, bData)
+	output.Name = "mul"
 	output.calcData = func() {
 		config.BroadCast(func(ax, bx, offset int) {
 			output.Data[offset] = aData.Data[ax] * bData.Data[bx]
@@ -57,6 +60,7 @@ func (aData *Data) Mul(bData *Data) *Data {
 func (aData *Data) Div(bData *Data) *Data {
 	config := BroadCast(aData, bData)
 	output := New(config.oDims, aData, bData)
+	output.Name = "div"
 	square := bData.Data.CopyZero()
 	output.calcData = func() {
 		config.BroadCast(func(ax, bx, offset int) {

@@ -9,7 +9,8 @@ func NewReshape(dims num.Dims) *Reshape {
 }
 
 type Reshape struct {
-	dims      num.Dims
+	dims num.Dims
+
 	inputsObj *num.Data
 	outputObj *num.Data
 }
@@ -18,14 +19,6 @@ func (l *Reshape) Compile(inputs *num.Data) *num.Data {
 	l.inputsObj = inputs
 	l.outputObj = inputs.Reshape(l.dims)
 	return l.outputObj
-}
-
-func (l *Reshape) Forward() {
-	l.outputObj.Forward()
-}
-
-func (l *Reshape) Backward() {
-	l.outputObj.Backward()
 }
 
 func (l *Reshape) GetInputs() *num.Data {

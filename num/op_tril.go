@@ -6,6 +6,7 @@ func (aData *Data) TriangleLower(zeroVal float64) *Data {
 	WH := aData.Dims.W * aData.Dims.W
 
 	output := aData.Copy()
+	output.Name = "triangleLower"
 	output.calcData = func() {
 		output.Data.Fill(zeroVal)
 		for z := 0; z < output.Dims.D; z++ {
@@ -66,6 +67,8 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:go
 		Dims:     Dims{W: oW, H: oH, D: oD},
 		srcNodes: Nodes{aData, fTranspose},
 	}
+
+	output.Name = "triangleLowerMatrixMultiply"
 
 	iWH := aData.Dims.W * aData.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
@@ -143,7 +146,7 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:go
 	}
 
 	output.calcData = func() {
-		fTranspose.Forward()
+		//fTranspose.Forward()
 
 		offset := 0
 		izOffset := 0
@@ -177,112 +180,7 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:go
 
 		wg.Wait()
 
-		fTranspose.Backward()
-	}
-
-	return output
-}
-
-func (aData *Data) TriangleLowerMatrixMultiply2(factor *Data) *Data {
-	if aData.Dims.W != factor.Dims.H {
-		panic("input width must be equal factor height")
-	}
-
-	izStep := 1
-	fzStep := 1
-
-	if aData.Dims.D != factor.Dims.D {
-		switch {
-		case aData.Dims.D == 1:
-			izStep = 0
-		case factor.Dims.D == 1:
-			fzStep = 0
-		default:
-			panic("input's and factor's dept must be equal or one of them must be 1")
-		}
-	}
-
-	oH := aData.Dims.H
-	oW := factor.Dims.W
-	oD := aData.Dims.D
-
-	if factor.Dims.D > oD {
-		oD = factor.Dims.D
-	}
-
-	fTranspose := factor.Transpose()
-
-	output := &Data{
-		Data:     make(Float64s, oW*oH*oD),
-		Grad:     make(Float64s, oW*oH*oD),
-		Dims:     Dims{W: oW, H: oH, D: oD},
-		srcNodes: Nodes{aData, fTranspose},
-	}
-
-	iWH := aData.Dims.W * aData.Dims.H
-	fWH := factor.Dims.W * factor.Dims.H
-
-	output.calcData = func() {
-		fTranspose.Forward()
-
-		offset := 0
-
-		izOffset := 0
-		fzOffset := 0
-
-		for z := 0; z < oD; z++ {
-			y := 0
-			for oY := izOffset; oY < izOffset+iWH; oY += aData.Dims.W {
-				y++
-				iData := aData.Data[oY : oY+y]
-
-				for oX := fzOffset; oX < fzOffset+fWH; oX += aData.Dims.W {
-					fData := fTranspose.Data[oX : oX+y]
-
-					v := 0.0
-					for i, iV := range iData {
-						v += iV * fData[i]
-					}
-
-					output.Data[offset] = v
-					offset++
-				}
-			}
-
-			izOffset += izStep * iWH
-			fzOffset += fzStep * fWH
-		}
-	}
-
-	output.calcGrad = func() {
-		offset := 0
-
-		izOffset := 0
-		fzOffset := 0
-
-		for z := 0; z < oD; z++ {
-			y := 0
-			for oY := izOffset; oY < izOffset+iWH; oY += aData.Dims.W {
-				y++
-				iData := aData.Data[oY : oY+y]
-				iGrad := aData.Grad[oY : oY+y]
-				for oX := fzOffset; oX < fzOffset+fWH; oX += aData.Dims.W {
-					fData := fTranspose.Data[oX : oX+y]
-					fGrad := fTranspose.Grad[oX : oX+y]
-
-					G := output.Grad[offset]
-					offset++
-
-					for i, iV := range iData {
-						fGrad[i] += G * iV
-						iGrad[i] += G * fData[i]
-					}
-				}
-			}
-
-			izOffset += izStep * iWH
-			fzOffset += fzStep * fWH
-		}
+		//fTranspose.Backward()
 	}
 
 	return output
@@ -297,6 +195,7 @@ func (aData *Data) TriangleLowerSoftmax(k float64) *Data {
 	wg := sync.WaitGroup{}
 
 	output := aData.Copy()
+	output.Name = "triangleLowerSoftmax"
 	output.Data.Fill(0)
 	output.calcData = func() {
 		wg.Add(output.Dims.D)

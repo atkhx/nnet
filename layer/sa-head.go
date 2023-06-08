@@ -49,14 +49,6 @@ func (l *SAHead) Compile(inputs *num.Data) *num.Data {
 	return l.outObject
 }
 
-func (l *SAHead) Forward() {
-	l.outObject.Forward()
-}
-
-func (l *SAHead) Backward() {
-	l.outObject.Backward()
-}
-
 func (l *SAHead) ForUpdate() num.Nodes {
 	return num.Nodes{
 		l.KeyWeights,

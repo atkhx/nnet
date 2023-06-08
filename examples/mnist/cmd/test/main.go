@@ -49,8 +49,8 @@ func main() {
 	}
 
 	targets := num.New(num.NewDims(10, 1, 1))
-
 	loss := modelOutput.CrossEntropy(targets)
+	forwardNodes := loss.GetForwardNodes()
 
 	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
 
@@ -89,9 +89,8 @@ func main() {
 				log.Fatalln(err)
 			}
 			copy(targets.Data, sample.Target.Data)
-			seqModel.Forward(sample.Input.Data)
-
-			loss.Forward()
+			copy(seqModel.GetInput().Data, sample.Input.Data)
+			forwardNodes.Forward()
 
 			outputIndex, _ := modelOutput.Data.MaxKeyVal()
 			targetIndex, _ := sample.Target.Data.MaxKeyVal()

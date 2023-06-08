@@ -78,32 +78,6 @@ func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
 	return l.concatObj
 }
 
-func (l *SAMultiHead) Forward() {
-	l.wg.Add(l.headsCount)
-	for i := range l.Heads {
-		go func(i int) {
-			l.Heads[i].outputObj.Forward()
-			l.wg.Done()
-		}(i)
-	}
-	l.wg.Wait()
-
-	l.concatObj.Forward()
-}
-
-func (l *SAMultiHead) Backward() {
-	l.concatObj.Backward()
-
-	l.wg.Add(l.headsCount)
-	for i := range l.Heads {
-		go func(i int) {
-			l.Heads[i].outputObj.Backward()
-			l.wg.Done()
-		}(i)
-	}
-	l.wg.Wait()
-}
-
 func (l *SAMultiHead) ForUpdate() num.Nodes {
 	return l.forUpdate
 }

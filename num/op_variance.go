@@ -1,23 +1,18 @@
 package num
 
-func (aData *Data) VarianceByRows(meanData Float64s) *Data {
+func (aData *Data) VarianceByRows(mean *Data) *Data {
 	oDims := aData.Dims
 	oDims.W = 1
 
 	chunkSize := aData.Dims.W
 	k := 1.0 / float64(chunkSize-1)
 
-	output := New(oDims, aData)
+	output := New(oDims, aData, mean)
+	output.Name = "variance"
 	output.calcData = func() {
-		if meanData == nil {
-			mean := aData.MeanByRows()
-			mean.Forward()
-			meanData = mean.Data
-		}
-
 		for i := 0; i < len(output.Data); i++ {
 			V := 0.0
-			M := meanData[i]
+			M := mean.Data[i]
 			for _, v := range aData.Data[i*chunkSize : (i+1)*chunkSize] {
 				V += (v - M) * (v - M)
 			}
@@ -27,7 +22,7 @@ func (aData *Data) VarianceByRows(meanData Float64s) *Data {
 
 	output.calcGrad = func() {
 		for i, G := range output.Grad {
-			M := meanData[i]
+			M := mean.Data[i]
 			for j, v := range aData.Data[i*chunkSize : (i+1)*chunkSize] {
 				aData.Grad[i*chunkSize+j] += G * 2.0 * (v - M) * k
 			}

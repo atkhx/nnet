@@ -17,14 +17,6 @@ func (l *ReLu) Compile(inputs *num.Data) *num.Data {
 	return l.outputObj
 }
 
-func (l *ReLu) Forward() {
-	l.outputObj.Forward()
-}
-
-func (l *ReLu) Backward() {
-	l.outputObj.Backward()
-}
-
 func (l *ReLu) GetInputs() *num.Data {
 	return l.inputsObj
 }

@@ -19,14 +19,6 @@ func (l *Tanh) Compile(inputs *num.Data) *num.Data {
 	return l.outputObj
 }
 
-func (l *Tanh) Forward() {
-	l.outputObj.Forward()
-}
-
-func (l *Tanh) Backward() {
-	l.outputObj.Backward()
-}
-
 func (l *Tanh) GetInputs() *num.Data {
 	return l.inputsObj
 }

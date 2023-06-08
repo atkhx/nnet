@@ -57,19 +57,11 @@ func (l *Conv) Compile(inputs *num.Data) *num.Data {
 	l.WeightObj = num.NewRandNormWeighted(num.NewDims(l.filterSize*l.filterSize, channels, l.filtersCount), weightK)
 	l.BiasesObj = num.New(num.NewDims(1, 1, l.filtersCount))
 
+	l.inputsObj = inputs
 	l.outputObj = inputs.Conv(l.imageWidth, l.imageHeight, l.filterSize, l.padding, l.stride, l.WeightObj, l.BiasesObj)
 	l.forUpdate = num.Nodes{l.WeightObj, l.BiasesObj}
 
-	l.inputsObj = inputs
 	return l.outputObj
-}
-
-func (l *Conv) Forward() {
-	l.outputObj.Forward()
-}
-
-func (l *Conv) Backward() {
-	l.outputObj.Backward()
 }
 
 func (l *Conv) ForUpdate() num.Nodes {
