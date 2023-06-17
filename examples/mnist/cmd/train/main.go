@@ -63,13 +63,7 @@ func main() {
 
 	loss := modelOutput.CrossEntropy(targets)
 	lossMean := loss.Mean()
-
-	forwardNodes := lossMean.GetForwardNodes()
-	backwardNodes := lossMean.GetBackwardNodes()
-	resetGradsNodes := lossMean.GetResetGradsNodes()
-	fmt.Println("forwardNodes", len(forwardNodes))
-	fmt.Println("backwardNodes", len(backwardNodes))
-	fmt.Println("resetGradsNodes", len(resetGradsNodes))
+	pipeline := num.NewPipeline(lossMean)
 
 	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
 
@@ -97,9 +91,8 @@ func main() {
 			copy(targets.Data, sample.Target.Data)
 			copy(seqModel.GetInput().Data, sample.Input.Data)
 
-			forwardNodes.Forward()
-			resetGradsNodes.ResetGrad()
-			backwardNodes.Backward()
+			pipeline.Forward()
+			pipeline.Backward()
 
 			lossAvg += lossMean.Data[0]
 			seqModel.Update()

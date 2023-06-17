@@ -4,7 +4,6 @@ func (aData *Data) Transpose() *Data {
 	WH := aData.Dims.W * aData.Dims.H
 
 	output := aData.Copy()
-	output.Name = "transpose " + aData.Name
 	output.Dims.W = aData.Dims.H
 	output.Dims.H = aData.Dims.W
 	output.calcData = func() {

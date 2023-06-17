@@ -57,9 +57,8 @@ func main() {
 	}
 
 	targets := num.New(num.NewDims(1, pkg.ContextLength*pkg.MiniBatchSize))
-
-	loss := modelOutput.CrossEntropyPos(targets)
-	lossMean := loss.Mean()
+	lossMean := modelOutput.CrossEntropyPos(targets).Mean()
+	pipeline := num.NewPipeline(lossMean)
 
 	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
 
@@ -71,15 +70,6 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	trainStopped := make(chan any)
-
-	//forwardNodes := lossMean.GetForwardNodes()
-	forwardNodes := lossMean.GetForwardNodesLayers()
-	//backwardNodes := loss.GetBackwardNodes()
-	backwardNodes := loss.GetBackwardNodesLayers()
-	resetGradsNodes := loss.GetResetGradsNodes()
-	fmt.Println("forwardNodes", len(forwardNodes))
-	fmt.Println("backwardNodes", len(backwardNodes))
-	fmt.Println("resetGradsNodes", len(resetGradsNodes))
 
 	go func() {
 		defer func() {
@@ -105,20 +95,9 @@ func main() {
 			//seqModel.Forward(batchInputs)
 			copy(seqModel.GetInput().Data, batchInputs)
 
-			//loss.Forward()
-			//lossMean.Forward()
-			//loss.ResetGrads(1)
-			//lossMean.ResetGrads(1)
-			//lossMean.Backward()
-			//loss.Backward()
-			//seqModel.Backward()
+			pipeline.Forward()
+			pipeline.Backward()
 
-			//lossMean.ResetGrads(1)
-			forwardNodes.Forward()
-			resetGradsNodes.ResetGrad()
-			backwardNodes.Backward()
-
-			metrics.Loss.Set(loss.Data[0])
 			metrics.LossMean.Set(lossMean.Data[0])
 			metrics.TrainDuration.Add(float64(time.Since(t1).Milliseconds()))
 

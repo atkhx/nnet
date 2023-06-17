@@ -21,7 +21,6 @@ func (aData *Data) Conv(imageWidth, imageHeight, filterSize, padding, stride int
 	wg := sync.WaitGroup{}
 
 	output := New(NewDims(outImageWidth*outImageHeight, filtersCount, imagesCount), aData, filters)
-	output.Name = "conv"
 	output.calcData = func() {
 		offset := 0
 		for imageIndex := 0; imageIndex < imagesCount; imageIndex++ {

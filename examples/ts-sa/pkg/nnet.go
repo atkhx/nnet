@@ -84,5 +84,6 @@ func CreateNN(
 		// out: [ alphabetSize, contextLength * batchSize ]
 	)
 
+	//return model.NewSequential(inDims, layers, optimizer.VanilaSGD(0.0003))
 	return model.NewSequential(inDims, layers, optimizer.Adadelta(optimizer.Ro, optimizer.Eps))
 }

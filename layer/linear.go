@@ -24,11 +24,13 @@ type Linear struct {
 func (l *Linear) Compile(inputs *num.Data) *num.Data {
 	weightK := l.initWeights.GetNormK(len(inputs.Data))
 
-	l.WeightObj = num.NewRandNormWeighted(num.NewDims(l.featuresCount, inputs.Dims.W), weightK)
+	//l.WeightObj = num.NewRandNormWeighted(num.NewDims(l.featuresCount, inputs.Dims.W), weightK)
+	l.WeightObj = num.NewRandNormWeighted(num.NewDims(inputs.Dims.W, l.featuresCount), weightK)
 	l.BiasesObj = num.New(num.NewDims(l.featuresCount))
 
 	l.inputsObj = inputs
-	l.outputObj = inputs.MatrixMultiply(l.WeightObj).Add(l.BiasesObj)
+	//l.outputObj = inputs.MatrixMultiply(l.WeightObj).Add(l.BiasesObj)
+	l.outputObj = inputs.MatrixMultiplyTransposed(l.WeightObj).Add(l.BiasesObj)
 	l.forUpdate = num.Nodes{l.WeightObj, l.BiasesObj}
 
 	return l.outputObj

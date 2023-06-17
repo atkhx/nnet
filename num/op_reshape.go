@@ -12,7 +12,6 @@ func (aData *Data) Reshape(dims Dims) *Data {
 		srcNodes: Nodes{aData},
 		calcData: nil,
 		calcGrad: nil,
-		Name:     "reshape",
 	}
 	// output := New(dims, aData)
 	output.calcData = func() {

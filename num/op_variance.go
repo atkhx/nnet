@@ -8,7 +8,6 @@ func (aData *Data) VarianceByRows(mean *Data) *Data {
 	k := 1.0 / float64(chunkSize-1)
 
 	output := New(oDims, aData, mean)
-	output.Name = "variance"
 	output.calcData = func() {
 		for i := 0; i < len(output.Data); i++ {
 			V := 0.0

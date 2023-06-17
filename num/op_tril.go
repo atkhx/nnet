@@ -6,7 +6,6 @@ func (aData *Data) TriangleLower(zeroVal float64) *Data {
 	WH := aData.Dims.W * aData.Dims.W
 
 	output := aData.Copy()
-	output.Name = "triangleLower"
 	output.calcData = func() {
 		output.Data.Fill(zeroVal)
 		for z := 0; z < output.Dims.D; z++ {
@@ -67,8 +66,6 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:go
 		Dims:     Dims{W: oW, H: oH, D: oD},
 		srcNodes: Nodes{aData, fTranspose},
 	}
-
-	output.Name = "triangleLowerMatrixMultiply"
 
 	iWH := aData.Dims.W * aData.Dims.H
 	fWH := factor.Dims.W * factor.Dims.H
@@ -195,7 +192,6 @@ func (aData *Data) TriangleLowerSoftmax(k float64) *Data {
 	wg := sync.WaitGroup{}
 
 	output := aData.Copy()
-	output.Name = "triangleLowerSoftmax"
 	output.Data.Fill(0)
 	output.calcData = func() {
 		wg.Add(output.Dims.D)

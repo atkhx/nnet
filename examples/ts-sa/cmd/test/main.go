@@ -8,6 +8,7 @@ import (
 
 	"github.com/atkhx/nnet/examples/ts-sa/dataset"
 	"github.com/atkhx/nnet/examples/ts-sa/pkg"
+	"github.com/atkhx/nnet/num"
 )
 
 var filename string
@@ -40,8 +41,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	forwardNodes := output.GetForwardNodes()
-	fmt.Println("forwardNodes", len(forwardNodes))
+	pipeline := num.NewPipeline(output)
 
 	inp, _ := namesDataset.ReadRandomSample()
 	inputBytes := namesDataset.DecodeFloats(inp...)
@@ -54,7 +54,7 @@ func main() {
 		inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
 		copy(seqModel.GetInput().Data, inputsFloat)
-		forwardNodes.Forward()
+		pipeline.Forward()
 
 		//out := seqModel.Forward(inputsFloat)
 

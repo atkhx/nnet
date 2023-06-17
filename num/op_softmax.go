@@ -9,7 +9,6 @@ func (aData *Data) Softmax() *Data {
 	wg := sync.WaitGroup{}
 
 	output := aData.Copy()
-	output.Name = "softmax"
 	output.calcData = func() {
 		output.Data.CopyFrom(aData.Data)
 

@@ -22,7 +22,6 @@ func (aData *Data) CrossEntropyPos(targets *Data) *Data {
 	softmax := aData.Data.CopyZero()
 
 	output := New(oDims, aData)
-	output.Name = "crossEntropyPos"
 	output.calcData = func() {
 		softmax.CopyFrom(aData.Data)
 		for i := 0; i < len(softmax); i += chunkSize {
@@ -65,7 +64,6 @@ func (aData *Data) CrossEntropy(targets *Data) *Data {
 	logLikelihood := aData.Data.CopyZero()
 
 	output := New(oDims, aData)
-	output.Name = "crossEntropy"
 	output.calcData = func() {
 		softmax.CopyFrom(aData.Data)
 		for i := 0; i < len(softmax); i += chunkSize {

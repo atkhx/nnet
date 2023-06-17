@@ -52,11 +52,22 @@ func (l *SAMultiHead) Compile(inputs *num.Data) *num.Data {
 	outputObjs := make([]*num.Data, 0, l.headsCount)
 
 	for i := 0; i < l.headsCount; i++ {
-		l.Heads[i].KeyWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
-		l.Heads[i].QryWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
-		l.Heads[i].ValWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+		//l.Heads[i].KeyWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+		//l.Heads[i].QryWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+		//l.Heads[i].ValWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
+		//
+		//l.Heads[i].outputObj = inputs.SAHead(
+		//	l.headSize,
+		//	l.Heads[i].KeyWeights,
+		//	l.Heads[i].QryWeights,
+		//	l.Heads[i].ValWeights,
+		//)
 
-		l.Heads[i].outputObj = inputs.SAHead(
+		l.Heads[i].KeyWeights = num.NewRandNormWeighted(num.NewDims(l.featuresCount, l.headSize, 1), weightK)
+		l.Heads[i].QryWeights = num.NewRandNormWeighted(num.NewDims(l.featuresCount, l.headSize, 1), weightK)
+		l.Heads[i].ValWeights = num.NewRandNormWeighted(num.NewDims(l.featuresCount, l.headSize, 1), weightK)
+
+		l.Heads[i].outputObj = inputs.SAHeadTransposed(
 			l.headSize,
 			l.Heads[i].KeyWeights,
 			l.Heads[i].QryWeights,
