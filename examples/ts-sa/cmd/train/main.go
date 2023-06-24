@@ -57,8 +57,9 @@ func main() {
 	}
 
 	targets := num.New(num.NewDims(1, pkg.ContextLength*pkg.MiniBatchSize))
-	lossMean := modelOutput.CrossEntropyPos(targets).Mean()
-	pipeline := num.NewPipeline(lossMean)
+	loss := modelOutput.CrossEntropyPos(targets)
+	pipeline := num.NewPipeline(loss)
+	lossMean := loss.Mean()
 
 	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
 
@@ -96,6 +97,7 @@ func main() {
 			copy(seqModel.GetInput().Data, batchInputs)
 
 			pipeline.Forward()
+			lossMean.Forward()
 			pipeline.Backward()
 
 			metrics.LossMean.Set(lossMean.Data[0])

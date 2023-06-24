@@ -66,9 +66,9 @@ func CreateNN(
 
 	//---SA Blocks-----------------------------------------------
 	layers = append(layers, SABlock()...)
-	layers = append(layers, SABlock()...)
-	layers = append(layers, SABlock()...)
-	layers = append(layers, SABlock()...)
+	//layers = append(layers, SABlock()...)
+	//layers = append(layers, SABlock()...)
+	//layers = append(layers, SABlock()...)
 	// out: [ embeddingFeatures, contextLength, batchSize ]
 
 	//---Probabilities--------------------------------------------------------

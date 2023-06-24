@@ -68,3 +68,7 @@ func (aData *Data) StringData() string {
 func (aData *Data) StringGrad() string {
 	return aData.Grad.String(aData.Dims)
 }
+
+func (aData *Data) Forward() {
+	aData.calcData()
+}

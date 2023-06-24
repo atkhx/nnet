@@ -49,27 +49,12 @@ func (s *Sequential) GetOutput() *num.Data {
 	return s.output
 }
 
-//
-//func (s *Sequential) Forward(inputs num.Float64s) *num.Data {
-//	copy(s.inputs.Data, inputs)
-//	s.Layers.Forward()
-//	return s.output
-//}
-//
-//func (s *Sequential) Backward() {
-//	s.Layers.Backward()
-//}
-
 func (s *Sequential) GetTrainableParamsCount() int {
 	var result int
 	for _, node := range s.update {
 		result += len(node.Data)
 	}
 	return result
-}
-
-func (s *Sequential) GetUpdateNodes() num.Nodes {
-	return s.update
 }
 
 func (s *Sequential) Update() {
