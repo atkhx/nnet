@@ -1,6 +1,9 @@
 package num
 
-import "sync"
+import (
+	"runtime"
+	"sync"
+)
 
 func (aData *Data) TriangleLower(zeroVal float64) *Data {
 	WH := aData.Dims.W * aData.Dims.W
@@ -80,7 +83,7 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:go
 		offset, izOffset, fzOffset int
 	}
 
-	bufferSize := 64
+	bufferSize := runtime.GOMAXPROCS(0)
 	forwardChan := make(chan forwardArgs, bufferSize)
 	forwardFunc := func(a forwardArgs) {
 		y := 0
@@ -112,11 +115,14 @@ func (aData *Data) TriangleLowerMatrixMultiply(factor *Data) *Data { //nolint:go
 			iGrad := aData.Grad[oY : oY+y]
 
 			for oX := a.fzOffset; oX < a.fzOffset+fWH; oX += aData.Dims.W {
-				fData := fTranspose.Data[oX : oX+y]
-				fGrad := fTranspose.Grad[oX : oX+y]
-
 				G := output.Grad[a.offset]
 				a.offset++
+
+				if G == 0 {
+					continue
+				}
+				fData := fTranspose.Data[oX : oX+y]
+				fGrad := fTranspose.Grad[oX : oX+y]
 
 				for i, iV := range iData {
 					fGrad[i] += G * iV
@@ -190,18 +196,21 @@ func (aData *Data) TriangleLowerSoftmax(k float64) *Data {
 	WH := aData.Dims.W * aData.Dims.W
 
 	wg := sync.WaitGroup{}
+	cn := make(chan struct{}, runtime.GOMAXPROCS(0))
 
 	output := aData.Copy()
 	output.Data.Fill(0)
 	output.calcData = func() {
 		wg.Add(output.Dims.D)
 		for z := 0; z < output.Dims.D; z++ {
+			cn <- struct{}{}
 			go func(z int) {
 				for y := 0; y < output.Dims.H; y++ {
 					c := z*WH + y*aData.Dims.W
 					aData.Data[c:c+y+1].SoftmaxKTo(output.Data[c:c+y+1], k)
 				}
 				wg.Done()
+				<-cn
 			}(z)
 		}
 		wg.Wait()
@@ -210,6 +219,7 @@ func (aData *Data) TriangleLowerSoftmax(k float64) *Data {
 	output.calcGrad = func() {
 		wg.Add(output.Dims.D)
 		for z := 0; z < output.Dims.D; z++ {
+			cn <- struct{}{}
 			go func(z int) {
 				for y := 0; y < output.Dims.H; y++ {
 					c := z*WH + y*aData.Dims.W
@@ -218,7 +228,12 @@ func (aData *Data) TriangleLowerSoftmax(k float64) *Data {
 					softmax := output.Data[c : c+y+1]
 
 					for i, softmaxI := range softmax {
+
 						gI := k * output.Grad[c+i] * softmaxI
+						if gI == 0 {
+							continue
+						}
+
 						for j, softmaxJ := range softmax {
 							if i == j {
 								iGrad[j] += gI * (1 - softmaxI)
@@ -229,6 +244,7 @@ func (aData *Data) TriangleLowerSoftmax(k float64) *Data {
 					}
 				}
 				wg.Done()
+				<-cn
 			}(z)
 		}
 		wg.Wait()

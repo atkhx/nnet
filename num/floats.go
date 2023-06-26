@@ -43,6 +43,12 @@ func (f Float64s) Fill(v float64) {
 	}
 }
 
+func (f Float64s) Zero() {
+	for i := range f {
+		f[i] = 0
+	}
+}
+
 func (f Float64s) CopyFrom(src Float64s) {
 	copy(f, src)
 }

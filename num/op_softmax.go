@@ -34,6 +34,9 @@ func (aData *Data) Softmax() *Data {
 
 				for i, softmaxI := range softmax {
 					gI := oGrad[i] * softmaxI
+					if gI == 0 {
+						continue
+					}
 					for j, softmaxJ := range softmax {
 						if i == j {
 							iGrad[j] += gI * (1 - softmaxI)

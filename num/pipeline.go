@@ -1,13 +1,16 @@
 package num
 
-import "sync"
+import (
+	"runtime"
+	"sync"
+)
 
 func NewPipeline(lastNode *Data) (out *Pipeline) {
 	forwardLayers := getForwardNodeLayers(lastNode)
 	backwardLayers := getBackwardNodeLayers(lastNode)
 	resetLayers := getResetGradsNodeLayers(lastNode)
 
-	parallel := 8
+	parallel := runtime.GOMAXPROCS(0)
 
 	wg := &sync.WaitGroup{}
 
