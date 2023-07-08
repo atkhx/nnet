@@ -9,12 +9,13 @@ import (
 )
 
 const (
-	ContextLength = 64
+	ContextLength = 256
 	MiniBatchSize = 16
 
-	EmbeddingFeatures = 256
+	EmbeddingFeatures = 384
 	HeadSize          = 64
-	HeadsCount        = 4
+	HeadsCount        = 6
+	blocksCount       = 6
 )
 
 func CreateNN(
@@ -40,11 +41,13 @@ func CreateNN(
 				layer.Layers{
 					layer.NewLNorm(),
 					layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+					// out: [ headSize, contextLength, batchSize ]
 					layer.NewLinear(embeddingFeatures, initWeight),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 				},
 			),
 			layer.NewResidual(
+				// the goal of this block https://youtu.be/XowwKOAWYoQ?t=1297
 				layer.Layers{
 					layer.NewLNorm(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
@@ -65,10 +68,9 @@ func CreateNN(
 	)
 
 	//---SA Blocks-----------------------------------------------
-	layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
-	//layers = append(layers, SABlock()...)
+	for i := 0; i < blocksCount; i++ {
+		layers = append(layers, SABlock()...)
+	}
 	// out: [ embeddingFeatures, contextLength, batchSize ]
 
 	//---Probabilities--------------------------------------------------------

@@ -10,3 +10,7 @@ lint:
 .PHONY: imports
 imports:
 	@goimports -w -local github.com/atkhx/nnet $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
+.PHONY: pprof
+pprof:
+	go tool pprof http://localhost:6060/debug/pprof/profile

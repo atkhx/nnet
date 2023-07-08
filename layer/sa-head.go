@@ -39,7 +39,7 @@ func (l *SAHead) Compile(inputs *num.Data) *num.Data {
 	l.ValWeights = num.NewRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 
 	l.inputsObj = inputs
-	l.outObject = inputs.SAHead(
+	l.outObject = inputs.MaskedSelfAttention(
 		l.headSize,
 		l.KeyWeights,
 		l.QryWeights,

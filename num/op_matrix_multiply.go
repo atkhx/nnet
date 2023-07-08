@@ -46,7 +46,7 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data {
 	fWH := fW * fH
 
 	wg := sync.WaitGroup{}
-	cn := make(chan struct{}, runtime.GOMAXPROCS(0))
+	cn := make(chan struct{}, runtime.GOMAXPROCS(0)*4)
 
 	output.calcData = func() {
 		var ozOffset, izOffset, fzOffset int
@@ -57,7 +57,7 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data {
 		for z := 0; z < oD; z++ {
 			cn <- struct{}{}
 			go func(aData, bData, oData Float64s) {
-				mm(iW, aData, bData, oData)
+				mAmB(iW, aData, bData, oData)
 				<-cn
 				wg.Done()
 			}(
@@ -78,23 +78,18 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data {
 		wg.Add(oD)
 		defer wg.Wait()
 
-		aDataT := transpose(iW, iH, aData.Data)
-		fDataT := transpose(fW, fH, factor.Data)
-
 		for z := 0; z < oD; z++ {
 			cn <- struct{}{}
-			go func(iDataT, iGrad, fData, fDataT, fGrad, oGrad Float64s) {
-				mm(oW, oGrad, fDataT, iGrad)
-				//mmTB(oW, oGrad, fData, iGrad)
-				mm(iH, iDataT, oGrad, fGrad)
+			go func(iData, iGrad, fData, fGrad, oGrad Float64s) {
+				mAmBT(oW, oGrad, fData, iGrad)
+				mATmB(iH, iData, oGrad, fGrad)
 				<-cn
 				wg.Done()
 			}(
-				aDataT[izOffset:izOffset+iWH],
+				aData.Data[izOffset:izOffset+iWH],
 				aData.Grad[izOffset:izOffset+iWH],
 
 				factor.Data[fzOffset:fzOffset+fWH],
-				fDataT[fzOffset:fzOffset+fWH],
 				factor.Grad[fzOffset:fzOffset+fWH],
 
 				output.Grad[ozOffset:ozOffset+oW*oH],

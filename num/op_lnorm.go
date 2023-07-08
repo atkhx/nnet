@@ -1,6 +1,9 @@
 package num
 
 func (aData *Data) LNorm(gamma, beta *Data) *Data {
+	// todo work with matrix in batch as single row (not individually)
+	// https://youtu.be/XowwKOAWYoQ?t=1163
+
 	mean := aData.MeanByRows()
 	xSub := aData.Sub(mean)
 	vars := aData.VarianceByRows(mean)

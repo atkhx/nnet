@@ -30,6 +30,8 @@ type Embedding struct {
 }
 
 func (l *Embedding) Compile(inputs *num.Data) *num.Data {
+	// todo make positional embedding calculated by formula and not trainable
+	// https://youtu.be/XowwKOAWYoQ?t=582
 	normK := l.initWeights.GetNormK(len(inputs.Data))
 
 	l.ValEmbedding.MulScalar(normK)

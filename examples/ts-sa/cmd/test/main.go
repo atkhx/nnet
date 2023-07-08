@@ -60,9 +60,10 @@ func main() {
 
 		output := output.Data[(pkg.ContextLength-1)*namesDataset.GetAlphabetSize():]
 		output.Softmax()
+		//i, _ := output.MaxKeyVal()
 		output.CumulativeSum()
-
 		b := namesDataset.Decode(output.Multinomial())
+		//b := namesDataset.Decode(i)
 
 		inputBytes = append(inputBytes, b...)
 		inputBytes = inputBytes[len(b):]
