@@ -51,7 +51,7 @@ func NewRandNormWeighted(dims Dims, w float64) *Data {
 	}
 }
 
-func (aData *Data) Copy() *Data {
+func (aData *Data) NewLinkedCopy() *Data {
 	return &Data{
 		Data: make(Float64s, len(aData.Data)),
 		Grad: make(Float64s, len(aData.Data)),

@@ -1,14 +1,27 @@
 package num
 
-import (
-	"runtime"
-	"sync"
-)
+type mmConfig struct {
+	alpha float64
+}
 
-func (aData *Data) MatrixMultiply(factor *Data) *Data {
+type mmOption func(*mmConfig)
+
+func WithMatrixMultiplyAlpha(alpha float64) mmOption {
+	return func(config *mmConfig) {
+		config.alpha = alpha
+	}
+}
+
+func (aData *Data) MatrixMultiply(factor *Data, options ...mmOption) *Data {
 	if aData.Dims.W != factor.Dims.H {
 		panic("aData width must be equal factor height")
 	}
+
+	cfg := &mmConfig{alpha: 1.0}
+	for _, option := range options {
+		option(cfg)
+	}
+	alpha := cfg.alpha
 
 	izStep := 1
 	fzStep := 1
@@ -44,29 +57,29 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data {
 
 	iWH := iW * iH
 	fWH := fW * fH
+	oWH := oW * oH
 
-	wg := sync.WaitGroup{}
-	cn := make(chan struct{}, runtime.GOMAXPROCS(0)*4)
+	if factor.Dims.D == 1 {
+		output.calcData = func() {
+			matrixMultiplyAB(aData.Dims.W, aData.Data, factor.Data, output.Data, alpha, 0.0)
+		}
+
+		output.calcGrad = func() {
+			matrixMultiplyABTransposed(oW, output.Grad, factor.Data, aData.Grad, alpha, 1)
+			matrixMultiplyATransposedB(aData.Dims.H*aData.Dims.D, aData.Data, output.Grad, factor.Grad, alpha, 1)
+		}
+		return output
+	}
 
 	output.calcData = func() {
 		var ozOffset, izOffset, fzOffset int
-		wg.Add(oD)
-		defer wg.Wait()
-
-		output.Data.Zero()
 		for z := 0; z < oD; z++ {
-			cn <- struct{}{}
-			go func(aData, bData, oData Float64s) {
-				mAmB(iW, aData, bData, oData)
-				<-cn
-				wg.Done()
-			}(
+			matrixMultiplyAB(iW,
 				aData.Data[izOffset:izOffset+iWH],
 				factor.Data[fzOffset:fzOffset+fWH],
-				output.Data[ozOffset:ozOffset+(oW*oH)],
-			)
+				output.Data[ozOffset:ozOffset+oWH], alpha, 0)
 
-			ozOffset += oW * oH
+			ozOffset += oWH
 			izOffset += izStep * iWH
 			fzOffset += fzStep * fWH
 		}
@@ -74,28 +87,20 @@ func (aData *Data) MatrixMultiply(factor *Data) *Data {
 
 	output.calcGrad = func() {
 		var ozOffset, izOffset, fzOffset int
-
-		wg.Add(oD)
-		defer wg.Wait()
-
 		for z := 0; z < oD; z++ {
-			cn <- struct{}{}
-			go func(iData, iGrad, fData, fGrad, oGrad Float64s) {
-				mAmBT(oW, oGrad, fData, iGrad)
-				mATmB(iH, iData, oGrad, fGrad)
-				<-cn
-				wg.Done()
-			}(
-				aData.Data[izOffset:izOffset+iWH],
-				aData.Grad[izOffset:izOffset+iWH],
-
+			matrixMultiplyABTransposed(oW,
+				output.Grad[ozOffset:ozOffset+oWH],
 				factor.Data[fzOffset:fzOffset+fWH],
+				aData.Grad[izOffset:izOffset+iWH],
+				alpha, 1)
+
+			matrixMultiplyATransposedB(iH,
+				aData.Data[izOffset:izOffset+iWH],
+				output.Grad[ozOffset:ozOffset+oWH],
 				factor.Grad[fzOffset:fzOffset+fWH],
+				alpha, 1)
 
-				output.Grad[ozOffset:ozOffset+oW*oH],
-			)
-
-			ozOffset += oW * oH
+			ozOffset += oWH
 			izOffset += izStep * iWH
 			fzOffset += fzStep * fWH
 		}

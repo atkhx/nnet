@@ -1,6 +1,10 @@
 package num
 
-import "math"
+import (
+	"math"
+	"runtime"
+	"sync"
+)
 
 func (aData *Data) CrossEntropyPos(targets *Data) *Data {
 	if targets.Dims.W != 1 {
@@ -21,12 +25,23 @@ func (aData *Data) CrossEntropyPos(targets *Data) *Data {
 	// just buffer to avoid memory allocations
 	softmax := aData.Data.CopyZero()
 
+	wg := sync.WaitGroup{}
+	cn := make(chan struct{}, runtime.GOMAXPROCS(0))
+
 	output := New(oDims, aData)
 	output.calcData = func() {
 		softmax.CopyFrom(aData.Data)
+		wg.Add(len(softmax) / chunkSize)
 		for i := 0; i < len(softmax); i += chunkSize {
-			softmax[i : i+chunkSize].Softmax()
+			cn <- struct{}{}
+			go func(i int) {
+				softmax[i : i+chunkSize].Softmax()
+
+				<-cn
+				wg.Done()
+			}(i)
 		}
+		wg.Wait()
 
 		for rowIdx, correctIdx := range targets.Data {
 			for i := 0; i < chunkSize; i++ {

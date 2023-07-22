@@ -16,7 +16,7 @@ type Residual struct {
 func (l *Residual) Compile(inputs *num.Data) *num.Data {
 	l.inputsObj = inputs
 	l.outputPre = l.Layers.Compile(inputs)
-	l.outputObj = l.outputPre.Add(inputs)
+	l.outputObj = inputs.Add(l.outputPre)
 
 	return l.outputObj
 }

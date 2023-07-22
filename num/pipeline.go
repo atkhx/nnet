@@ -14,21 +14,12 @@ func NewPipeline(lastNode *Data) (out *Pipeline) {
 
 	wg := &sync.WaitGroup{}
 
-	fChan := make(chan *Data)
-	bChan := make(chan *Data)
-	rChan := make(chan *Data)
+	fChan := make(chan func())
 
 	for i := 0; i < parallel; i++ {
 		go func() {
-			for {
-				select {
-				case node := <-fChan:
-					node.calcData()
-				case node := <-bChan:
-					node.calcGrad()
-				case node := <-rChan:
-					node.Grad.Fill(0.0)
-				}
+			for fn := range fChan {
+				fn()
 				wg.Done()
 			}
 		}()
@@ -40,10 +31,10 @@ func NewPipeline(lastNode *Data) (out *Pipeline) {
 		forwardChan:   fChan,
 		forwardLayers: forwardLayers,
 
-		backwardChan:   bChan,
+		//backwardChan:   bChan,
 		backwardLayers: backwardLayers,
 
-		resetChan:   rChan,
+		//resetChan:   rChan,
 		resetLayers: resetLayers,
 	}
 }
@@ -51,13 +42,13 @@ func NewPipeline(lastNode *Data) (out *Pipeline) {
 type Pipeline struct {
 	wg *sync.WaitGroup
 
-	forwardChan   chan *Data
+	forwardChan   chan func()
 	forwardLayers NodeLayers
 
-	backwardChan   chan *Data
+	//backwardChan   chan *Data
 	backwardLayers NodeLayers
 
-	resetChan   chan *Data
+	//resetChan   chan *Data
 	resetLayers NodeLayers
 }
 
@@ -70,26 +61,32 @@ func (p *Pipeline) Forward() {
 
 		p.wg.Add(len(nodes))
 		for _, node := range nodes {
-			p.forwardChan <- node
+			p.forwardChan <- node.calcData
 		}
 		p.wg.Wait()
 	}
 }
 
 func (p *Pipeline) Backward() {
-	p.resetLayers[0][0].Grad.Fill(1.0)
-	for _, nodes := range p.resetLayers[1:] {
-		if len(nodes) == 1 {
-			nodes[0].Grad.Fill(0.0)
-			continue
-		}
+	//p.resetLayers[0][0].Grad.Ones()
+	//for _, nodes := range p.resetLayers[1:] {
+	for i, nodes := range p.resetLayers {
+		//	if len(nodes) == 1 {
+		//		nodes[0].Grad.Zero()
+		//		continue
+		//	}
 
 		p.wg.Add(len(nodes))
 		for _, node := range nodes {
-			p.resetChan <- node
+			if i == 0 {
+				p.forwardChan <- node.Grad.Ones
+			} else {
+				p.forwardChan <- node.Grad.Zero
+			}
+			//p.forwardChan <- node.Grad.Zero
 		}
-		p.wg.Wait()
 	}
+	p.wg.Wait()
 
 	for _, nodes := range p.backwardLayers {
 		if len(nodes) == 1 {
@@ -99,7 +96,7 @@ func (p *Pipeline) Backward() {
 
 		p.wg.Add(len(nodes))
 		for _, node := range nodes {
-			p.backwardChan <- node
+			p.forwardChan <- node.calcGrad
 		}
 		p.wg.Wait()
 	}

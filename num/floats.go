@@ -43,6 +43,12 @@ func (f Float64s) Fill(v float64) {
 	}
 }
 
+func (f Float64s) Ones() {
+	for i := range f {
+		f[i] = 1
+	}
+}
+
 func (f Float64s) Zero() {
 	for i := range f {
 		f[i] = 0
@@ -50,12 +56,14 @@ func (f Float64s) Zero() {
 }
 
 func (f Float64s) CopyFrom(src Float64s) {
-	copy(f, src)
+	//copy(f, src)
+	vectorCopy(src, f)
 }
 
 func (f Float64s) Copy() Float64s {
 	res := make(Float64s, len(f))
-	copy(res, f)
+	//copy(res, f)
+	vectorCopy(f, res)
 	return res
 }
 
@@ -64,9 +72,17 @@ func (f Float64s) CopyZero() Float64s {
 }
 
 func (f Float64s) Add(b Float64s) {
-	for i, v := range f {
-		f[i] = v + b[i]
-	}
+	vectorAddWeighted(b, f, 1)
+	//for i, v := range f {
+	//	f[i] = v + b[i]
+	//}
+}
+
+func (f Float64s) Sub(b Float64s) {
+	vectorAddWeighted(b, f, -1)
+	//for i, v := range f {
+	//	f[i] = v - b[i]
+	//}
 }
 
 func (f Float64s) Mul(b Float64s) {
@@ -82,15 +98,17 @@ func (f Float64s) AddScalar(b float64) {
 }
 
 func (f Float64s) AddWeighted(b Float64s, w float64) {
-	for i, v := range b {
-		f[i] += v * w
-	}
+	vectorAddWeighted(b, f, w)
+	//for i, v := range b {
+	//	f[i] += v * w
+	//}
 }
 
 func (f Float64s) MulScalar(b float64) {
-	for i := range f {
-		f[i] *= b
-	}
+	cblas_dscal(len(f), b, f, 1)
+	//for i := range f {
+	//	f[i] *= b
+	//}
 }
 
 func (f Float64s) Max() (max float64) {
@@ -152,11 +170,11 @@ func (f Float64s) Sum() (sum float64) {
 }
 
 func (f Float64s) Softmax() {
-	var max float64
+	var max float64 = f[0]
 	var sum float64
 
-	for i, v := range f {
-		if i == 0 || max < v {
+	for _, v := range f {
+		if max < v {
 			max = v
 		}
 	}
@@ -191,7 +209,7 @@ func (f Float64s) SoftmaxK(k float64) {
 	}
 }
 
-func (f Float64s) SoftmaxKTo(out Float64s, k float64) {
+func (f Float64s) SoftmaxTo(out Float64s) {
 	var max float64
 	var sum float64
 
@@ -202,7 +220,7 @@ func (f Float64s) SoftmaxKTo(out Float64s, k float64) {
 	}
 
 	for i, v := range f {
-		out[i] = math.Exp(k * (v - max))
+		out[i] = math.Exp(v - max)
 		sum += out[i]
 	}
 

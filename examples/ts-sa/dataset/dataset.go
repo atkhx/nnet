@@ -1,15 +1,24 @@
 package dataset
 
 import (
+	"bufio"
 	_ "embed"
+	"fmt"
+	"io"
+	"log"
 	"math/rand"
-	"sort"
+	"os"
 
 	"github.com/atkhx/nnet/num"
 )
 
-//go:embed tinyshakespeare.txt
-var TinyShakespeare []byte
+// дддлgo:embed spring.txt
+//
+// ddgo:embed tinyshakespeare.txt
+// var TinyShakespeare []byte
+//
+//fffgo:embed ruwiki1.txt
+var RuWiki1 []rune
 
 func NewDataset(contextSize, miniBatchSize int) *Dataset {
 	result := &Dataset{
@@ -20,17 +29,18 @@ func NewDataset(contextSize, miniBatchSize int) *Dataset {
 	return result
 }
 
+type Token string
+
 type Dataset struct {
-	index map[byte]int
-	chars []byte
+	tokenCodes map[Token]int
+	tokens     []Token
+	rawRunes   []rune
 
 	contextSize   int
 	miniBatchSize int
 
 	alphabetSize int
 	samplesCount int
-
-	rawBytes []byte
 }
 
 func (d *Dataset) GetSamplesCount() int {
@@ -49,62 +59,105 @@ func (d *Dataset) GetMiniBatchSize() int {
 	return d.miniBatchSize
 }
 
-func (d *Dataset) ParseAlphabet(bytes []byte) {
-	d.rawBytes = bytes
+var wiki = "/Users/andrey.tikhonov/go/src/github.com/atkhx/nnet/examples/ts-sa/dataset/ruwiki1.txt"
+var wikiAlphabet = "/Users/andrey.tikhonov/go/src/github.com/atkhx/nnet/examples/ts-sa/dataset/ruwiki1.alphabet"
 
-	d.index = map[byte]int{}
-	d.chars = []byte{}
+func (d *Dataset) ParseAlphabet(_ []rune) {
+	f2, err := os.OpenFile(wikiAlphabet, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer f2.Close()
 
-	// Prepare index and collect unique set of chars
-	for _, b := range bytes {
-		if _, ok := d.index[b]; !ok {
-			d.index[b] = 0
-			d.chars = append(d.chars, b)
+	d.tokenCodes = map[Token]int{}
+	d.tokens = []Token{}
+
+	reader := bufio.NewReader(f2)
+
+	var p = 0
+	for {
+		r, _, err := reader.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Fatalln(err)
 		}
+
+		d.tokens = append(d.tokens, Token(r))
+		d.tokenCodes[Token(r)] = p
+		p++
 	}
 
-	// Sort unique set of chars (expect than "\n" will pop to the first place)
-	sort.Slice(d.chars, func(i, j int) bool {
-		return d.chars[i] < d.chars[j]
-	})
-
-	// Collect total alphabet size
-	d.alphabetSize = len(d.chars)
-
-	// Fill index map with actual chars positions
-	for i, b := range d.chars {
-		d.index[b] = i
+	f, err := os.OpenFile(wiki, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		log.Fatalln(err)
 	}
+	defer f.Close()
+
+	b := make([]byte, 1000_000)
+	//n, err := f.ReadAt(b, 6000_000)
+	n, err := f.ReadAt(b, 5000_000)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	b = b[:n]
+	fmt.Println("length b", len(b))
+
+	rawBytes := []rune(string(b))
+	d.rawRunes = rawBytes
+
+	d.alphabetSize = len(d.tokens)
+	fmt.Println("d.alphabetSize", d.alphabetSize)
 }
 
-func (d *Dataset) Encode(chars ...byte) []int {
+func (d *Dataset) EncodeString(value string) []int {
+	indexes := make([]int, len([]rune(value)))
+	for i, v := range []rune(value) {
+		indexes[i] = d.tokenCodes[Token(v)]
+	}
+	return indexes
+}
+
+func (d *Dataset) Encode(chars ...Token) []int {
 	indexes := make([]int, len(chars))
 	for i, v := range chars {
-		indexes[i] = d.index[v]
+		indexes[i] = d.tokenCodes[v]
 	}
 	return indexes
 }
 
-func (d *Dataset) EncodeToFloats(chars ...byte) []float64 {
+func (d *Dataset) EncodeToFloats(chars ...Token) []float64 {
 	indexes := make([]float64, len(chars))
 	for i, v := range chars {
-		indexes[i] = float64(d.index[v])
+		indexes[i] = float64(d.tokenCodes[v])
 	}
 	return indexes
 }
 
-func (d *Dataset) Decode(pos ...int) []byte {
-	result := make([]byte, len(pos))
-	for i, p := range pos {
-		result[i] = d.chars[p]
+type Tokens []Token
+
+func (t Tokens) String() string {
+	result := ""
+	for _, token := range t {
+		result += string(token)
 	}
 	return result
 }
 
-func (d *Dataset) DecodeFloats(pos ...float64) []byte {
-	result := make([]byte, len(pos))
+func (d *Dataset) Decode(pos ...int) Tokens {
+	result := make([]Token, len(pos))
 	for i, p := range pos {
-		result[i] = d.chars[int(p)]
+		t := d.tokens[p]
+		result[i] = t
+	}
+	return result
+}
+
+func (d *Dataset) DecodeFloats(pos ...float64) []Token {
+	result := make([]Token, len(pos))
+	for i, p := range pos {
+		result[i] = d.tokens[int(p)]
 	}
 	return result
 }
@@ -115,32 +168,58 @@ func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets num.Float
 	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
 	sampleTargets = make(num.Float64s, inputSampleSize*d.miniBatchSize)
 
+	tokens := make([]Token, d.contextSize)
+	tokenLength := 1
+
 	for b := 0; b < d.miniBatchSize; b++ {
-		pos := rand.Intn(len(d.rawBytes) - inputSampleSize - 1)
+		pos := rand.Intn(len(d.rawRunes) - (d.contextSize * tokenLength) - 1)
+
+		chunk := d.rawRunes[pos : (pos+1)+(inputSampleSize*tokenLength)]
+		for i := 0; i < d.contextSize; i++ {
+			tokens[i] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
+		}
 
 		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleInputs, d.EncodeToFloats(d.rawBytes[pos:pos+inputSampleSize]...))
+		copy(sampleInputs, d.EncodeToFloats(tokens...))
+
+		for i := 1; i < d.contextSize+1; i++ {
+			tokens[i-1] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
+		}
 
 		sampleTargets := sampleTargets[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleTargets, d.EncodeToFloats(d.rawBytes[pos+1:pos+1+inputSampleSize]...))
+		copy(sampleTargets, d.EncodeToFloats(tokens...))
 	}
 
 	return sampleInputs, sampleTargets
 }
 
-func (d *Dataset) ReadRandomSample() (sampleInputs, sampleTargets num.Float64s) {
+func (d *Dataset) ReadRandomSampleBatch2() (sampleInputs, sampleTargets num.Float64s) {
 	inputSampleSize := d.contextSize
-	sampleInputs = make(num.Float64s, inputSampleSize)
-	sampleTargets = make(num.Float64s, inputSampleSize)
 
-	for b := 0; b < 1; b++ {
-		pos := rand.Intn(len(d.rawBytes) - inputSampleSize - 1)
+	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
+	sampleTargets = make(num.Float64s, inputSampleSize*d.miniBatchSize)
+
+	tokens := make([]Token, d.contextSize)
+	tokenLength := 1
+
+	batchPos := rand.Intn(len(d.rawRunes) - (d.miniBatchSize * d.contextSize * tokenLength) - 1)
+
+	for b := 0; b < d.miniBatchSize; b++ {
+		pos := batchPos + b*d.contextSize*tokenLength
+		chunk := d.rawRunes[pos : (pos+1)+(inputSampleSize*tokenLength)]
+		for i := 0; i < d.contextSize; i++ {
+			tokens[i] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
+		}
 
 		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleInputs, d.EncodeToFloats(d.rawBytes[pos:pos+inputSampleSize]...))
+		copy(sampleInputs, d.EncodeToFloats(tokens...))
+
+		for i := 1; i < d.contextSize+1; i++ {
+			tokens[i-1] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
+		}
 
 		sampleTargets := sampleTargets[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleTargets, d.EncodeToFloats(d.rawBytes[pos+1:pos+1+inputSampleSize]...))
+		copy(sampleTargets, d.EncodeToFloats(tokens...))
 	}
 
 	return sampleInputs, sampleTargets

@@ -51,6 +51,7 @@ func (aData *Data) ConcatRows(bData ...*Data) *Data {
 			// copy aData grads
 			aData.Grad[iOffset : iOffset+aData.Dims.W].Add(output.Grad[oOffset : oOffset+aData.Dims.W])
 			oOffset += aData.Dims.W
+
 			for _, b := range bData {
 				// copy bData data
 				b.Grad[bOffset : bOffset+b.Dims.W].Add(output.Grad[oOffset : oOffset+b.Dims.W])

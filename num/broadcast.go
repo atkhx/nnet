@@ -31,7 +31,7 @@ func GetBroadCastSteps(aDims, bDims Dims) (steps Steps) {
 func BroadCast(aData, bData *Data) broadCastConfig {
 	steps := GetBroadCastSteps(aData.Dims, bData.Dims)
 
-	return broadCastConfig{
+	bc := broadCastConfig{
 		axStep: steps.aW,
 		ayStep: steps.aH * aData.Dims.W,
 		azStep: steps.aD * aData.Dims.W * aData.Dims.H,
@@ -42,16 +42,32 @@ func BroadCast(aData, bData *Data) broadCastConfig {
 
 		oDims: aData.Dims.GetMax(bData.Dims),
 	}
+
+	bc.coordsMap = prepareCoordsMap(bc)
+	return bc
 }
 
 type broadCastConfig struct {
 	axStep, ayStep, azStep int
 	bxStep, byStep, bzStep int
 
-	oDims Dims
+	oDims     Dims
+	coordsMap []bcCoordinate
+}
+
+type bcCoordinate struct {
+	aOffset, bOffset int
 }
 
 func (cfg broadCastConfig) BroadCast(fn func(aOffset, bOffset, oOffset int)) {
+	for offset, coords := range cfg.coordsMap {
+		fn(coords.aOffset, coords.bOffset, offset)
+	}
+}
+
+func prepareCoordsMap(cfg broadCastConfig) []bcCoordinate {
+	var coordsMap []bcCoordinate
+
 	offset := 0
 	azOffset := 0
 	bzOffset := 0
@@ -64,11 +80,10 @@ func (cfg broadCastConfig) BroadCast(fn func(aOffset, bOffset, oOffset int)) {
 			axOffset := 0
 			bxOffset := 0
 			for oX := 0; oX < cfg.oDims.W; oX++ {
-				fn(
-					azOffset+ayOffset+axOffset,
-					bzOffset+byOffset+bxOffset,
-					offset,
-				)
+				coordsMap = append(coordsMap, bcCoordinate{
+					aOffset: azOffset + ayOffset + axOffset,
+					bOffset: bzOffset + byOffset + bxOffset,
+				})
 
 				offset++
 
@@ -83,4 +98,6 @@ func (cfg broadCastConfig) BroadCast(fn func(aOffset, bOffset, oOffset int)) {
 		azOffset += cfg.azStep
 		bzOffset += cfg.bzStep
 	}
+
+	return coordsMap
 }

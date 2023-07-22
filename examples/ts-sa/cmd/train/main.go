@@ -15,7 +15,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/atkhx/nnet/examples/ts-sa/dataset"
-	"github.com/atkhx/nnet/examples/ts-sa/metrics"
 	"github.com/atkhx/nnet/examples/ts-sa/pkg"
 	"github.com/atkhx/nnet/num"
 )
@@ -47,7 +46,7 @@ func main() {
 	}()
 
 	namesDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
-	namesDataset.ParseAlphabet(dataset.TinyShakespeare)
+	namesDataset.ParseAlphabet(dataset.RuWiki1)
 
 	seqModel := pkg.CreateNN(namesDataset.GetAlphabetSize(), pkg.MiniBatchSize)
 
@@ -62,6 +61,7 @@ func main() {
 	lossMean := loss.Mean()
 
 	fmt.Println("trainable params count:", seqModel.GetTrainableParamsCount())
+	fmt.Println("alphabet size:", namesDataset.GetAlphabetSize())
 
 	defer func() {
 		if err := seqModel.SaveToFile(filename); err != nil {
@@ -77,13 +77,12 @@ func main() {
 			trainStopped <- true
 		}()
 
-		statChunkSize := 10
+		statChunkSize := 100
 		lossAvg := 0.0
 
 		t := time.Now()
 
-		for index := 0; index < epochs; index++ {
-			t1 := time.Now()
+		for iteration := 0; iteration < epochs; iteration++ {
 			select {
 			case <-ctx.Done():
 				return
@@ -100,18 +99,17 @@ func main() {
 			lossMean.Forward()
 			pipeline.Backward()
 
-			metrics.LossMean.Set(lossMean.Data[0])
-			metrics.TrainDuration.Add(float64(time.Since(t1).Milliseconds()))
-
 			lossAvg += lossMean.Data[0]
-			seqModel.Update()
+			//lossAvg = lossMean.Data[0]
+			//lossAvg = loss.Data[pkg.ContextLength-1]
 
-			if index > 0 && index%statChunkSize == 0 {
+			seqModel.Update(iteration + 1)
+
+			if iteration > 0 && iteration%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)
-				metrics.AvgLossMean.Set(lossAvg)
 				fmt.Println(
 					fmt.Sprintf("loss: %.8f", lossAvg), "\t",
-					"index:", index, "\t",
+					"iteration:", iteration, "\t",
 					"duration:", time.Since(t), "\t",
 				)
 				lossAvg = 0

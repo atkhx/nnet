@@ -1,45 +1,13 @@
 package num
 
-import "math"
-
-func (aData *Data) Add(bData *Data) *Data {
-	config := BroadCast(aData, bData)
-	output := New(config.oDims, aData, bData)
-	output.calcData = func() {
-		config.BroadCast(func(ax, bx, offset int) {
-			output.Data[offset] = aData.Data[ax] + bData.Data[bx]
-		})
-	}
-	output.calcGrad = func() {
-		config.BroadCast(func(ax, bx, offset int) {
-			aData.Grad[ax] += output.Grad[offset]
-			bData.Grad[bx] += output.Grad[offset]
-		})
-	}
-	return output
-}
-
-func (aData *Data) Sub(bData *Data) *Data {
-	config := BroadCast(aData, bData)
-	output := New(config.oDims, aData, bData)
-	output.calcData = func() {
-		config.BroadCast(func(ax, bx, offset int) {
-			output.Data[offset] = aData.Data[ax] - bData.Data[bx]
-		})
-	}
-	output.calcGrad = func() {
-		config.BroadCast(func(ax, bx, offset int) {
-			aData.Grad[ax] += output.Grad[offset]
-			bData.Grad[bx] -= output.Grad[offset]
-		})
-	}
-
-	return output
-}
+import (
+	"math"
+)
 
 func (aData *Data) Mul(bData *Data) *Data {
 	config := BroadCast(aData, bData)
 	output := New(config.oDims, aData, bData)
+
 	output.calcData = func() {
 		config.BroadCast(func(ax, bx, offset int) {
 			output.Data[offset] = aData.Data[ax] * bData.Data[bx]
@@ -68,12 +36,18 @@ func (aData *Data) Div(bData *Data) *Data {
 			square[k] = -math.Pow(v, -2.0)
 		}
 		config.BroadCast(func(ax, bx, offset int) {
-			iV := aData.Data[ax]
-			bV := bData.Data[bx]
 			gV := output.Grad[offset]
+			if gV == 0 {
+				return
+			}
 
-			aData.Grad[ax] += gV * (1.0 / bV)
-			bData.Grad[bx] += gV * iV * square[bx]
+			if bV := bData.Data[bx]; bV != 0 {
+				aData.Grad[ax] += gV / bV
+			}
+
+			if iV := aData.Data[ax]; iV != 0 {
+				bData.Grad[bx] += gV * iV * square[bx]
+			}
 		})
 	}
 	return output

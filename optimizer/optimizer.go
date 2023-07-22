@@ -11,16 +11,16 @@ const (
 	Eps = 0.000001
 )
 
-type getGradDeltaFn func(k int, gradient float64) float64
+type getGradDeltaFn func(iteration, k int, gradient float64) float64
 
-func NewOptimizer(newGetGradDelta func(nodes num.Nodes) getGradDeltaFn) func(nodes num.Nodes) func() {
-	return func(nodes num.Nodes) func() {
+func NewOptimizer(newGetGradDelta func(nodes num.Nodes) getGradDeltaFn) func(nodes num.Nodes) func(iteration int) {
+	return func(nodes num.Nodes) func(iteration int) {
 		getGradDelta := newGetGradDelta(nodes)
-		return func() {
+		return func(iteration int) {
 			offset := 0
 			for _, node := range nodes {
 				for j := 0; j < len(node.Data); j++ {
-					node.Data[j] += getGradDelta(offset+j, node.Grad[j])
+					node.Data[j] += getGradDelta(iteration, offset+j, node.Grad[j])
 				}
 				offset += len(node.Data)
 			}
@@ -35,13 +35,43 @@ func getWeightsCount(nodes num.Nodes) (weightsCount int) {
 	return
 }
 
-func Adadelta(ro, eps float64) func(nodes num.Nodes) func() {
+func Adam(beta1, beta2, learningRate, eps float64) func(nodes num.Nodes) func(iteration int) {
+	// beta1 - decay_rate1 или momentum
+	// beta2 - decay_rate2 или adagrad_decay
+	return NewOptimizer(func(nodes num.Nodes) getGradDeltaFn {
+		weightsCount := getWeightsCount(nodes)
+
+		m := num.NewFloat64s(weightsCount)
+		v := num.NewFloat64s(weightsCount)
+
+		pbeta1 := beta1
+		pbeta2 := beta2
+
+		return func(iteration, k int, gradient float64) float64 {
+			m[k] = beta1*m[k] + (1-beta1)*gradient
+			v[k] = beta2*v[k] + (1-beta2)*gradient*gradient
+
+			mHat := m[k] / (1 - pbeta1)
+			vHat := v[k] / (1 - pbeta2)
+
+			pbeta1 *= beta1
+			pbeta2 *= beta2
+
+			//mHat := m[k] / (1 - math.Pow(beta1, float64(iteration)))
+			//vHat := v[k] / (1 - math.Pow(beta2, float64(iteration)))
+
+			return -learningRate * mHat / (math.Sqrt(vHat) + eps)
+		}
+	})
+}
+
+func Adadelta(ro, eps float64) func(nodes num.Nodes) func(iteration int) {
 	return NewOptimizer(func(nodes num.Nodes) getGradDeltaFn {
 		weightsCount := getWeightsCount(nodes)
 		gsum := num.NewFloat64s(weightsCount)
 		xsum := num.NewFloat64s(weightsCount)
 
-		return func(k int, gradient float64) float64 {
+		return func(_, k int, gradient float64) float64 {
 			gsum[k] = ro*gsum[k] + (1-ro)*gradient*gradient
 			value := -math.Sqrt((xsum[k]+eps)/(gsum[k]+eps)) * gradient
 			xsum[k] = ro*xsum[k] + (1-ro)*value*value
@@ -51,28 +81,28 @@ func Adadelta(ro, eps float64) func(nodes num.Nodes) func() {
 	})
 }
 
-func Adagrad(learning, eps float64) func(nodes num.Nodes) func() {
+func Adagrad(learning, eps float64) func(nodes num.Nodes) func(iteration int) {
 	return NewOptimizer(func(nodes num.Nodes) getGradDeltaFn {
 		gsum := num.NewFloat64s(getWeightsCount(nodes))
-		return func(k int, gradient float64) float64 {
+		return func(_, k int, gradient float64) float64 {
 			gsum[k] += gradient * gradient
 			return -learning / math.Sqrt(gsum[k]+eps) * gradient
 		}
 	})
 }
 
-func VanilaSGD(learning float64) func(nodes num.Nodes) func() {
+func VanilaSGD(learning float64) func(nodes num.Nodes) func(iteration int) {
 	return NewOptimizer(func(nodes num.Nodes) getGradDeltaFn {
-		return func(k int, gradient float64) float64 {
+		return func(_, k int, gradient float64) float64 {
 			return -learning * gradient
 		}
 	})
 }
 
-func Nesterov(momentum, learning float64) func(nodes num.Nodes) func() {
+func Nesterov(momentum, learning float64) func(nodes num.Nodes) func(iteration int) {
 	return NewOptimizer(func(nodes num.Nodes) getGradDeltaFn {
 		gsum := num.NewFloat64s(getWeightsCount(nodes))
-		return func(k int, gradient float64) float64 {
+		return func(_, k int, gradient float64) float64 {
 			value := gsum[k]
 			gsum[k] = gsum[k]*momentum + learning*gradient
 			return momentum*value - (1.0+momentum)*gsum[k]
@@ -80,10 +110,10 @@ func Nesterov(momentum, learning float64) func(nodes num.Nodes) func() {
 	})
 }
 
-func Momentum(momentum, learning float64) func(nodes num.Nodes) func() {
+func Momentum(momentum, learning float64) func(nodes num.Nodes) func(iteration int) {
 	return NewOptimizer(func(nodes num.Nodes) getGradDeltaFn {
 		gsum := num.NewFloat64s(getWeightsCount(nodes))
-		return func(k int, gradient float64) float64 {
+		return func(_, k int, gradient float64) float64 {
 			gsum[k] = gsum[k]*momentum - learning*gradient
 			return gsum[k]
 		}

@@ -3,7 +3,7 @@ package num
 func (aData *Data) Transpose() *Data {
 	WH := aData.Dims.W * aData.Dims.H
 
-	output := aData.Copy()
+	output := aData.NewLinkedCopy()
 	output.Dims.W = aData.Dims.H
 	output.Dims.H = aData.Dims.W
 	output.calcData = func() {

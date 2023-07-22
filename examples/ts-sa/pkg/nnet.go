@@ -9,14 +9,20 @@ import (
 )
 
 const (
-	ContextLength = 256
-	MiniBatchSize = 16
+	ContextLength = 64
+	MiniBatchSize = 10
 
-	EmbeddingFeatures = 384
 	HeadSize          = 64
-	HeadsCount        = 6
+	HeadsCount        = 4
+	EmbeddingFeatures = HeadSize * HeadsCount
 	blocksCount       = 6
+	HeadLinearSize    = 4
 )
+
+// blocksCount не так сильно влияют на скорость
+// context 256, batch 10, headSize 64, headCount 4
+// 16 блоков - 15 секунд
+// 1 блок - 2.5 секунды
 
 func CreateNN(
 	alphabetSize int,
@@ -35,13 +41,21 @@ func CreateNN(
 
 	initWeight := &initializer.InitWeightFixed{NormK: 0.02}
 
-	SABlock := func() layer.Layers {
+	layers := layer.Layers{}
+
+	//---Embedding table------------------------------------------------------
+	layers = append(layers,
+		layer.NewEmbedding(embeddingFeatures, alphabetSize, contextLength),
+		// out: [ embeddingFeatures, contextLength, batchSize ]
+	)
+
+	createSABlock := func() layer.Layers {
 		return []layer.Layer{
 			layer.NewResidual(
 				layer.Layers{
 					layer.NewLNorm(),
-					layer.NewSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
-					// out: [ headSize, contextLength, batchSize ]
+					layer.NewMSAMultiHead(embeddingFeatures, headSize, headsCount, initWeight),
+					// out: [ headSize * headsCount, contextLength, batchSize ]
 					layer.NewLinear(embeddingFeatures, initWeight),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 				},
@@ -51,7 +65,7 @@ func CreateNN(
 				layer.Layers{
 					layer.NewLNorm(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
-					layer.NewLinear(4*embeddingFeatures, initWeight),
+					layer.NewLinear(HeadLinearSize*embeddingFeatures, initWeight),
 					layer.NewReLu(),
 					layer.NewLinear(embeddingFeatures, initWeight),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
@@ -59,17 +73,10 @@ func CreateNN(
 			),
 		}
 	}
-	layers := layer.Layers{}
-
-	//---Embedding table------------------------------------------------------
-	layers = append(layers,
-		layer.NewEmbedding(embeddingFeatures, alphabetSize, contextLength, initWeight),
-		// out: [ embeddingFeatures, contextLength, batchSize ]
-	)
 
 	//---SA Blocks-----------------------------------------------
 	for i := 0; i < blocksCount; i++ {
-		layers = append(layers, SABlock()...)
+		layers = append(layers, createSABlock()...)
 	}
 	// out: [ embeddingFeatures, contextLength, batchSize ]
 
@@ -86,6 +93,5 @@ func CreateNN(
 		// out: [ alphabetSize, contextLength * batchSize ]
 	)
 
-	//return model.NewSequential(inDims, layers, optimizer.VanilaSGD(0.0003))
-	return model.NewSequential(inDims, layers, optimizer.Adadelta(optimizer.Ro, optimizer.Eps))
+	return model.NewSequential(inDims, layers, optimizer.Adam(0.9, 0.98, 3e-4, 0.000000001))
 }

@@ -34,21 +34,9 @@ func (aData *Data) GetEmbeddings(tEmbeddings, pEmbeddings *Data) *Data {
 		}
 	}
 	output.calcGrad = func() {
-		//p := 0
 		for i, s := range aData.Data.ToInt() {
 			tGrads := tEmbeddings.Grad[s*featuresCount : (s+1)*featuresCount]
 			tGrads.Add(output.Grad[i*featuresCount : (i+1)*featuresCount])
-			//pGrads := pEmbeddings.Grad[p*featuresCount : (p+1)*featuresCount]
-
-			//for j, g := range output.Grad[i*featuresCount : (i+1)*featuresCount] {
-			//	tGrads[j] += g
-			//pGrads[j] += g
-			//}
-
-			//p++
-			//if p == contextSize {
-			//	p = 0
-			//}
 		}
 	}
 	return output

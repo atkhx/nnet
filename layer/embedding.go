@@ -1,28 +1,46 @@
 package layer
 
 import (
-	"github.com/atkhx/nnet/initializer"
+	"math"
+
 	"github.com/atkhx/nnet/num"
 )
+
+func NewTokenEmbeddingTable(featuresCount, alphabetSize int) *num.Data {
+	return num.NewRandNorm(num.NewDims(featuresCount, alphabetSize))
+}
+
+func NewPositionEmbeddingTable(featuresCount, contextSize int) *num.Data {
+	// https://youtu.be/XowwKOAWYoQ?t=582
+	result := num.New(num.NewDims(featuresCount, contextSize))
+	k := 0
+	for j := 0; j < contextSize; j++ {
+		for i := 0; i < featuresCount; i++ {
+			if i%2 == 0 {
+				result.Data[k] = math.Sin(float64(k) / math.Pow(10_000, float64(i+1)/float64(featuresCount)))
+			} else {
+				result.Data[k] = math.Cos(float64(k) / math.Pow(10_000, float64(i+1)/float64(featuresCount)))
+			}
+			k++
+		}
+	}
+	return result
+}
 
 func NewEmbedding(
 	featuresCount int,
 	alphabetSize int,
 	contextSize int,
-	initWeights initializer.Initializer,
 ) *Embedding {
 	return &Embedding{
-		ValEmbedding: num.NewRandNorm(num.NewDims(featuresCount, alphabetSize)),
-		PosEmbedding: num.NewRandNorm(num.NewDims(featuresCount, contextSize)),
-		initWeights:  initWeights,
+		ValEmbedding: NewTokenEmbeddingTable(featuresCount, alphabetSize),
+		posEmbedding: NewPositionEmbeddingTable(featuresCount, contextSize),
 	}
 }
 
 type Embedding struct {
-	initWeights initializer.Initializer
-
 	ValEmbedding *num.Data
-	PosEmbedding *num.Data
+	posEmbedding *num.Data
 
 	inputsObj *num.Data
 	outputObj *num.Data
@@ -30,16 +48,9 @@ type Embedding struct {
 }
 
 func (l *Embedding) Compile(inputs *num.Data) *num.Data {
-	// todo make positional embedding calculated by formula and not trainable
-	// https://youtu.be/XowwKOAWYoQ?t=582
-	normK := l.initWeights.GetNormK(len(inputs.Data))
-
-	l.ValEmbedding.MulScalar(normK)
-	l.PosEmbedding.MulScalar(normK)
-
 	l.inputsObj = inputs
-	l.outputObj = inputs.GetEmbeddings(l.ValEmbedding, l.PosEmbedding)
-	l.forUpdate = num.Nodes{l.ValEmbedding, l.PosEmbedding}
+	l.outputObj = inputs.GetEmbeddings(l.ValEmbedding, l.posEmbedding)
+	l.forUpdate = num.Nodes{l.ValEmbedding}
 
 	return l.outputObj
 }

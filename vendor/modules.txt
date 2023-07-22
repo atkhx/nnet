@@ -4,10 +4,16 @@ github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
+# github.com/dustin/go-wikiparse v0.0.0-20230222053353-0bffc9007375
+## explicit; go 1.16
+github.com/dustin/go-wikiparse
 # github.com/golang/protobuf v1.5.3
 ## explicit; go 1.9
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/m-m-f/gowiki v0.0.0-20180103212159-93aa7513fb32
+## explicit
+github.com/m-m-f/gowiki
 # github.com/matttproud/golang_protobuf_extensions v1.0.4
 ## explicit; go 1.9
 github.com/matttproud/golang_protobuf_extensions/pbutil

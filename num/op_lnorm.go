@@ -5,8 +5,9 @@ func (aData *Data) LNorm(gamma, beta *Data) *Data {
 	// https://youtu.be/XowwKOAWYoQ?t=1163
 
 	mean := aData.MeanByRows()
-	xSub := aData.Sub(mean)
+
 	vars := aData.VarianceByRows(mean)
+	xSub := aData.Sub(mean)
 
 	sqrt := vars.Sqrt()
 	sqrtEps := sqrt.AddScalar(0.000001)

@@ -2,7 +2,11 @@ module github.com/atkhx/nnet
 
 go 1.20
 
-require github.com/prometheus/client_golang v1.15.1
+require (
+	github.com/dustin/go-wikiparse v0.0.0-20230222053353-0bffc9007375
+	github.com/m-m-f/gowiki v0.0.0-20180103212159-93aa7513fb32
+	github.com/prometheus/client_golang v1.15.1
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

@@ -8,7 +8,7 @@ func (aData *Data) Softmax() *Data {
 
 	wg := sync.WaitGroup{}
 
-	output := aData.Copy()
+	output := aData.NewLinkedCopy()
 	output.calcData = func() {
 		output.Data.CopyFrom(aData.Data)
 
@@ -29,21 +29,17 @@ func (aData *Data) Softmax() *Data {
 			go func(b int) {
 				oGrad := output.Grad[b : b+chunkSize]
 				iGrad := aData.Grad[b : b+chunkSize]
-
 				softmax := output.Data[b : b+chunkSize]
 
+				s := 0.0
 				for i, softmaxI := range softmax {
-					gI := oGrad[i] * softmaxI
-					if gI == 0 {
-						continue
-					}
-					for j, softmaxJ := range softmax {
-						if i == j {
-							iGrad[j] += gI * (1 - softmaxI)
-						} else {
-							iGrad[j] -= gI * softmaxJ
-						}
-					}
+					g := softmaxI * oGrad[i]
+					s += g
+					iGrad[i] += g
+				}
+
+				for i, softmaxI := range softmax {
+					iGrad[i] -= softmaxI * s
 				}
 
 				wg.Done()

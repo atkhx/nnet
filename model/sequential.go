@@ -11,7 +11,7 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-type Optimizer func(nodes num.Nodes) func()
+type Optimizer func(nodes num.Nodes) func(iteration int)
 
 func NewSequential(inDims num.Dims, layers layer.Layers, optimizer Optimizer) *Sequential {
 	return &Sequential{
@@ -29,7 +29,7 @@ type Sequential struct {
 	update num.Nodes
 
 	optimizer  Optimizer
-	updateFunc func()
+	updateFunc func(iteration int)
 }
 
 func (s *Sequential) Compile() *num.Data {
@@ -57,8 +57,8 @@ func (s *Sequential) GetTrainableParamsCount() int {
 	return result
 }
 
-func (s *Sequential) Update() {
-	s.updateFunc()
+func (s *Sequential) Update(iteration int) {
+	s.updateFunc(iteration)
 }
 
 func (s *Sequential) LoadFromFile(filename string) error {
