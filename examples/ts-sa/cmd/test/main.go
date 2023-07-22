@@ -31,7 +31,7 @@ func main() {
 	batchSize := 1
 
 	namesDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
-	namesDataset.ParseAlphabet(dataset.RuWiki1)
+	namesDataset.ParseAlphabet()
 
 	seqModel := pkg.CreateNN(
 		namesDataset.GetAlphabetSize(),
@@ -44,64 +44,68 @@ func main() {
 	}
 
 	pipeline := num.NewPipeline(output)
-	inputsFloat := make(num.Float64s, pkg.ContextLength)
 
-	//batchInputs, _ := namesDataset.ReadRandomSampleBatch()
-	//copy(inputsFloat, batchInputs)
+	inp := namesDataset.EncodeString(`Привет! `)
+	inputBytes := namesDataset.Decode(inp...)
+
+	fmt.Print(namesDataset.Decode(inp...))
 
 	for j := 0; j < 10000; j++ {
-		//inputsFloat := namesDataset.EncodeToFloats(inputTokens...)
+		inputsFloat := namesDataset.EncodeToFloats(inputBytes...)
 
 		copy(seqModel.GetInput().Data, inputsFloat)
 		pipeline.Forward()
 
-		output := output.Data[(pkg.ContextLength-1)*namesDataset.GetAlphabetSize():]
+		pos := len(inputBytes) - 1
+		if pos < 0 {
+			pos = 0
+		}
 
+		output := output.Data[pos*namesDataset.GetAlphabetSize() : (pos+1)*namesDataset.GetAlphabetSize()]
 		//output.Softmax()
-		//f, _ := output.MaxKeyVal()
 		//output.CumulativeSum()
 		//f := output.Multinomial()
 
-		f := sampleWithTemperature(output, 1)
-		b := namesDataset.Decode(f)[0]
+		f := sampleWithTemperature(output, 0.7)
+		b := namesDataset.Decode(f)
 
-		inputsFloat = append(inputsFloat, float64(f))
-		inputsFloat = inputsFloat[1:]
+		inputBytes = append(inputBytes, b...)
+		if len(inputBytes) > pkg.ContextLength {
+			l := len(inputBytes)
+			inputBytes = inputBytes[l-pkg.ContextLength:]
+		}
 
-		//for _, token := range b {
-		fmt.Print(string(b))
-		//}
+		fmt.Print(b)
 	}
 
-	//for _, t := range namesDataset.DecodeFloats(inputsFloat...) {
-	//	fmt.Print(t)
-	//}
-	//
 	//fmt.Println()
 	//fmt.Println("---")
 	//
-	//res := beamSearch(func(ints []int) []float64 {
+	//results := beamSearch(func(ints []int) []float64 {
 	//	floats := make([]float64, len(ints))
 	//	for i, v := range ints {
 	//		floats[i] = float64(v)
 	//	}
 	//
-	//	inp := make([]float64, pkg.ContextLength)
-	//	//copy(inp, floats)
-	//	inp = append(inp, floats...)
-	//	inp = inp[len(inp)-pkg.ContextLength:]
+	//	if len(floats) > pkg.ContextLength {
+	//		floats = floats[len(floats)-pkg.ContextLength:]
+	//	}
 	//
-	//	//seqModel.GetInput().Data = inp
+	//	pos := len(floats) - 1
+	//	if pos < 0 {
+	//		pos = 0
+	//	}
+	//
 	//	seqModel.GetInput().Data.Zero()
-	//	copy(seqModel.GetInput().Data, inp)
-	//	//fmt.Println(seqModel.GetInput().Data)
+	//	copy(seqModel.GetInput().Data, floats)
 	//	pipeline.Forward()
 	//
-	//	return output.Data[(pkg.ContextLength-1)*namesDataset.GetAlphabetSize():].NewLinkedCopy()
-	//}, inputsFloat.ToInt(), 1, 10)
+	//	return output.Data[pos*namesDataset.GetAlphabetSize() : (pos+1)*namesDataset.GetAlphabetSize()].Copy()
+	//}, namesDataset.Encode(inputBytes...), 10, 50)
 	//
-	//for _, t := range namesDataset.Decode(res...) {
-	//	fmt.Print(t)
+	//for _, result := range results {
+	//	fmt.Println(namesDataset.Decode(result...))
+	//	fmt.Println()
 	//}
 
 	fmt.Println()
@@ -157,26 +161,41 @@ type BeamSearchNode struct {
 	Score    float64 // Оценка для последовательности
 }
 
-func beamSearch(predict func([]int) []float64, input []int, beamSize int, maxSteps int) []int {
+func beamSearch(predict func([]int) []float64, input []int, beamSize int, maxSteps int) [][]int {
 	// Инициализация луча
-	beam := make([]*BeamSearchNode, 1)
-	beam[0] = &BeamSearchNode{
-		Sequence: input,
-		Score:    0.0,
+	beams := []*BeamSearchNode{
+		{
+			Sequence: input,
+			Score:    0.0,
+		},
 	}
 
-	// Пошаговый процесс beam search
+	// Пошаговый процесс beams search
 	for step := 0; step < maxSteps; step++ {
-		candidates := make([]*BeamSearchNode, 0)
+		var candidates []*BeamSearchNode
 
 		// Расширение текущих последовательностей
-		for _, node := range beam {
+		for _, node := range beams {
 			// Получение распределения вероятностей для следующего токена от модели
 			logits := predict(node.Sequence)
 			probs := softmax(logits)
 
+			maxProbs := make([]float64, len(probs))
+			copy(maxProbs, probs)
+			sort.Slice(maxProbs, func(i, j int) bool {
+				return maxProbs[i] > maxProbs[j]
+			})
+
+			maxProbs = maxProbs[:10]
+
+			minMaxProb := maxProbs[len(maxProbs)-1]
+
 			// Сэмплирование следующих токенов
 			for token, prob := range probs {
+				if prob < minMaxProb {
+					continue
+				}
+
 				candidate := &BeamSearchNode{
 					Sequence: append(node.Sequence, token),
 					Score:    node.Score + math.Log(prob),
@@ -190,12 +209,20 @@ func beamSearch(predict func([]int) []float64, input []int, beamSize int, maxSte
 			return candidates[i].Score > candidates[j].Score
 		})
 
+		//for _, candidate := range candidates {
+		//	fmt.Println(candidate.Sequence)
+		//}
 		// Выбор лучших k кандидатов
-		beam = candidates[:beamSize]
+		beams = candidates[:beamSize]
 	}
 
-	// Возвращение последовательности с наивысшей оценкой
-	bestSequence := beam[0].Sequence
+	result := [][]int{}
+	for _, beam := range beams {
+		result = append(result, beam.Sequence)
+	}
+	return result
 
-	return bestSequence
+	// Возвращение последовательности с наивысшей оценкой
+	//bestSequence := beams[0].Sequence
+	//return bestSequence
 }

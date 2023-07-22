@@ -28,7 +28,8 @@ func main() {
 	batchSize := 1
 
 	namesDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
-	namesDataset.ParseAlphabet(dataset.RuWiki1)
+	namesDataset.ParseAlphabet()
+	//namesDataset.ParseTokens()
 
 	seqModel := pkg.CreateNN(
 		namesDataset.GetAlphabetSize(),
@@ -42,8 +43,7 @@ func main() {
 
 	pipeline := num.NewPipeline(output)
 
-	//inp, _ := namesDataset.ReadRandomSample()
-	inp := namesDataset.EncodeString("Привет!") // num.Float64s{1}
+	inp := namesDataset.EncodeString("")
 	inputBytes := namesDataset.Decode(inp...)
 
 	fmt.Print(namesDataset.Decode(inp...))
@@ -55,6 +55,9 @@ func main() {
 		pipeline.Forward()
 
 		pos := len(inputBytes) - 1
+		if pos < 0 {
+			pos = 0
+		}
 
 		output := output.Data[pos*namesDataset.GetAlphabetSize() : (pos+1)*namesDataset.GetAlphabetSize()]
 		output.Softmax()

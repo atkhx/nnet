@@ -9,5 +9,7 @@
 - implement boilerplate for transformers: tokenizer (internal / external implementation), dataset, dataset loaders
 - implement transformer example with UI tool in nnet-app
 - research hardware optimization ways
+- make optional bias in linear layer
+
 
 

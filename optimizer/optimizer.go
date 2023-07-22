@@ -44,21 +44,46 @@ func Adam(beta1, beta2, learningRate, eps float64) func(nodes num.Nodes) func(it
 		m := num.NewFloat64s(weightsCount)
 		v := num.NewFloat64s(weightsCount)
 
-		pbeta1 := beta1
-		pbeta2 := beta2
+		beta1pow := num.NewFloat64s(5000)
+		beta2pow := num.NewFloat64s(5000)
 
+		for i := 0; i < 5000; i++ {
+			if i == 0 {
+				beta1pow[i] = beta1
+				beta2pow[i] = beta2
+			} else {
+				beta1pow[i] = beta1pow[i-1] * beta1
+				beta2pow[i] = beta2pow[i-1] * beta2
+			}
+		}
+
+		for i := 0; i < 5000; i++ {
+			beta1pow[i] = 1 / (1 - beta1pow[i])
+			beta2pow[i] = 1 / (1 - beta2pow[i])
+		}
+
+		//pbeta1 := beta1
+		//pbeta2 := beta2
+
+		// m = vector add (
 		return func(iteration, k int, gradient float64) float64 {
 			m[k] = beta1*m[k] + (1-beta1)*gradient
 			v[k] = beta2*v[k] + (1-beta2)*gradient*gradient
 
-			mHat := m[k] / (1 - pbeta1)
-			vHat := v[k] / (1 - pbeta2)
+			//mHat := m[k] / (1 - pbeta1)
+			//vHat := v[k] / (1 - pbeta2)
 
-			pbeta1 *= beta1
-			pbeta2 *= beta2
+			//pbeta1 *= beta1
+			//pbeta2 *= beta2
 
 			//mHat := m[k] / (1 - math.Pow(beta1, float64(iteration)))
 			//vHat := v[k] / (1 - math.Pow(beta2, float64(iteration)))
+
+			//mHat := m[k] / (1 - beta1pow[iteration])
+			//vHat := v[k] / (1 - beta2pow[iteration])
+
+			mHat := m[k] * beta1pow[iteration]
+			vHat := v[k] * beta2pow[iteration]
 
 			return -learningRate * mHat / (math.Sqrt(vHat) + eps)
 		}

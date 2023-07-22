@@ -62,7 +62,7 @@ func (d *Dataset) GetMiniBatchSize() int {
 var wiki = "/Users/andrey.tikhonov/go/src/github.com/atkhx/nnet/examples/ts-sa/dataset/ruwiki1.txt"
 var wikiAlphabet = "/Users/andrey.tikhonov/go/src/github.com/atkhx/nnet/examples/ts-sa/dataset/ruwiki1.alphabet"
 
-func (d *Dataset) ParseAlphabet(_ []rune) {
+func (d *Dataset) ParseAlphabet() {
 	f2, err := os.OpenFile(wikiAlphabet, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		log.Fatalln(err)
@@ -89,15 +89,18 @@ func (d *Dataset) ParseAlphabet(_ []rune) {
 		p++
 	}
 
+	d.alphabetSize = len(d.tokens)
+}
+
+func (d *Dataset) ParseTokens() {
 	f, err := os.OpenFile(wiki, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer f.Close()
 
-	b := make([]byte, 1000_000)
-	//n, err := f.ReadAt(b, 6000_000)
-	n, err := f.ReadAt(b, 5000_000)
+	b := make([]byte, 5000_000)
+	n, err := f.ReadAt(b, 7000_000)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -106,9 +109,6 @@ func (d *Dataset) ParseAlphabet(_ []rune) {
 
 	rawBytes := []rune(string(b))
 	d.rawRunes = rawBytes
-
-	d.alphabetSize = len(d.tokens)
-	fmt.Println("d.alphabetSize", d.alphabetSize)
 }
 
 func (d *Dataset) EncodeString(value string) []int {
@@ -174,38 +174,6 @@ func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets num.Float
 	for b := 0; b < d.miniBatchSize; b++ {
 		pos := rand.Intn(len(d.rawRunes) - (d.contextSize * tokenLength) - 1)
 
-		chunk := d.rawRunes[pos : (pos+1)+(inputSampleSize*tokenLength)]
-		for i := 0; i < d.contextSize; i++ {
-			tokens[i] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
-		}
-
-		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleInputs, d.EncodeToFloats(tokens...))
-
-		for i := 1; i < d.contextSize+1; i++ {
-			tokens[i-1] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
-		}
-
-		sampleTargets := sampleTargets[b*inputSampleSize : (b+1)*inputSampleSize]
-		copy(sampleTargets, d.EncodeToFloats(tokens...))
-	}
-
-	return sampleInputs, sampleTargets
-}
-
-func (d *Dataset) ReadRandomSampleBatch2() (sampleInputs, sampleTargets num.Float64s) {
-	inputSampleSize := d.contextSize
-
-	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
-	sampleTargets = make(num.Float64s, inputSampleSize*d.miniBatchSize)
-
-	tokens := make([]Token, d.contextSize)
-	tokenLength := 1
-
-	batchPos := rand.Intn(len(d.rawRunes) - (d.miniBatchSize * d.contextSize * tokenLength) - 1)
-
-	for b := 0; b < d.miniBatchSize; b++ {
-		pos := batchPos + b*d.contextSize*tokenLength
 		chunk := d.rawRunes[pos : (pos+1)+(inputSampleSize*tokenLength)]
 		for i := 0; i < d.contextSize; i++ {
 			tokens[i] = Token(chunk[i*tokenLength : (i+1)*tokenLength])

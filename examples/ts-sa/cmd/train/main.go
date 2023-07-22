@@ -46,7 +46,8 @@ func main() {
 	}()
 
 	namesDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
-	namesDataset.ParseAlphabet(dataset.RuWiki1)
+	namesDataset.ParseAlphabet()
+	namesDataset.ParseTokens()
 
 	seqModel := pkg.CreateNN(namesDataset.GetAlphabetSize(), pkg.MiniBatchSize)
 
