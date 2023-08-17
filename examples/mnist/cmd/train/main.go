@@ -95,7 +95,7 @@ func main() {
 			pipeline.Backward()
 
 			lossAvg += lossMean.Data[0]
-			seqModel.Update()
+			seqModel.Update(index)
 
 			if index > 0 && index%statChunkSize == 0 {
 				lossAvg /= float64(statChunkSize)

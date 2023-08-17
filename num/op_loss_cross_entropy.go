@@ -2,9 +2,10 @@ package num
 
 import (
 	"math"
-	"runtime"
 	"sync"
 )
+
+const Eps = 0.000001
 
 func (aData *Data) CrossEntropyPos(targets *Data) *Data {
 	if targets.Dims.W != 1 {
@@ -26,41 +27,42 @@ func (aData *Data) CrossEntropyPos(targets *Data) *Data {
 	softmax := aData.Data.CopyZero()
 
 	wg := sync.WaitGroup{}
-	cn := make(chan struct{}, runtime.GOMAXPROCS(0))
+	//cn := make(chan struct{}, runtime.GOMAXPROCS(0))
 
 	output := New(oDims, aData)
 	output.calcData = func() {
 		softmax.CopyFrom(aData.Data)
 		wg.Add(len(softmax) / chunkSize)
 		for i := 0; i < len(softmax); i += chunkSize {
-			cn <- struct{}{}
+			//cn <- struct{}{}
 			go func(i int) {
 				softmax[i : i+chunkSize].Softmax()
 
-				<-cn
+				//<-cn
 				wg.Done()
 			}(i)
 		}
 		wg.Wait()
 
 		for rowIdx, correctIdx := range targets.Data {
-			for i := 0; i < chunkSize; i++ {
-				if i == int(correctIdx) {
-					output.Data[rowIdx] = -math.Log(softmax[rowIdx*chunkSize+i])
-				}
-			}
+			output.Data[rowIdx] = -math.Log(softmax[rowIdx*chunkSize+int(correctIdx)])
 		}
 	}
 
+	oneEps := 1.  // 1 - Eps
+	zeroEps := 0. // Eps / float64(chunkSize-1)
+
 	output.calcGrad = func() {
 		for rowIdx, correctIdx := range targets.Data {
-			for i := 0; i < chunkSize; i++ {
-				j := rowIdx*chunkSize + i
-				t := 0.0
+			rowIdxChunkSize := rowIdx * chunkSize
+			aGrad := aData.Grad[rowIdxChunkSize : rowIdxChunkSize+chunkSize]
+			softmax := softmax[rowIdxChunkSize : rowIdxChunkSize+chunkSize]
+			for i, softmaxJ := range softmax {
 				if i == int(correctIdx) {
-					t = 1.0
+					aGrad[i] += output.Grad[rowIdx] * (softmaxJ - oneEps)
+				} else {
+					aGrad[i] += output.Grad[rowIdx] * (softmaxJ - zeroEps)
 				}
-				aData.Grad[j] += output.Grad[0] * (softmax[j] - t)
 			}
 		}
 	}

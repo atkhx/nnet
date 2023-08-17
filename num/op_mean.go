@@ -7,10 +7,7 @@ func (aData *Data) Mean() *Data {
 		output.Data[0] = aData.Data.Mean()
 	}
 	output.calcGrad = func() {
-		g := output.Grad[0] * k
-		for i := range aData.Data {
-			aData.Grad[i] += g
-		}
+		aData.Grad.AddScalar(output.Grad[0] * k)
 	}
 	return output
 }

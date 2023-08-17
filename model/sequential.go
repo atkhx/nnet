@@ -37,7 +37,10 @@ func (s *Sequential) Compile() *num.Data {
 	s.output = s.Layers.Compile(s.inputs)
 
 	s.update = append(s.update, s.Layers.ForUpdate()...)
-	s.updateFunc = s.optimizer(s.update)
+	if s.optimizer != nil {
+		s.updateFunc = s.optimizer(s.update)
+	}
+
 	return s.output
 }
 

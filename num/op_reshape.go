@@ -6,12 +6,13 @@ func (aData *Data) Reshape(dims Dims) *Data {
 	}
 
 	output := &Data{
-		Data:     aData.Data,
-		Grad:     aData.Grad,
-		Dims:     dims,
-		srcNodes: Nodes{aData},
-		calcData: nil,
-		calcGrad: nil,
+		Data:          aData.Data,
+		Grad:          aData.Grad,
+		Dims:          dims,
+		srcNodes:      Nodes{aData},
+		calcData:      nil,
+		calcGrad:      nil,
+		skipResetGrad: true,
 	}
 	// output := New(dims, aData)
 	output.calcData = func() {

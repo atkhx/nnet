@@ -1,30 +1,15 @@
 package layer
 
 import (
-	"math"
-
 	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
-
-type msaHeadWeights struct {
-	KeyWeights *num.Data
-	QryWeights *num.Data
-	ValWeights *num.Data
-}
-
-func NewMSAHead(headSize, featuresCount int, weightK float64) msaHeadWeights {
-	return msaHeadWeights{
-		KeyWeights: num.NewRandNormWeighted(num.NewDims(headSize, featuresCount, 1), weightK),
-		QryWeights: num.NewRandNormWeighted(num.NewDims(headSize, featuresCount, 1), weightK),
-		ValWeights: num.NewRandNormWeighted(num.NewDims(headSize, featuresCount, 1), weightK),
-	}
-}
 
 func NewMSAMultiHead(
 	featuresCount int,
 	headSize int,
 	headsCount int,
+	dropoutProb float64,
 	initWeights initializer.Initializer,
 ) *MSAMultiHead {
 	return &MSAMultiHead{
@@ -32,6 +17,7 @@ func NewMSAMultiHead(
 		headSize:      headSize,
 		headsCount:    headsCount,
 		initWeights:   initWeights,
+		DropoutProb:   dropoutProb,
 	}
 }
 
@@ -42,7 +28,9 @@ type MSAMultiHead struct {
 	headSize      int
 	headsCount    int
 
-	Heads []msaHeadWeights
+	HeadWeights []num.SAHeadWeights
+	headObjects []*num.Data
+	DropoutProb float64
 
 	inputsObj *num.Data
 	concatObj *num.Data
@@ -50,34 +38,29 @@ type MSAMultiHead struct {
 }
 
 func (l *MSAMultiHead) Compile(inputs *num.Data) *num.Data {
-	l.Heads = make([]msaHeadWeights, l.headsCount)
+	l.HeadWeights = make([]num.SAHeadWeights, 0, l.headsCount)
+	l.headObjects = make([]*num.Data, 0, l.headsCount)
 
 	weightK := l.initWeights.GetNormK(len(inputs.Data))
-	outputObjs := make([]*num.Data, 0, l.headsCount)
 
-	for i := range l.Heads {
-		l.Heads[i] = NewMSAHead(l.headSize, l.featuresCount, weightK)
-
-		outputObjs = append(outputObjs, inputs.MaskedSelfAttention(
-			math.Pow(float64(l.headSize), -0.5),
-			l.Heads[i].KeyWeights,
-			l.Heads[i].QryWeights,
-			l.Heads[i].ValWeights,
-		))
+	for i := 0; i < l.headsCount; i++ {
+		l.HeadWeights = append(l.HeadWeights, num.NewSAHeadWeights(l.headSize, l.featuresCount, weightK))
 
 		l.forUpdate = append(l.forUpdate,
-			l.Heads[i].KeyWeights,
-			l.Heads[i].QryWeights,
-			l.Heads[i].ValWeights,
+			l.HeadWeights[i].KeyWeights,
+			l.HeadWeights[i].QryWeights,
+			l.HeadWeights[i].ValWeights,
 		)
+
+		l.headObjects = append(l.headObjects, inputs.SAMasked(l.DropoutProb, l.HeadWeights[i]))
 	}
 
 	l.inputsObj = inputs
 
 	if l.headsCount == 1 {
-		l.concatObj = outputObjs[0]
+		l.concatObj = l.headObjects[0]
 	} else {
-		l.concatObj = outputObjs[0].ConcatRows(outputObjs[1:]...)
+		l.concatObj = l.headObjects[0].ConcatRows(l.headObjects[1:]...)
 	}
 
 	return l.concatObj

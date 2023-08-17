@@ -27,13 +27,15 @@ func (aData *Data) ConcatRows(bData ...*Data) *Data {
 		bOffset := 0
 
 		for i := 0; i < output.Dims.D*output.Dims.H; i++ {
+			output.Data[oOffset : oOffset+aData.Dims.W].CopyFrom(aData.Data[iOffset : iOffset+aData.Dims.W])
 			// copy aData data
-			copy(output.Data[oOffset:oOffset+aData.Dims.W], aData.Data[iOffset:iOffset+aData.Dims.W])
+			//copy(output.Data[oOffset:oOffset+aData.Dims.W], aData.Data[iOffset:iOffset+aData.Dims.W])
 			oOffset += aData.Dims.W
 
 			for _, b := range bData {
 				// copy bData data
-				copy(output.Data[oOffset:oOffset+b.Dims.W], b.Data[bOffset:bOffset+b.Dims.W])
+				output.Data[oOffset : oOffset+b.Dims.W].CopyFrom(b.Data[bOffset : bOffset+b.Dims.W])
+				//copy(output.Data[oOffset:oOffset+b.Dims.W], b.Data[bOffset:bOffset+b.Dims.W])
 				oOffset += b.Dims.W
 			}
 

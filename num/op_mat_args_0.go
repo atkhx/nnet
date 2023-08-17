@@ -1,13 +1,14 @@
 package num
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
 func (aData *Data) Exp() (outMatrix *Data) {
 	output := aData.NewLinkedCopy()
 	output.calcData = func() {
-		for i, x := range aData.Data {
-			output.Data[i] = math.Exp(x)
-		}
+		output.Data.Exp()
 	}
 	output.calcGrad = func() {
 		for i, y := range output.Data {
@@ -50,9 +51,10 @@ func (aData *Data) Pow(n float64) *Data {
 func (aData *Data) Sqrt() (outMatrix *Data) {
 	output := aData.NewLinkedCopy()
 	output.calcData = func() {
-		for i, x := range aData.Data {
-			output.Data[i] = math.Sqrt(x)
-		}
+		aData.Data.SqrtTo(output.Data)
+		//for i, x := range aData.Data {
+		//	output.Data[i] = math.Sqrt(x)
+		//}
 	}
 	output.calcGrad = func() {
 		for i, y := range output.Data {
@@ -109,6 +111,42 @@ func (aData *Data) Relu() *Data {
 				aData.Grad[i] += output.Grad[i]
 			}
 		}
+	}
+	return output
+}
+
+func (aData *Data) Dropout(prob float64) *Data {
+	output := &Data{
+		Data:          aData.Data,
+		Grad:          aData.Grad,
+		Dims:          aData.Dims,
+		srcNodes:      Nodes{aData},
+		calcData:      nil,
+		calcGrad:      nil,
+		skipResetGrad: true,
+	}
+
+	mask10 := aData.Data.CopyZero()
+	maskbt := make([]byte, len(mask10))
+	maxval := byte(255. * prob)
+
+	output.calcData = func() {
+		if _, err := rand.Read(maskbt); err != nil {
+			panic("rand.Read: %w" + err.Error())
+		}
+
+		mask10.Ones()
+		for i, b := range maskbt {
+			if b < maxval {
+				mask10[i] = 0
+			}
+		}
+		aData.Data.Mul(mask10)
+		//aData.Data.MulTo(output.Data, mask10)
+	}
+	output.calcGrad = func() {
+		aData.Grad.Mul(mask10)
+		//output.Grad.MulTo(aData.Grad, mask10)
 	}
 	return output
 }

@@ -6,9 +6,14 @@ type Data struct {
 	Grad Float64s `json:"-"`
 	Dims Dims
 
-	srcNodes Nodes
-	calcData func()
-	calcGrad func()
+	srcNodes      Nodes
+	calcData      func()
+	calcGrad      func()
+	skipResetGrad bool
+}
+
+func (aData *Data) SkipResetGrad() {
+	aData.skipResetGrad = true
 }
 
 func New(dims Dims, srcNodes ...*Data) *Data {

@@ -8,7 +8,7 @@ import (
 func NewPipeline(lastNode *Data) (out *Pipeline) {
 	forwardLayers := getForwardNodeLayers(lastNode)
 	backwardLayers := getBackwardNodeLayers(lastNode)
-	resetLayers := getResetGradsNodeLayers(lastNode)
+	resetNodeFuncs := getResetGradsNodeFuncs(lastNode)
 
 	parallel := runtime.GOMAXPROCS(0)
 
@@ -28,28 +28,22 @@ func NewPipeline(lastNode *Data) (out *Pipeline) {
 	return &Pipeline{
 		wg: wg,
 
-		forwardChan:   fChan,
-		forwardLayers: forwardLayers,
-
-		//backwardChan:   bChan,
+		forwardChan:    fChan,
+		forwardLayers:  forwardLayers,
 		backwardLayers: backwardLayers,
-
-		//resetChan:   rChan,
-		resetLayers: resetLayers,
+		resetLayers:    getResetGradsNodeLayers(lastNode),
+		resetGradsFunc: resetNodeFuncs,
 	}
 }
 
 type Pipeline struct {
 	wg *sync.WaitGroup
 
-	forwardChan   chan func()
-	forwardLayers NodeLayers
-
-	//backwardChan   chan *Data
+	forwardChan    chan func()
+	forwardLayers  NodeLayers
 	backwardLayers NodeLayers
-
-	//resetChan   chan *Data
-	resetLayers NodeLayers
+	resetLayers    NodeLayers
+	resetGradsFunc []func()
 }
 
 func (p *Pipeline) Forward() {
@@ -68,25 +62,34 @@ func (p *Pipeline) Forward() {
 }
 
 func (p *Pipeline) Backward() {
-	//p.resetLayers[0][0].Grad.Ones()
-	//for _, nodes := range p.resetLayers[1:] {
-	for i, nodes := range p.resetLayers {
-		//	if len(nodes) == 1 {
-		//		nodes[0].Grad.Zero()
-		//		continue
-		//	}
-
-		p.wg.Add(len(nodes))
-		for _, node := range nodes {
-			if i == 0 {
-				p.forwardChan <- node.Grad.Ones
-			} else {
-				p.forwardChan <- node.Grad.Zero
-			}
-			//p.forwardChan <- node.Grad.Zero
-		}
+	p.wg.Add(len(p.resetGradsFunc))
+	for _, resetFunc := range p.resetGradsFunc {
+		p.forwardChan <- resetFunc
 	}
 	p.wg.Wait()
+
+	////p.resetLayers[0][0].Grad.Ones()
+	////for _, nodes := range p.resetLayers[1:] {
+	//for i, nodes := range p.resetLayers {
+	//	//	if len(nodes) == 1 {
+	//	//		nodes[0].Grad.Zero()
+	//	//		continue
+	//	//	}
+	//
+	//	for _, node := range nodes {
+	//		if node.skipResetGrad {
+	//			continue
+	//		}
+	//		p.wg.Add(1)
+	//		if i == 0 {
+	//			p.forwardChan <- node.Grad.Ones
+	//		} else {
+	//			p.forwardChan <- node.Grad.Zero
+	//		}
+	//		//p.forwardChan <- node.Grad.Zero
+	//	}
+	//}
+	//p.wg.Wait()
 
 	for _, nodes := range p.backwardLayers {
 		if len(nodes) == 1 {

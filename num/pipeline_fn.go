@@ -128,3 +128,19 @@ func getResetGradsNodeLayers(aData *Data) NodeLayers {
 	}
 	return bwdNodes
 }
+
+func getResetGradsNodeFuncs(aData *Data) []func() {
+	nodes := getDistinctNodes(aData)
+	var result []func()
+	for i := len(nodes); i > 0; i-- {
+		if nodes[i-1].skipResetGrad {
+			continue
+		}
+		if i == len(nodes) {
+			result = append(result, nodes[i-1].Grad.Ones)
+		} else {
+			result = append(result, nodes[i-1].Grad.Zero)
+		}
+	}
+	return result
+}

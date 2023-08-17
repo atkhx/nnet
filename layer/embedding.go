@@ -7,12 +7,16 @@ import (
 )
 
 func NewTokenEmbeddingTable(featuresCount, alphabetSize int) *num.Data {
-	return num.NewRandNorm(num.NewDims(featuresCount, alphabetSize))
+	result := num.NewRandNorm(num.NewDims(featuresCount, alphabetSize))
+	result.MulScalar(math.Sqrt(float64(featuresCount)))
+	return result
 }
 
 func NewPositionEmbeddingTable(featuresCount, contextSize int) *num.Data {
 	// https://youtu.be/XowwKOAWYoQ?t=582
 	result := num.New(num.NewDims(featuresCount, contextSize))
+	result.SkipResetGrad()
+
 	k := 0
 	for j := 0; j < contextSize; j++ {
 		for i := 0; i < featuresCount; i++ {
@@ -24,6 +28,7 @@ func NewPositionEmbeddingTable(featuresCount, contextSize int) *num.Data {
 			k++
 		}
 	}
+	result.MulScalar(math.Sqrt(float64(featuresCount)))
 	return result
 }
 

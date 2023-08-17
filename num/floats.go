@@ -5,10 +5,20 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+
+	"github.com/atkhx/nnet/veclib/blas"
+	"github.com/atkhx/nnet/veclib/vdsp"
+	"github.com/atkhx/nnet/veclib/vforce"
 )
 
 func NewFloat64s(size int) Float64s {
 	return make(Float64s, size)
+}
+
+func NewRandFloat64s(size int) Float64s {
+	result := NewFloat64s(size)
+	result.Rand()
+	return result
 }
 
 func NewRandNormFloat64s(size int) Float64s {
@@ -25,6 +35,12 @@ func NewRandNormWeightedFloat64s(size int, w float64) Float64s {
 
 type Float64s []float64
 
+func (f Float64s) Rand() {
+	for i := range f {
+		f[i] = rand.Float64()
+	}
+}
+
 func (f Float64s) RandNorm() {
 	for i := range f {
 		f[i] = rand.NormFloat64()
@@ -38,32 +54,34 @@ func (f Float64s) RandNormWeighted(w float64) {
 }
 
 func (f Float64s) Fill(v float64) {
-	for i := range f {
-		f[i] = v
-	}
+	vdsp.VfillDAll(v, f)
+	//for i := range f {
+	//	f[i] = v
+	//}
 }
 
 func (f Float64s) Ones() {
-	for i := range f {
-		f[i] = 1
-	}
+	vdsp.VfillDAllOnes(f)
+	//vdsp.VfillDAll(1., f)
+	//for i := range f {
+	//	f[i] = 1
+	//}
 }
 
 func (f Float64s) Zero() {
-	for i := range f {
-		f[i] = 0
-	}
+	vdsp.VclrDAll(f)
+	//for i := range f {
+	//	f[i] = 0
+	//}
 }
 
 func (f Float64s) CopyFrom(src Float64s) {
-	//copy(f, src)
-	vectorCopy(src, f)
+	blas.DCopy(len(f), src, 1, f, 1)
 }
 
 func (f Float64s) Copy() Float64s {
 	res := make(Float64s, len(f))
-	//copy(res, f)
-	vectorCopy(f, res)
+	res.CopyFrom(f)
 	return res
 }
 
@@ -72,52 +90,83 @@ func (f Float64s) CopyZero() Float64s {
 }
 
 func (f Float64s) Add(b Float64s) {
-	vectorAddWeighted(b, f, 1)
+	vdsp.VaddD(f, b, f, len(f))
+	//vectorAddWeighted(b, f, 1)
 	//for i, v := range f {
 	//	f[i] = v + b[i]
 	//}
 }
 
 func (f Float64s) Sub(b Float64s) {
-	vectorAddWeighted(b, f, -1)
+	blas.Daxpy(len(f), -1, b, 1, f, 1)
+
+	//veclib.VectorAddWeighted(b, f, -1)
 	//for i, v := range f {
 	//	f[i] = v - b[i]
 	//}
 }
 
 func (f Float64s) Mul(b Float64s) {
-	for i, v := range f {
-		f[i] = v * b[i]
-	}
+	vdsp.VmulD(f, b, f, len(f))
+	//for i, v := range f {
+	//	f[i] = v * b[i]
+	//}
+}
+
+func (f Float64s) MulTo(dst, b Float64s) {
+	vdsp.VmulD(f, b, dst, len(f))
+	//for i, v := range f {
+	//	f[i] = v * b[i]
+	//}
 }
 
 func (f Float64s) AddScalar(b float64) {
-	for i := range f {
-		f[i] += b
-	}
+	vdsp.VsaddD(f, 1, f, 1, b, len(f))
+	//for i := range f {
+	//	f[i] += b
+	//}
 }
 
 func (f Float64s) AddWeighted(b Float64s, w float64) {
-	vectorAddWeighted(b, f, w)
+	blas.Daxpy(len(f), w, b, 1, f, 1)
 	//for i, v := range b {
 	//	f[i] += v * w
 	//}
 }
 
 func (f Float64s) MulScalar(b float64) {
-	cblas_dscal(len(f), b, f, 1)
+	blas.Dscal(len(f), b, f, 1)
 	//for i := range f {
 	//	f[i] *= b
 	//}
 }
 
-func (f Float64s) Max() (max float64) {
-	for i, v := range f {
-		if i == 0 || max < v {
-			max = v
-		}
-	}
-	return
+func (f Float64s) Max() float64 {
+	return vdsp.MaxvD(f, 1, len(f))
+	//
+	//max = f[0]
+	//for _, v := range f {
+	//	if max < v {
+	//		max = v
+	//	}
+	//}
+	//return
+}
+
+func (f Float64s) Pow2() {
+	vdsp.VmulD(f, f, f, len(f))
+	//vforce.VvsqrtD(f, f, len(f))
+	//for i, v := range f {
+	//	f[i] *= v
+	//}
+}
+
+func (f Float64s) Sqrt() {
+	vforce.VvsqrtD(f, f, len(f))
+}
+
+func (f Float64s) SqrtTo(dst Float64s) {
+	vforce.VvsqrtD(f, dst, len(f))
 }
 
 func (f Float64s) MaxKeyVal() (maxI int, maxV float64) {
@@ -130,9 +179,21 @@ func (f Float64s) MaxKeyVal() (maxI int, maxV float64) {
 	return
 }
 
-func (f Float64s) Min() (min float64) {
+func (f Float64s) MaxIndex() (maxIndex int) {
+	var max = f[0]
 	for i, v := range f {
-		if i == 0 || min > v {
+		if max < v {
+			max = v
+			maxIndex = i
+		}
+	}
+	return
+}
+
+func (f Float64s) Min() (min float64) {
+	min = f[0]
+	for _, v := range f {
+		if min > v {
 			min = v
 		}
 	}
@@ -140,9 +201,10 @@ func (f Float64s) Min() (min float64) {
 }
 
 func (f Float64s) Exp() {
-	for i, v := range f {
-		f[i] = math.Exp(v)
-	}
+	vforce.VvexpD(f, f, len(f))
+	//for i, v := range f {
+	//	f[i] = math.Exp(v)
+	//}
 }
 
 func (f Float64s) Mean() (sum float64) {
@@ -163,70 +225,22 @@ func (f Float64s) Std() float64 {
 }
 
 func (f Float64s) Sum() (sum float64) {
-	for _, v := range f {
-		sum += v
-	}
-	return
+	return vdsp.SveD(f, 1, len(f))
+	//for _, v := range f {
+	//	sum += v
+	//}
+	//return
 }
 
 func (f Float64s) Softmax() {
-	var max float64 = f[0]
-	var sum float64
-
-	for _, v := range f {
-		if max < v {
-			max = v
-		}
-	}
-
-	for i, v := range f {
-		f[i] = math.Exp(v - max)
-		sum += f[i]
-	}
-
-	for i := range f {
-		f[i] /= sum
-	}
-}
-
-func (f Float64s) SoftmaxK(k float64) {
-	var max float64
-	var sum float64
-
-	for i, v := range f {
-		if i == 0 || max < v {
-			max = v
-		}
-	}
-
-	for i, v := range f {
-		f[i] = math.Exp(k * (v - max))
-		sum += f[i]
-	}
-
-	for i := range f {
-		f[i] /= sum
-	}
+	f.AddScalar(-f.Max())
+	f.Exp()
+	f.MulScalar(1. / f.Sum())
 }
 
 func (f Float64s) SoftmaxTo(out Float64s) {
-	var max float64
-	var sum float64
-
-	for i, v := range f {
-		if i == 0 || max < v {
-			max = v
-		}
-	}
-
-	for i, v := range f {
-		out[i] = math.Exp(v - max)
-		sum += out[i]
-	}
-
-	for i := range out {
-		out[i] /= sum
-	}
+	out.CopyFrom(f)
+	out.Softmax()
 }
 
 func (f Float64s) CumulativeSum() {
