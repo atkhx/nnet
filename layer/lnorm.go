@@ -1,42 +1,34 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/num"
 )
 
-func NewLNorm() *LNorm {
-	return &LNorm{}
+func NewLNorm[data any]() *LNorm[data] {
+	return &LNorm[data]{}
 }
 
-type LNorm struct {
-	Gamma *num.Data
-	Beta  *num.Data
+type LNorm[data any] struct {
+	Gamma data
+	Beta  data
 
-	inputsObj *num.Data
-	outputObj *num.Data
-	forUpdate num.Nodes
+	forUpdate []data
 }
 
-func (l *LNorm) Compile(inputs *num.Data) *num.Data {
-	l.Gamma = num.New(num.NewDims(inputs.Dims.W))
-	l.Gamma.Data.Ones()
+func (l *LNorm[data]) Compile(device nnet.Device[data], inputs data) data {
+	rowWidth := device.GetDataDims(inputs).W
 
-	l.Beta = num.New(num.NewDims(inputs.Dims.W))
-	l.inputsObj = inputs
-	l.outputObj = inputs.LNorm(l.Gamma, l.Beta)
-	l.forUpdate = num.Nodes{l.Gamma, l.Beta}
+	l.Beta = device.NewData(num.NewDims(rowWidth))
+	l.Gamma = device.NewData(num.NewDims(rowWidth))
 
-	return l.outputObj
+	device.FillDataWithOnes(l.Gamma)
+
+	l.forUpdate = []data{l.Gamma, l.Beta}
+
+	return device.LNorm(inputs, l.Gamma, l.Beta)
 }
 
-func (l *LNorm) ForUpdate() num.Nodes {
+func (l *LNorm[data]) ForUpdate() []data {
 	return l.forUpdate
-}
-
-func (l *LNorm) GetInputs() *num.Data {
-	return l.inputsObj
-}
-
-func (l *LNorm) GetOutput() *num.Data {
-	return l.outputObj
 }

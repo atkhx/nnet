@@ -1,30 +1,18 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/num"
 )
 
-func NewReshape(dims num.Dims) *Reshape {
-	return &Reshape{dims: dims}
+func NewReshape[data any](dims num.Dims) *Reshape[data] {
+	return &Reshape[data]{dims: dims}
 }
 
-type Reshape struct {
+type Reshape[data any] struct {
 	dims num.Dims
-
-	inputsObj *num.Data
-	outputObj *num.Data
 }
 
-func (l *Reshape) Compile(inputs *num.Data) *num.Data {
-	l.inputsObj = inputs
-	l.outputObj = inputs.Reshape(l.dims)
-	return l.outputObj
-}
-
-func (l *Reshape) GetInputs() *num.Data {
-	return l.inputsObj
-}
-
-func (l *Reshape) GetOutput() *num.Data {
-	return l.outputObj
+func (l *Reshape[data]) Compile(device nnet.Device[data], inputs data) data {
+	return device.Reshape(inputs, l.dims)
 }

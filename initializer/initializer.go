@@ -17,21 +17,21 @@ var (
 )
 
 type Initializer interface {
-	GetNormK(fanIn int) float64
+	GetNormK(fanIn int) float32
 }
 
 type InitWeightFixed struct {
-	NormK float64
+	NormK float32
 }
 
-func (wi InitWeightFixed) GetNormK(fanIn int) float64 {
+func (wi InitWeightFixed) GetNormK(fanIn int) float32 {
 	return wi.NormK
 }
 
 type KaimingNormal struct {
-	gain float64
+	gain float32
 }
 
-func (wi KaimingNormal) GetNormK(fanIn int) float64 {
-	return wi.gain / math.Sqrt(float64(fanIn))
+func (wi KaimingNormal) GetNormK(fanIn int) float32 {
+	return wi.gain / float32(math.Sqrt(float64(fanIn)))
 }

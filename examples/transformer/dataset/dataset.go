@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/atkhx/nnet/num"
+	"github.com/atkhx/nnet/num/native"
 )
 
 func NewDataset(contextSize, miniBatchSize int) *Dataset {
@@ -51,11 +51,11 @@ func (d *Dataset) GetMiniBatchSize() int {
 	return d.miniBatchSize
 }
 
-//var sourceTxt = "./examples/transformer/data/ruwiki12.txt"
-//var sourceAlphabet = "./examples/transformer/data/ruwiki12.alphabet"
+var sourceTxt = "./examples/transformer/data/ruwiki12.txt"
+var sourceAlphabet = "./examples/transformer/data/ruwiki12.alphabet"
 
-var sourceTxt = "./examples/transformer/data/rus_sentences.txt"
-var sourceAlphabet = "./examples/transformer/data/rus_sentences.alphabet"
+//var sourceTxt = "./examples/transformer/data/rus_sentences.txt"
+//var sourceAlphabet = "./examples/transformer/data/rus_sentences.alphabet"
 
 func (d *Dataset) ParseAlphabet() {
 	f2, err := os.OpenFile(sourceAlphabet, os.O_RDONLY, os.ModePerm)
@@ -128,10 +128,10 @@ func (d *Dataset) Encode(chars ...Token) []int {
 	return indexes
 }
 
-func (d *Dataset) EncodeToFloats(chars ...Token) []float64 {
-	indexes := make([]float64, len(chars))
+func (d *Dataset) EncodeToFloats(chars ...Token) []float32 {
+	indexes := make([]float32, len(chars))
 	for i, v := range chars {
-		indexes[i] = float64(d.tokenCodes[v])
+		indexes[i] = float32(d.tokenCodes[v])
 	}
 	return indexes
 }
@@ -161,7 +161,7 @@ func (d *Dataset) Decode(pos ...int) Tokens {
 	return result
 }
 
-func (d *Dataset) DecodeFloats(pos ...float64) []Token {
+func (d *Dataset) DecodeFloats(pos ...float32) []Token {
 	result := make([]Token, len(pos))
 	for i, p := range pos {
 		result[i] = d.tokens[int(p)]
@@ -169,11 +169,11 @@ func (d *Dataset) DecodeFloats(pos ...float64) []Token {
 	return result
 }
 
-func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets num.Float64s) {
+func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets native.Float32s) {
 	inputSampleSize := d.contextSize
 
-	sampleInputs = make(num.Float64s, inputSampleSize*d.miniBatchSize)
-	sampleTargets = make(num.Float64s, inputSampleSize*d.miniBatchSize)
+	sampleInputs = make(native.Float32s, inputSampleSize*d.miniBatchSize)
+	sampleTargets = make(native.Float32s, inputSampleSize*d.miniBatchSize)
 
 	tokens := make([]Token, d.contextSize)
 	tokenLength := 1

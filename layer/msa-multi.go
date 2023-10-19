@@ -1,79 +1,40 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/initializer"
-	"github.com/atkhx/nnet/num"
 )
 
-func NewMSAMultiHead(
+func NewMSAMultiHead[data any](
 	featuresCount int,
 	headSize int,
 	headsCount int,
-	dropoutProb float64,
+	dropoutProb float32,
 	initWeights initializer.Initializer,
-) *MSAMultiHead {
-	return &MSAMultiHead{
-		featuresCount: featuresCount,
-		headSize:      headSize,
-		headsCount:    headsCount,
-		initWeights:   initWeights,
-		DropoutProb:   dropoutProb,
+) *MSAMultiHead[data] {
+	heads := make([]nnet.Layer[data], headsCount)
+	for i := 0; i < headsCount; i++ {
+		heads[i] = NewMSAHead[data](featuresCount, headSize, dropoutProb, initWeights)
 	}
+	return &MSAMultiHead[data]{Heads: heads}
 }
 
-type MSAMultiHead struct {
-	initWeights initializer.Initializer
-
-	featuresCount int
-	headSize      int
-	headsCount    int
-
-	HeadWeights []num.SAHeadWeights
-	headObjects []*num.Data
-	DropoutProb float64
-
-	inputsObj *num.Data
-	concatObj *num.Data
-	forUpdate num.Nodes
+type MSAMultiHead[data any] struct {
+	Heads Layers[data]
 }
 
-func (l *MSAMultiHead) Compile(inputs *num.Data) *num.Data {
-	l.HeadWeights = make([]num.SAHeadWeights, 0, l.headsCount)
-	l.headObjects = make([]*num.Data, 0, l.headsCount)
-
-	weightK := l.initWeights.GetNormK(len(inputs.Data))
-
-	for i := 0; i < l.headsCount; i++ {
-		l.HeadWeights = append(l.HeadWeights, num.NewSAHeadWeights(l.headSize, l.featuresCount, weightK))
-
-		l.forUpdate = append(l.forUpdate,
-			l.HeadWeights[i].KeyWeights,
-			l.HeadWeights[i].QryWeights,
-			l.HeadWeights[i].ValWeights,
-		)
-
-		l.headObjects = append(l.headObjects, inputs.SAMasked(l.DropoutProb, l.HeadWeights[i]))
+func (l *MSAMultiHead[data]) Compile(device nnet.Device[data], inputs data) data {
+	if len(l.Heads) == 1 {
+		return l.Heads[0].Compile(device, inputs)
 	}
 
-	l.inputsObj = inputs
-
-	if l.headsCount == 1 {
-		l.concatObj = l.headObjects[0]
-	} else {
-		l.concatObj = l.headObjects[0].ConcatRows(l.headObjects[1:]...)
+	var headObjects []data
+	for _, head := range l.Heads {
+		headObjects = append(headObjects, head.Compile(device, inputs))
 	}
-
-	return l.concatObj
+	return device.ConcatByRows(headObjects...)
 }
 
-func (l *MSAMultiHead) ForUpdate() num.Nodes {
-	return l.forUpdate
-}
-
-func (l *MSAMultiHead) GetInputs() *num.Data {
-	return l.inputsObj
-}
-
-func (l *MSAMultiHead) GetOutput() *num.Data {
-	return l.concatObj
+func (l *MSAMultiHead[data]) ForUpdate() []data {
+	return l.Heads.ForUpdate()
 }

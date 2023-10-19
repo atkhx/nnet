@@ -1,28 +1,17 @@
 package layer
 
-import "github.com/atkhx/nnet/num"
+import (
+	"github.com/atkhx/nnet"
+)
 
-func NewDropout(prob float64) *Dropout {
-	return &Dropout{Prob: prob}
+func NewDropout[data any](prob float32) *Dropout[data] {
+	return &Dropout[data]{dropoutProb: prob}
 }
 
-type Dropout struct {
-	Prob float64
-
-	inputsObj *num.Data
-	outputObj *num.Data
+type Dropout[data any] struct {
+	dropoutProb float32
 }
 
-func (l *Dropout) Compile(inputs *num.Data) *num.Data {
-	l.inputsObj = inputs
-	l.outputObj = inputs.Dropout(l.Prob)
-	return l.outputObj
-}
-
-func (l *Dropout) GetInputs() *num.Data {
-	return l.inputsObj
-}
-
-func (l *Dropout) GetOutput() *num.Data {
-	return l.outputObj
+func (l *Dropout[data]) Compile(device nnet.Device[data], inputs data) data {
+	return device.Dropout(inputs, l.dropoutProb)
 }

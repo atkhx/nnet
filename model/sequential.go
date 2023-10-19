@@ -7,34 +7,42 @@ import (
 	"log"
 	"os"
 
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/layer"
 	"github.com/atkhx/nnet/num"
 )
 
-type Optimizer func(nodes num.Nodes) func(iteration int)
+type Optimizer[data any] func(nodes []data) func(iteration int)
 
-func NewSequential(inDims num.Dims, layers layer.Layers, optimizer Optimizer) *Sequential {
-	return &Sequential{
+func NewSequential[data any](
+	inDims num.Dims,
+	layers layer.Layers[data],
+	device nnet.Device[data],
+	optimizer Optimizer[data],
+) *Sequential[data] {
+	return &Sequential[data]{
 		inDims:    inDims,
 		Layers:    layers,
+		device:    device,
 		optimizer: optimizer,
 	}
 }
 
-type Sequential struct {
+type Sequential[data any] struct {
 	inDims num.Dims
-	inputs *num.Data
-	output *num.Data
-	Layers layer.Layers
-	update num.Nodes
+	inputs data
+	output data
+	Layers layer.Layers[data]
+	update []data
+	device nnet.Device[data]
 
-	optimizer  Optimizer
+	optimizer  Optimizer[data]
 	updateFunc func(iteration int)
 }
 
-func (s *Sequential) Compile() *num.Data {
-	s.inputs = num.New(s.inDims)
-	s.output = s.Layers.Compile(s.inputs)
+func (s *Sequential[data]) Compile() data {
+	s.inputs = s.device.NewData(s.inDims)
+	s.output = s.Layers.Compile(s.device, s.inputs)
 
 	s.update = append(s.update, s.Layers.ForUpdate()...)
 	if s.optimizer != nil {
@@ -44,27 +52,27 @@ func (s *Sequential) Compile() *num.Data {
 	return s.output
 }
 
-func (s *Sequential) GetInput() *num.Data {
+func (s *Sequential[data]) GetInput() data {
 	return s.inputs
 }
 
-func (s *Sequential) GetOutput() *num.Data {
+func (s *Sequential[data]) GetOutput() data {
 	return s.output
 }
 
-func (s *Sequential) GetTrainableParamsCount() int {
+func (s *Sequential[data]) GetTrainableParamsCount() int {
 	var result int
 	for _, node := range s.update {
-		result += len(node.Data)
+		result += s.device.GetDataLength(node)
 	}
 	return result
 }
 
-func (s *Sequential) Update(iteration int) {
+func (s *Sequential[data]) Update(iteration int) {
 	s.updateFunc(iteration)
 }
 
-func (s *Sequential) LoadFromFile(filename string) error {
+func (s *Sequential[data]) LoadFromFile(filename string) error {
 	config, err := os.ReadFile(filename)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		log.Println("trained config not found (skip)")
@@ -81,7 +89,7 @@ func (s *Sequential) LoadFromFile(filename string) error {
 	return nil
 }
 
-func (s *Sequential) SaveToFile(filename string) error {
+func (s *Sequential[data]) SaveToFile(filename string) error {
 	nnBytes, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("marshal model config failed: %w", err)

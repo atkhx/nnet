@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/model"
 )
 
@@ -12,15 +13,16 @@ const (
 	HeadsCount     = 8
 	FeaturesCount  = HeadSize * HeadsCount
 	HeadLinearSize = 4
-	BlocksCount    = 4
-	DropoutProb    = 0.1
+	BlocksCount    = 1
+	DropoutProb    = 0.3
 )
 
-func CreateNN(
+func CreateNN[data any](
 	alphabetSize int,
 	miniBatchSize int,
-	modelOptimizer model.Optimizer,
-) *model.Sequential {
+	device nnet.Device[data],
+	modelOptimizer model.Optimizer[data],
+) *model.Sequential[data] {
 	return model.NewTransformer(
 		ContextLength,
 		FeaturesCount,
@@ -32,6 +34,7 @@ func CreateNN(
 		alphabetSize,
 		miniBatchSize,
 		DropoutProb,
+		device,
 		modelOptimizer,
 	)
 }

@@ -1,73 +1,31 @@
 package layer
 
 import (
-	"math"
-
-	"github.com/atkhx/nnet/num"
+	"github.com/atkhx/nnet"
 )
 
-func NewTokenEmbeddingTable(featuresCount, alphabetSize int) *num.Data {
-	result := num.NewRandNorm(num.NewDims(featuresCount, alphabetSize))
-	result.MulScalar(math.Sqrt(float64(featuresCount)))
-	return result
-}
-
-func NewPositionEmbeddingTable(featuresCount, contextSize int) *num.Data {
-	// https://youtu.be/XowwKOAWYoQ?t=582
-	result := num.New(num.NewDims(featuresCount, contextSize))
-	result.SkipResetGrad()
-
-	k := 0
-	for j := 0; j < contextSize; j++ {
-		for i := 0; i < featuresCount; i++ {
-			if i%2 == 0 {
-				result.Data[k] = math.Sin(float64(k) / math.Pow(10_000, float64(i+1)/float64(featuresCount)))
-			} else {
-				result.Data[k] = math.Cos(float64(k) / math.Pow(10_000, float64(i+1)/float64(featuresCount)))
-			}
-			k++
-		}
-	}
-	result.MulScalar(math.Sqrt(float64(featuresCount)))
-	return result
-}
-
-func NewEmbedding(
-	featuresCount int,
-	alphabetSize int,
-	contextSize int,
-) *Embedding {
-	return &Embedding{
-		ValEmbedding: NewTokenEmbeddingTable(featuresCount, alphabetSize),
-		posEmbedding: NewPositionEmbeddingTable(featuresCount, contextSize),
+func NewEmbedding[data any](
+	valEmbedding data,
+	posEmbedding data,
+) *Embedding[data] {
+	return &Embedding[data]{
+		ValEmbedding: valEmbedding,
+		posEmbedding: posEmbedding,
+		forUpdate:    []data{valEmbedding},
 	}
 }
 
-type Embedding struct {
-	ValEmbedding *num.Data
-	posEmbedding *num.Data
+type Embedding[data any] struct {
+	ValEmbedding data
+	posEmbedding data
 
-	inputsObj *num.Data
-	outputObj *num.Data
-	forUpdate num.Nodes
+	forUpdate []data
 }
 
-func (l *Embedding) Compile(inputs *num.Data) *num.Data {
-	l.inputsObj = inputs
-	l.outputObj = inputs.GetEmbeddings(l.ValEmbedding, l.posEmbedding)
-	l.forUpdate = num.Nodes{l.ValEmbedding}
-
-	return l.outputObj
+func (l *Embedding[data]) Compile(device nnet.Device[data], inputs data) data {
+	return device.Embeddings(inputs, l.ValEmbedding, l.posEmbedding)
 }
 
-func (l *Embedding) ForUpdate() num.Nodes {
+func (l *Embedding[data]) ForUpdate() []data {
 	return l.forUpdate
-}
-
-func (l *Embedding) GetInputs() *num.Data {
-	return l.inputsObj
-}
-
-func (l *Embedding) GetOutput() *num.Data {
-	return l.outputObj
 }

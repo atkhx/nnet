@@ -1,15 +1,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"math"
 	"math/rand"
 
+	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/examples/transformer/dataset"
 	"github.com/atkhx/nnet/examples/transformer/pkg"
-	"github.com/atkhx/nnet/num"
+	"github.com/atkhx/nnet/num/native"
 )
 
 var filename string
@@ -27,14 +29,18 @@ func main() {
 		}
 	}()
 
+	mps.InitDefaultDevice()
+	defer mps.ReleaseDefaultDevice()
+
 	batchSize := 1
 
 	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
 	trainDataset.ParseAlphabet()
 
-	model := pkg.CreateNN(
+	model := pkg.CreateNN[*native.Data](
 		trainDataset.GetAlphabetSize(),
 		batchSize,
+		&native.Device{},
 		nil,
 	)
 
@@ -43,18 +49,18 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	pipeline := num.NewPipeline(output)
+	pipeline := native.NewPipeline(output)
 
 	inputIndexes := trainDataset.EncodeString(` `)
 	inputTokens := trainDataset.Decode(inputIndexes...)
 
 	fmt.Print(trainDataset.Decode(inputIndexes...))
-
+	ctx := context.Background()
 	for j := 0; j < 10000; j++ {
 		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
 		copy(model.GetInput().Data, inputsFloat)
 
-		pipeline.Forward()
+		pipeline.Forward(ctx)
 
 		pos := len(inputTokens) - 1
 		if pos < 0 {
@@ -80,7 +86,7 @@ func main() {
 	fmt.Println()
 }
 
-func sampleWithTemperature(logits num.Float64s, temperature float64) int {
+func sampleWithTemperature(logits native.Float32s, temperature float32) int {
 	for i := 0; i < len(logits); i++ {
 		logits[i] /= temperature
 	}
@@ -88,23 +94,23 @@ func sampleWithTemperature(logits num.Float64s, temperature float64) int {
 	return sampleFromDistribution(softmax(logits))
 }
 
-func softmax(logits []float64) []float64 {
-	probs := make([]float64, len(logits))
+func softmax(logits []float32) []float32 {
+	probs := make([]float32, len(logits))
 	sum := 0.0
 
 	for _, logit := range logits {
-		sum += math.Exp(logit)
+		sum += math.Exp(float64(logit))
 	}
 
 	for i, logit := range logits {
-		probs[i] = math.Exp(logit) / sum
+		probs[i] = float32(math.Exp(float64(logit)) / sum)
 	}
 	return probs
 }
 
-func sampleFromDistribution(probs []float64) int {
-	r := rand.Float64()
-	cumulativeProb := 0.0
+func sampleFromDistribution(probs []float32) int {
+	r := float32(rand.Float64())
+	cumulativeProb := float32(0.0)
 
 	for i, prob := range probs {
 		cumulativeProb += prob

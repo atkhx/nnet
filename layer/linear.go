@@ -1,47 +1,36 @@
 package layer
 
 import (
+	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
 
-func NewLinear(featuresCount int, initWeights initializer.Initializer) *Linear {
-	return &Linear{featuresCount: featuresCount, initWeights: initWeights}
+func NewLinear[data any](featuresCount int, initWeights initializer.Initializer) *Linear[data] {
+	return &Linear[data]{featuresCount: featuresCount, initWeights: initWeights}
 }
 
-type Linear struct {
+type Linear[data any] struct {
 	initWeights   initializer.Initializer
 	featuresCount int
 
-	WeightObj *num.Data
-	BiasesObj *num.Data
+	WeightObj data
+	BiasesObj data
 
-	inputsObj *num.Data
-	outputObj *num.Data
-	forUpdate num.Nodes
+	forUpdate []data
 }
 
-func (l *Linear) Compile(inputs *num.Data) *num.Data {
-	weightK := l.initWeights.GetNormK(len(inputs.Data))
+func (l *Linear[data]) Compile(device nnet.Device[data], inputs data) data {
+	weightK := l.initWeights.GetNormK(device.GetDataLength(inputs))
+	inputWidth := device.GetDataDims(inputs).W
 
-	l.WeightObj = num.NewRandNormWeighted(num.NewDims(l.featuresCount, inputs.Dims.W), weightK)
-	l.BiasesObj = num.New(num.NewDims(l.featuresCount))
+	l.WeightObj = device.NewDataRandNormWeighted(num.NewDims(l.featuresCount, inputWidth), weightK)
+	l.BiasesObj = device.NewData(num.NewDims(l.featuresCount))
+	l.forUpdate = []data{l.WeightObj, l.BiasesObj}
 
-	l.inputsObj = inputs
-	l.outputObj = inputs.MatrixMultiply(l.WeightObj).Add(l.BiasesObj)
-	l.forUpdate = num.Nodes{l.WeightObj, l.BiasesObj}
-
-	return l.outputObj
+	return device.Add(device.MatrixMultiply(inputs, l.WeightObj), l.BiasesObj)
 }
 
-func (l *Linear) ForUpdate() num.Nodes {
+func (l *Linear[data]) ForUpdate() []data {
 	return l.forUpdate
-}
-
-func (l *Linear) GetInputs() *num.Data {
-	return l.inputsObj
-}
-
-func (l *Linear) GetOutput() *num.Data {
-	return l.outputObj
 }

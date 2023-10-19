@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/examples/transformer/dataset"
 	"github.com/atkhx/nnet/examples/transformer/pkg"
 	"github.com/atkhx/nnet/num"
-	"github.com/atkhx/nnet/optimizer"
-	"github.com/atkhx/nnet/veclib/msp"
+	"github.com/atkhx/nnet/num/native"
 )
 
 var (
@@ -44,27 +44,32 @@ func main() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	msp.InitDefaultDevice()
-	defer msp.ReleaseDefaultDevice()
+	mps.InitDefaultDevice()
+	defer mps.ReleaseDefaultDevice()
 
 	trainDataset := dataset.NewDataset(pkg.ContextLength, pkg.TrainingMiniBatchSize)
 	trainDataset.ParseAlphabet()
 	trainDataset.ParseTokens()
 
-	modelOptimizer := optimizer.NewOptimizerAdam(epochs, 0.9, 0.98, 3e-4, 0.000000001)
-	model := pkg.CreateNN(trainDataset.GetAlphabetSize(), pkg.TrainingMiniBatchSize, modelOptimizer)
+	device := &native.Device{}
+
+	//modelOptimizer := device.GetOptimizerAdam(epochs, 0.9, 0.98, 3e-4, 0.000000001)
+	//modelOptimizer := device.GetOptimizerAdam(epochs, 0.9, 0.98, 0.0003, 0.000000001)
+	modelOptimizer := device.GetOptimizerAdam(epochs, 0.9, 0.98, 0.0003, 0.000000001)
+	model := pkg.CreateNN[*native.Data](trainDataset.GetAlphabetSize(), pkg.TrainingMiniBatchSize, device, modelOptimizer)
 
 	modelOutput := model.Compile()
 	if err := model.LoadFromFile(filename); err != nil {
 		log.Fatalln(err)
 	}
 
-	targets := num.New(num.NewDims(1, pkg.ContextLength*pkg.TrainingMiniBatchSize))
+	targets := device.NewData(num.NewDims(1, pkg.ContextLength*pkg.TrainingMiniBatchSize))
 	inputs := model.GetInput()
 
-	lossFunc := modelOutput.CrossEntropyPos(targets)
-	pipeline := num.NewPipeline(lossFunc)
-	lossMean := lossFunc.Mean()
+	lossFunc := device.CrossEntropyPos(modelOutput, targets)
+	//pipeline := native.NewPipeline(lossFunc)
+	lossMean := device.Mean(lossFunc)
+	pipeline := native.NewPipeline(lossMean)
 
 	fmt.Println("trainable params count:", model.GetTrainableParamsCount())
 	fmt.Println("alphabet size:", trainDataset.GetAlphabetSize())
@@ -81,7 +86,7 @@ func main() {
 	go func() {
 		defer close(trainStopped)
 
-		lossAvg := 0.0
+		lossAvg := float32(0.0)
 
 		t := time.Now()
 
@@ -96,15 +101,15 @@ func main() {
 			copy(targets.Data, batchTarget)
 			copy(inputs.Data, batchInputs)
 
-			pipeline.Forward()
-			lossMean.Forward()
-			pipeline.Backward()
+			pipeline.Forward(ctx)
+			//lossMean.Forward(ctx)
+			pipeline.Backward(ctx)
 			model.Update(iteration)
 
 			lossAvg += lossMean.Data[0]
 
 			if iteration > 0 && iteration%statChunkSize == 0 {
-				lossAvg /= float64(statChunkSize)
+				lossAvg /= float32(statChunkSize)
 				fmt.Println(
 					fmt.Sprintf("lossFunc: %.8f", lossAvg), "\t",
 					"iteration:", iteration, "\t",
