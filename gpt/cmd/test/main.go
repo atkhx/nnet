@@ -11,7 +11,6 @@ import (
 	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/gpt/dataset"
 	"github.com/atkhx/nnet/gpt/pkg"
-	"github.com/atkhx/nnet/num"
 	numDevice "github.com/atkhx/nnet/num/dev/metal"
 )
 
@@ -38,7 +37,7 @@ func main() {
 	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
 	trainDataset.ParseAlphabet()
 
-	model := pkg.CreateNN[*num.Data](
+	model := pkg.CreateNN(
 		trainDataset.GetAlphabetSize(),
 		batchSize,
 		&numDevice.Device{},

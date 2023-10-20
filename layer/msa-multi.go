@@ -3,38 +3,39 @@ package layer
 import (
 	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/initializer"
+	"github.com/atkhx/nnet/num"
 )
 
-func NewMSAMultiHead[data any](
+func NewMSAMultiHead(
 	featuresCount int,
 	headSize int,
 	headsCount int,
 	dropoutProb float32,
 	initWeights initializer.Initializer,
-) *MSAMultiHead[data] {
-	heads := make([]nnet.Layer[data], headsCount)
+) *MSAMultiHead {
+	heads := make([]nnet.Layer, headsCount)
 	for i := 0; i < headsCount; i++ {
-		heads[i] = NewMSAHead[data](featuresCount, headSize, dropoutProb, initWeights)
+		heads[i] = NewMSAHead(featuresCount, headSize, dropoutProb, initWeights)
 	}
-	return &MSAMultiHead[data]{Heads: heads}
+	return &MSAMultiHead{Heads: heads}
 }
 
-type MSAMultiHead[data any] struct {
-	Heads Layers[data]
+type MSAMultiHead struct {
+	Heads Layers
 }
 
-func (l *MSAMultiHead[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *MSAMultiHead) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	if len(l.Heads) == 1 {
 		return l.Heads[0].Compile(device, inputs)
 	}
 
-	var headObjects []data
+	var headObjects []*num.Data
 	for _, head := range l.Heads {
 		headObjects = append(headObjects, head.Compile(device, inputs))
 	}
 	return device.ConcatByRows(headObjects...)
 }
 
-func (l *MSAMultiHead[data]) ForUpdate() []data {
+func (l *MSAMultiHead) ForUpdate() []*num.Data {
 	return l.Heads.ForUpdate()
 }

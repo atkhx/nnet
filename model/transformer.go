@@ -7,7 +7,7 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewTransformer[data any](
+func NewTransformer(
 	contextLength,
 	embeddingFeatures,
 	headsCount,
@@ -17,9 +17,9 @@ func NewTransformer[data any](
 	alphabetSize,
 	miniBatchSize int,
 	dropout float32,
-	device nnet.Device[data],
-	modelOptimizer Optimizer[data],
-) *Sequential[data] {
+	device nnet.Device,
+	modelOptimizer Optimizer,
+) *Sequential {
 	inDims := num.Dims{
 		W: contextLength,
 		H: miniBatchSize,
@@ -30,7 +30,7 @@ func NewTransformer[data any](
 	//initWeight := &initializer.InitWeightFixed{NormK: 0.010}
 	initWeight := &initializer.InitWeightFixed{NormK: 0.007}
 
-	layers := layer.Layers[data]{}
+	layers := layer.Layers{}
 
 	//---Embedding table------------------------------------------------------
 	layers = append(layers,
@@ -41,28 +41,28 @@ func NewTransformer[data any](
 		// out: [ embeddingFeatures, contextLength, batchSize ]
 	)
 
-	createSABlock := func() layer.Layers[data] {
-		return []nnet.Layer[data]{
-			layer.NewResidual[data](
-				layer.Layers[data]{
-					layer.NewLNorm[data](),
-					layer.NewMSAMultiHead[data](embeddingFeatures, headSize, headsCount, dropout, initWeight),
+	createSABlock := func() layer.Layers {
+		return []nnet.Layer{
+			layer.NewResidual(
+				layer.Layers{
+					layer.NewLNorm(),
+					layer.NewMSAMultiHead(embeddingFeatures, headSize, headsCount, dropout, initWeight),
 					// out: [ headSize * headsCount, contextLength, batchSize ]
-					layer.NewLinear[data](embeddingFeatures, initWeight),
+					layer.NewLinear(embeddingFeatures, initWeight),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
-					layer.NewDropout[data](dropout),
+					layer.NewDropout(dropout),
 				},
 			),
-			layer.NewResidual[data](
+			layer.NewResidual(
 				// the goal of this block https://youtu.be/XowwKOAWYoQ?t=1297
-				layer.Layers[data]{
-					layer.NewLNorm[data](),
+				layer.Layers{
+					layer.NewLNorm(),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
-					layer.NewLinear[data](headLinearSize*embeddingFeatures, initWeight),
-					layer.NewReLu[data](),
-					layer.NewLinear[data](embeddingFeatures, initWeight),
+					layer.NewLinear(headLinearSize*embeddingFeatures, initWeight),
+					layer.NewReLu(),
+					layer.NewLinear(embeddingFeatures, initWeight),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
-					layer.NewDropout[data](dropout),
+					layer.NewDropout(dropout),
 				},
 			),
 		}
@@ -76,14 +76,14 @@ func NewTransformer[data any](
 
 	//---Probabilities--------------------------------------------------------
 	layers = append(layers,
-		layer.NewLNorm[data](),
-		layer.NewLinear[data](alphabetSize, initWeight),
+		layer.NewLNorm(),
+		layer.NewLinear(alphabetSize, initWeight),
 		// out: [ alphabetSize, contextLength, batchSize ]
 	)
 
 	//---Adopt probs to 2D----------------------------------------------------
 	layers = append(layers,
-		layer.NewReshape[data](num.NewDims(alphabetSize, miniBatchSize*contextLength)),
+		layer.NewReshape(num.NewDims(alphabetSize, miniBatchSize*contextLength)),
 		// out: [ alphabetSize, contextLength * batchSize ]
 	)
 

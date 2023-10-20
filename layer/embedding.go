@@ -2,30 +2,31 @@ package layer
 
 import (
 	"github.com/atkhx/nnet"
+	"github.com/atkhx/nnet/num"
 )
 
-func NewEmbedding[data any](
-	valEmbedding data,
-	posEmbedding data,
-) *Embedding[data] {
-	return &Embedding[data]{
+func NewEmbedding(
+	valEmbedding *num.Data,
+	posEmbedding *num.Data,
+) *Embedding {
+	return &Embedding{
 		ValEmbedding: valEmbedding,
 		posEmbedding: posEmbedding,
-		forUpdate:    []data{valEmbedding},
+		forUpdate:    []*num.Data{valEmbedding},
 	}
 }
 
-type Embedding[data any] struct {
-	ValEmbedding data
-	posEmbedding data
+type Embedding struct {
+	ValEmbedding *num.Data
+	posEmbedding *num.Data
 
-	forUpdate []data
+	forUpdate []*num.Data
 }
 
-func (l *Embedding[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *Embedding) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	return device.Embeddings(inputs, l.ValEmbedding, l.posEmbedding)
 }
 
-func (l *Embedding[data]) ForUpdate() []data {
+func (l *Embedding) ForUpdate() []*num.Data {
 	return l.forUpdate
 }

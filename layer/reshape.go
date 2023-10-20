@@ -5,14 +5,14 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewReshape[data any](dims num.Dims) *Reshape[data] {
-	return &Reshape[data]{dims: dims}
+func NewReshape(dims num.Dims) *Reshape {
+	return &Reshape{dims: dims}
 }
 
-type Reshape[data any] struct {
+type Reshape struct {
 	dims num.Dims
 }
 
-func (l *Reshape[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *Reshape) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	return device.Reshape(inputs, l.dims)
 }

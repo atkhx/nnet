@@ -6,31 +6,31 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewLinear[data any](featuresCount int, initWeights initializer.Initializer) *Linear[data] {
-	return &Linear[data]{featuresCount: featuresCount, initWeights: initWeights}
+func NewLinear(featuresCount int, initWeights initializer.Initializer) *Linear {
+	return &Linear{featuresCount: featuresCount, initWeights: initWeights}
 }
 
-type Linear[data any] struct {
+type Linear struct {
 	initWeights   initializer.Initializer
 	featuresCount int
 
-	WeightObj data
-	BiasesObj data
+	WeightObj *num.Data
+	BiasesObj *num.Data
 
-	forUpdate []data
+	forUpdate []*num.Data
 }
 
-func (l *Linear[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *Linear) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	weightK := l.initWeights.GetNormK(device.GetDataLength(inputs))
 	inputWidth := device.GetDataDims(inputs).W
 
 	l.WeightObj = device.NewDataRandNormWeighted(num.NewDims(l.featuresCount, inputWidth), weightK)
 	l.BiasesObj = device.NewData(num.NewDims(l.featuresCount))
-	l.forUpdate = []data{l.WeightObj, l.BiasesObj}
+	l.forUpdate = []*num.Data{l.WeightObj, l.BiasesObj}
 
-	return device.Add(device.MatrixMultiply(inputs, l.WeightObj), l.BiasesObj)
+	return device.Add(device.MatrixMultiply3D(inputs, l.WeightObj, 1), l.BiasesObj)
 }
 
-func (l *Linear[data]) ForUpdate() []data {
+func (l *Linear) ForUpdate() []*num.Data {
 	return l.forUpdate
 }

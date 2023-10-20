@@ -2,20 +2,21 @@ package layer
 
 import (
 	"github.com/atkhx/nnet"
+	"github.com/atkhx/nnet/num"
 )
 
-func NewResidual[data any](layers Layers[data]) *Residual[data] {
-	return &Residual[data]{Layers: layers}
+func NewResidual(layers Layers) *Residual {
+	return &Residual{Layers: layers}
 }
 
-type Residual[data any] struct {
-	Layers Layers[data]
+type Residual struct {
+	Layers Layers
 }
 
-func (l *Residual[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *Residual) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	return device.Add(inputs, l.Layers.Compile(device, inputs))
 }
 
-func (l *Residual[data]) ForUpdate() []data {
+func (l *Residual) ForUpdate() []*num.Data {
 	return l.Layers.ForUpdate()
 }

@@ -2,18 +2,19 @@ package layer
 
 import (
 	"github.com/atkhx/nnet"
+	"github.com/atkhx/nnet/num"
 )
 
-func NewReLu[data any]() *Activation[data] {
-	return &Activation[data]{inputsAct: func(device nnet.Device[data], inputs data) data {
+func NewReLu() *Activation {
+	return &Activation{inputsAct: func(device nnet.Device, inputs *num.Data) *num.Data {
 		return device.Relu(inputs)
 	}}
 }
 
-type Activation[data any] struct {
-	inputsAct func(device nnet.Device[data], inputs data) data
+type Activation struct {
+	inputsAct func(device nnet.Device, inputs *num.Data) *num.Data
 }
 
-func (l *Activation[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *Activation) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	return l.inputsAct(device, inputs)
 }

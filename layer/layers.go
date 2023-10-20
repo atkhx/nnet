@@ -2,11 +2,12 @@ package layer
 
 import (
 	"github.com/atkhx/nnet"
+	"github.com/atkhx/nnet/num"
 )
 
-type Layers[data any] []nnet.Layer[data]
+type Layers []nnet.Layer
 
-func (s Layers[data]) Compile(device nnet.Device[data], inputs data) data {
+func (s Layers) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	for _, layer := range s {
 		inputs = layer.Compile(device, inputs)
 	}
@@ -14,10 +15,10 @@ func (s Layers[data]) Compile(device nnet.Device[data], inputs data) data {
 	return inputs
 }
 
-func (s Layers[data]) ForUpdate() []data {
-	result := make([]data, 0, len(s))
+func (s Layers) ForUpdate() []*num.Data {
+	result := make([]*num.Data, 0, len(s))
 	for _, layer := range s {
-		if l, ok := layer.(nnet.LayerUpdatable[data]); ok {
+		if l, ok := layer.(nnet.LayerUpdatable); ok {
 			result = append(result, l.ForUpdate()...)
 		}
 	}

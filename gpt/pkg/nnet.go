@@ -10,19 +10,19 @@ const (
 
 	ContextLength  = 64
 	HeadSize       = 64
-	HeadsCount     = 1
+	HeadsCount     = 64
 	FeaturesCount  = HeadSize * HeadsCount
 	HeadLinearSize = 4
 	BlocksCount    = 1
 	DropoutProb    = 0.3
 )
 
-func CreateNN[data any](
+func CreateNN(
 	alphabetSize int,
 	miniBatchSize int,
-	device nnet.Device[data],
-	modelOptimizer model.Optimizer[data],
-) *model.Sequential[data] {
+	device nnet.Device,
+	modelOptimizer model.Optimizer,
+) *model.Sequential {
 	return model.NewTransformer(
 		ContextLength,
 		FeaturesCount,

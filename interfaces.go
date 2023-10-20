@@ -4,51 +4,51 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-type Device[data any] interface {
-	NewData(dims num.Dims, srcNodes ...data) data
-	NewDataRandNormWeighted(dims num.Dims, w float32) data
+type Device interface {
+	NewData(dims num.Dims, srcNodes ...*num.Data) *num.Data
+	NewDataRandNormWeighted(dims num.Dims, w float32) *num.Data
 
-	NewTokenEmbeddingTable(featuresCount, alphabetSize int) data
-	NewPositionEmbeddingTable(featuresCount, contextSize int) data
+	NewTokenEmbeddingTable(featuresCount, alphabetSize int) *num.Data
+	NewPositionEmbeddingTable(featuresCount, contextSize int) *num.Data
 
-	FillDataWithZeros(aData data)
-	FillDataWithOnes(aData data)
+	FillDataWithZeros(aData *num.Data)
+	FillDataWithOnes(aData *num.Data)
 
-	GetDataDims(aData data) num.Dims
-	GetDataLength(aData data) int
+	GetDataDims(aData *num.Data) num.Dims
+	GetDataLength(aData *num.Data) int
 
-	Sqrt(aData data) data
-	Mean(aData data) data
-	MeanByRows(aData data) data
-	VarianceByRows(aData data, mean data) data
+	Sqrt(aData *num.Data) *num.Data
+	Mean(aData *num.Data) *num.Data
+	MeanByRows(aData *num.Data) *num.Data
+	VarianceByRows(aData *num.Data, mean *num.Data) *num.Data
 
-	LNorm(aData, gamma, beta data) data
+	LNorm(aData, gamma, beta *num.Data) *num.Data
 
-	Relu(aData data) data
+	Relu(aData *num.Data) *num.Data
 
-	AddScalar(aData data, k float32) data
-	MulScalar(aData data, k float32) data
+	AddScalar(aData *num.Data, k float32) *num.Data
+	MulScalar(aData *num.Data, k float32) *num.Data
 
-	Add(aData data, bData data) data
-	Sub(aData data, bData data) data
-	Mul(aData data, bData data) data
-	Div(aData data, bData data) data
+	Add(aData *num.Data, bData *num.Data) *num.Data
+	Sub(aData *num.Data, bData *num.Data) *num.Data
+	Mul(aData *num.Data, bData *num.Data) *num.Data
+	Div(aData *num.Data, bData *num.Data) *num.Data
 
-	ConcatByRows(bData ...data) data
-	Dropout(aData data, prob float32) data
-	Reshape(aData data, dims num.Dims) data
-	CrossEntropyPos(aData data, targets data) data
-	Embeddings(aData data, tEmbeddings, pEmbeddings data) data
-	Transpose(aData data) data
-	TriangleLowerSoftmax(aData data) data
-	MatrixMultiply2D(aData data, bData data, options ...num.MMOption) data
-	MatrixMultiply(aData data, bData data, options ...num.MMOption) data
+	ConcatByRows(bData ...*num.Data) *num.Data
+	Dropout(aData *num.Data, prob float32) *num.Data
+	Reshape(aData *num.Data, dims num.Dims) *num.Data
+	CrossEntropyPos(aData *num.Data, targets *num.Data) *num.Data
+	Embeddings(aData *num.Data, tEmbeddings, pEmbeddings *num.Data) *num.Data
+	Transpose(aData *num.Data) *num.Data
+	TriangleLowerSoftmax(aData *num.Data) *num.Data
+	MatrixMultiply2D(aData *num.Data, bData *num.Data, alpha float32) *num.Data
+	MatrixMultiply3D(aData *num.Data, bData *num.Data, alpha float32) *num.Data
 }
 
-type Layer[data any] interface {
-	Compile(device Device[data], inputs data) data
+type Layer interface {
+	Compile(device Device, inputs *num.Data) *num.Data
 }
 
-type LayerUpdatable[data any] interface {
-	ForUpdate() []data
+type LayerUpdatable interface {
+	ForUpdate() []*num.Data
 }

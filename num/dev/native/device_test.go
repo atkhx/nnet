@@ -1162,7 +1162,7 @@ func TestDevice_MatrixMultiply2D(t *testing.T) {
 		1, 0,
 	}, Float32s{1, 1, 1, 1, 1, 1})
 
-	cData := testDevice.MatrixMultiply2D(aData, bData)
+	cData := testDevice.MatrixMultiply2D(aData, bData, 1)
 
 	runPipelines(t, cData)
 

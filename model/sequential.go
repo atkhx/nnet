@@ -16,15 +16,15 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-type Optimizer[data any] func(nodes []data) func(iteration int)
+type Optimizer func(nodes []*num.Data) func(iteration int)
 
-func NewSequential[data any](
+func NewSequential(
 	inDims num.Dims,
-	layers layer.Layers[data],
-	device nnet.Device[data],
-	optimizer Optimizer[data],
-) *Sequential[data] {
-	return &Sequential[data]{
+	layers layer.Layers,
+	device nnet.Device,
+	optimizer Optimizer,
+) *Sequential {
+	return &Sequential{
 		inDims:    inDims,
 		Layers:    layers,
 		device:    device,
@@ -32,19 +32,19 @@ func NewSequential[data any](
 	}
 }
 
-type Sequential[data any] struct {
+type Sequential struct {
 	inDims num.Dims
-	inputs data
-	output data
-	Layers layer.Layers[data]
-	update []data
-	device nnet.Device[data]
+	inputs *num.Data
+	output *num.Data
+	Layers layer.Layers
+	update []*num.Data
+	device nnet.Device
 
-	optimizer  Optimizer[data]
+	optimizer  Optimizer
 	updateFunc func(iteration int)
 }
 
-func (s *Sequential[data]) Compile() data {
+func (s *Sequential) Compile() *num.Data {
 	s.inputs = s.device.NewData(s.inDims)
 	s.output = s.Layers.Compile(s.device, s.inputs)
 
@@ -56,27 +56,26 @@ func (s *Sequential[data]) Compile() data {
 	return s.output
 }
 
-func (s *Sequential[data]) GetInput() data {
+func (s *Sequential) GetInput() *num.Data {
 	return s.inputs
 }
 
-func (s *Sequential[data]) GetOutput() data {
+func (s *Sequential) GetOutput() *num.Data {
 	return s.output
 }
 
-func (s *Sequential[data]) GetTrainableParamsCount() int {
-	var result int
+func (s *Sequential) GetTrainableParamsCount() (result int) {
 	for _, node := range s.update {
 		result += s.device.GetDataLength(node)
 	}
 	return result
 }
 
-func (s *Sequential[data]) Update(iteration int) {
+func (s *Sequential) Update(iteration int) {
 	s.updateFunc(iteration)
 }
 
-func (s *Sequential[data]) LoadFromFile(filename string) error {
+func (s *Sequential) LoadFromFile(filename string) error {
 	t := time.Now()
 	config, err := os.ReadFile(filename)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -96,7 +95,7 @@ func (s *Sequential[data]) LoadFromFile(filename string) error {
 	return nil
 }
 
-func (s *Sequential[data]) SaveToFile(filename string) error {
+func (s *Sequential) SaveToFile(filename string) error {
 	t := time.Now()
 	nnBytes, err := json.Marshal(s)
 	if err != nil {

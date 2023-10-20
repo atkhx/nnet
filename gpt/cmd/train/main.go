@@ -16,7 +16,7 @@ import (
 	"github.com/atkhx/nnet/gpt/dataset"
 	"github.com/atkhx/nnet/gpt/pkg"
 	"github.com/atkhx/nnet/num"
-	numDevice "github.com/atkhx/nnet/num/dev/native"
+	numDevice "github.com/atkhx/nnet/num/dev/metal"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -59,7 +59,7 @@ func main() {
 	device := &numDevice.Device{}
 
 	modelOptimizer := device.GetOptimizerAdam(epochs, 0.9, 0.98, 0.0003, 0.000000001)
-	model := pkg.CreateNN[*num.Data](trainDataset.GetAlphabetSize(), pkg.TrainingMiniBatchSize, device, modelOptimizer)
+	model := pkg.CreateNN(trainDataset.GetAlphabetSize(), pkg.TrainingMiniBatchSize, device, modelOptimizer)
 
 	modelOutput := model.Compile()
 	if err := model.LoadFromFile(filename); err != nil {

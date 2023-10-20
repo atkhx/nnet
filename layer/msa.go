@@ -8,19 +8,19 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-type SAHeadWeights[data any] struct {
-	KeyWeights data
-	QryWeights data
-	ValWeights data
+type SAHeadWeights struct {
+	KeyWeights *num.Data
+	QryWeights *num.Data
+	ValWeights *num.Data
 }
 
-func NewMSAHead[data any](
+func NewMSAHead(
 	featuresCount int,
 	headSize int,
 	dropoutProb float32,
 	initWeights initializer.Initializer,
-) *MSAHead[data] {
-	return &MSAHead[data]{
+) *MSAHead {
+	return &MSAHead{
 		featuresCount: featuresCount,
 		headSize:      headSize,
 		initWeights:   initWeights,
@@ -28,42 +28,42 @@ func NewMSAHead[data any](
 	}
 }
 
-type MSAHead[data any] struct {
+type MSAHead struct {
 	initWeights initializer.Initializer
 
 	featuresCount int
 	headSize      int
 
-	KeyWeights  data
-	QryWeights  data
-	ValWeights  data
+	KeyWeights  *num.Data
+	QryWeights  *num.Data
+	ValWeights  *num.Data
 	dropoutProb float32
 
-	forUpdate []data
+	forUpdate []*num.Data
 }
 
-func (l *MSAHead[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *MSAHead) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	weightK := l.initWeights.GetNormK(device.GetDataLength(inputs))
 
 	l.KeyWeights = device.NewDataRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 	l.QryWeights = device.NewDataRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 	l.ValWeights = device.NewDataRandNormWeighted(num.NewDims(l.headSize, l.featuresCount, 1), weightK)
 
-	l.forUpdate = []data{l.KeyWeights, l.QryWeights, l.ValWeights}
+	l.forUpdate = []*num.Data{l.KeyWeights, l.QryWeights, l.ValWeights}
 
 	k := float32(math.Pow(float64(l.headSize), -0.5))
 
-	keyObject := device.MatrixMultiply(inputs, l.KeyWeights)
-	qryObject := device.MatrixMultiply(inputs, l.QryWeights)
-	valObject := device.MatrixMultiply(inputs, l.ValWeights)
+	keyObject := device.MatrixMultiply3D(inputs, l.KeyWeights, 1)
+	qryObject := device.MatrixMultiply3D(inputs, l.QryWeights, 1)
+	valObject := device.MatrixMultiply3D(inputs, l.ValWeights, 1)
 
-	weiObject := device.MatrixMultiply(keyObject, device.Transpose(qryObject), num.WithMatrixMultiplyAlpha(k))
+	weiObject := device.MatrixMultiply3D(keyObject, device.Transpose(qryObject), k)
 	weiSoftmax := device.TriangleLowerSoftmax(weiObject)
 	weiSoftmax = device.Dropout(weiSoftmax, l.dropoutProb)
 
-	return device.MatrixMultiply(weiSoftmax, valObject)
+	return device.MatrixMultiply3D(weiSoftmax, valObject, 1)
 }
 
-func (l *MSAHead[data]) ForUpdate() []data {
+func (l *MSAHead) ForUpdate() []*num.Data {
 	return l.forUpdate
 }

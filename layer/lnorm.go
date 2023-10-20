@@ -5,18 +5,18 @@ import (
 	"github.com/atkhx/nnet/num"
 )
 
-func NewLNorm[data any]() *LNorm[data] {
-	return &LNorm[data]{}
+func NewLNorm() *LNorm {
+	return &LNorm{}
 }
 
-type LNorm[data any] struct {
-	Gamma data
-	Beta  data
+type LNorm struct {
+	Gamma *num.Data
+	Beta  *num.Data
 
-	forUpdate []data
+	forUpdate []*num.Data
 }
 
-func (l *LNorm[data]) Compile(device nnet.Device[data], inputs data) data {
+func (l *LNorm) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	rowWidth := device.GetDataDims(inputs).W
 
 	l.Beta = device.NewData(num.NewDims(rowWidth))
@@ -24,11 +24,11 @@ func (l *LNorm[data]) Compile(device nnet.Device[data], inputs data) data {
 
 	device.FillDataWithOnes(l.Gamma)
 
-	l.forUpdate = []data{l.Gamma, l.Beta}
+	l.forUpdate = []*num.Data{l.Gamma, l.Beta}
 
 	return device.LNorm(inputs, l.Gamma, l.Beta)
 }
 
-func (l *LNorm[data]) ForUpdate() []data {
+func (l *LNorm) ForUpdate() []*num.Data {
 	return l.forUpdate
 }

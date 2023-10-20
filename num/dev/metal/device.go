@@ -472,7 +472,7 @@ func (d *Device) TriangleLowerSoftmax(aData *num.Data) *num.Data {
 	return output
 }
 
-func (d *Device) MatrixMultiply2D(aData, bData *num.Data, options ...num.MMOption) *num.Data {
+func (d *Device) MatrixMultiply2D(aData, bData *num.Data, alpha float32) *num.Data {
 	if aData.Dims.W != bData.Dims.H {
 		panic("aData width must be equal bData height")
 	}
@@ -480,12 +480,6 @@ func (d *Device) MatrixMultiply2D(aData, bData *num.Data, options ...num.MMOptio
 	if bData.Dims.D != 1 || aData.Dims.D != 1 {
 		panic("matrix is not 2D")
 	}
-
-	cfg := &num.MMConfig{Alpha: 1.0}
-	for _, option := range options {
-		option(cfg)
-	}
-	alpha := cfg.Alpha
 
 	oH := aData.Dims.H
 	oW := bData.Dims.W
@@ -514,20 +508,14 @@ func (d *Device) MatrixMultiply2D(aData, bData *num.Data, options ...num.MMOptio
 	return output
 }
 
-func (d *Device) MatrixMultiply(aData, bData *num.Data, options ...num.MMOption) *num.Data {
+func (d *Device) MatrixMultiply3D(aData, bData *num.Data, alpha float32) *num.Data {
 	if aData.Dims.W != bData.Dims.H {
 		panic("aData width must be equal bData height")
 	}
 
 	if aData.Dims.D == 1 && bData.Dims.D == 1 {
-		return d.MatrixMultiply2D(aData, bData, options...)
+		return d.MatrixMultiply2D(aData, bData, alpha)
 	}
-
-	cfg := &num.MMConfig{Alpha: 1.0}
-	for _, option := range options {
-		option(cfg)
-	}
-	alpha := cfg.Alpha
 
 	oD := aData.Dims.D
 	if bData.Dims.D > oD {
