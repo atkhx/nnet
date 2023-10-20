@@ -1,8 +1,8 @@
 package blas32
 
-// #cgo CFLAGS: -I/Library/Developer/CommandLineTools/SDKs/MacOSX13.3.sdk/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Headers/ -I/Library/Developer/CommandLineTools/SDKs/MacOSX13.3.sdk/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/  -DACCELERATE_NEW_LAPACK=1
-// #cgo LDFLAGS: -lcblas
-// #include <Accelerate/Accelerate.h>
+import "C"
+
+// #include "cblas.h"
 import "C"
 
 // test
