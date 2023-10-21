@@ -5,6 +5,8 @@ import (
 )
 
 type Device interface {
+	Close() error
+
 	NewData(dims num.Dims, srcNodes ...*num.Data) *num.Data
 	NewDataRandNormWeighted(dims num.Dims, w float32) *num.Data
 
@@ -43,6 +45,8 @@ type Device interface {
 	TriangleLowerSoftmax(aData *num.Data) *num.Data
 	MatrixMultiply2D(aData *num.Data, bData *num.Data, alpha float32) *num.Data
 	MatrixMultiply3D(aData *num.Data, bData *num.Data, alpha float32) *num.Data
+
+	GetOptimizerAdam(iterations int, beta1, beta2, learningRate, eps float32) func(nodes []*num.Data) func(iteration int)
 }
 
 type Layer interface {

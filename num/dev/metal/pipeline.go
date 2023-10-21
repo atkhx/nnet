@@ -2,33 +2,28 @@ package metal
 
 import (
 	"context"
-	"sync"
 
 	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/num"
 )
 
-func NewPipeline(lastNode *num.Data) (out *Pipeline) {
-	out = &Pipeline{
-		wg:  &sync.WaitGroup{},
-		ctx: context.Background(),
-
-		forwardLayers:  getForwardNodeLayers(lastNode),
-		backwardLayers: getBackwardNodeLayers(lastNode),
-		resetGradsFunc: getResetGradsNodeFuncs(lastNode),
-		commandQueue:   mps.DefaultDevice.CreateCommandQueue(),
+func NewPipeline(device *Device, lastNode *num.Data) *Pipeline {
+	return &Pipeline{
+		device:          device,
+		forwardLayers:   num.GetForwardNodeLayers(lastNode),
+		backwardLayers:  num.GetBackwardNodeLayers(lastNode),
+		resetGradsNodes: num.GetResetGradsNodes(lastNode),
+		commandQueue:    device.CreateCommandQueue(),
 	}
-	return
 }
 
 type Pipeline struct {
-	wg  *sync.WaitGroup
-	ctx context.Context
+	device *Device
 
-	forwardLayers  NodeLayers
-	backwardLayers NodeLayers
-	resetGradsFunc []func(ctx context.Context)
-	commandQueue   *mps.MTLCommandQueue
+	forwardLayers   num.NodeLayers
+	backwardLayers  num.NodeLayers
+	resetGradsNodes num.Nodes
+	commandQueue    *mps.MTLCommandQueue
 }
 
 func (p *Pipeline) Forward(ctx context.Context) {
@@ -43,13 +38,16 @@ func (p *Pipeline) Forward(ctx context.Context) {
 }
 
 func (p *Pipeline) Backward(ctx context.Context) {
-	for _, resetFunc := range p.resetGradsFunc {
-		resetFunc(p.ctx)
+	for i, node := range p.resetGradsNodes {
+		if i == 0 {
+			p.device.FillGradWithOnes(node)
+		} else {
+			p.device.FillGradWithZeros(node)
+		}
 	}
 
 	for _, nodes := range p.backwardLayers {
 		commandBuffer := p.commandQueue.GetCommandBuffer()
-
 		ctx := mps.ContextWithCommandBuffer(ctx, commandBuffer)
 		for _, node := range nodes {
 			node.CalcGrad(ctx)

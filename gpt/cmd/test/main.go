@@ -8,7 +8,6 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/gpt/dataset"
 	"github.com/atkhx/nnet/gpt/pkg"
 	numDevice "github.com/atkhx/nnet/num/dev/metal"
@@ -29,27 +28,29 @@ func main() {
 		}
 	}()
 
-	mps.InitDefaultDevice()
-	defer mps.ReleaseDefaultDevice()
+	device := numDevice.NewDevice()
+	defer device.Close()
 
 	batchSize := 1
 
 	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
 	trainDataset.ParseAlphabet()
 
-	model := pkg.CreateNN(
+	model := pkg.CreateModel(
 		trainDataset.GetAlphabetSize(),
 		batchSize,
-		&numDevice.Device{},
+		device,
 		nil,
 	)
 
 	output := model.Compile()
+	inputs := model.GetInput()
+
 	if err := model.LoadFromFile(filename); err != nil {
 		log.Fatalln(err)
 	}
 
-	pipeline := numDevice.NewPipeline(output)
+	pipeline := numDevice.NewPipeline(device, output)
 
 	inputIndexes := trainDataset.EncodeString(` `)
 	inputTokens := trainDataset.Decode(inputIndexes...)
@@ -58,7 +59,7 @@ func main() {
 	ctx := context.Background()
 	for j := 0; j < 10000; j++ {
 		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
-		copy(model.GetInput().Data, inputsFloat)
+		copy(inputs.Data, inputsFloat)
 
 		pipeline.Forward(ctx)
 

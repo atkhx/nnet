@@ -4,8 +4,6 @@ import (
 	"context"
 )
 
-type Nodes []*Data
-
 func NewData(data, grad []float32, dims Dims, opts any, srcNodes ...*Data) *Data {
 	return &Data{
 		Data:     data,

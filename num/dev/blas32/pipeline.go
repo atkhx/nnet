@@ -2,73 +2,47 @@ package blas32
 
 import (
 	"context"
-	"runtime"
-	"sync"
 
 	"github.com/atkhx/nnet/num"
 )
 
-func NewPipeline(lastNode *num.Data) (out *Pipeline) {
-	out = &Pipeline{
-		wg:  &sync.WaitGroup{},
-		ctx: context.Background(),
-
-		forwardChan:    make(chan func(ctx context.Context)),
-		forwardLayers:  getForwardNodeLayers(lastNode),
-		backwardLayers: getBackwardNodeLayers(lastNode),
-		resetLayers:    getResetGradsNodeLayers(lastNode),
-		resetGradsFunc: getResetGradsNodeFuncs(lastNode),
+func NewPipeline(device *Device, lastNode *num.Data) *Pipeline {
+	return &Pipeline{
+		device:          device,
+		forwardLayers:   num.GetForwardNodeLayers(lastNode),
+		backwardLayers:  num.GetBackwardNodeLayers(lastNode),
+		resetGradsNodes: num.GetResetGradsNodes(lastNode),
 	}
-	//out.runRoutines()
-	return
 }
 
 type Pipeline struct {
-	wg  *sync.WaitGroup
-	ctx context.Context
+	device *Device
 
-	forwardChan    chan func(ctx context.Context)
-	forwardLayers  NodeLayers
-	backwardLayers NodeLayers
-	resetLayers    NodeLayers
-	resetGradsFunc []func(ctx context.Context)
-}
-
-func (p *Pipeline) runRoutines() {
-	parallel := runtime.GOMAXPROCS(0)
-	for i := 0; i < parallel; i++ {
-		go func() {
-			for fn := range p.forwardChan {
-				fn(p.ctx)
-				p.wg.Done()
-			}
-		}()
-	}
+	forwardLayers   num.NodeLayers
+	backwardLayers  num.NodeLayers
+	resetGradsNodes num.Nodes
 }
 
 func (p *Pipeline) Forward(ctx context.Context) {
 	for _, nodes := range p.forwardLayers {
-		//p.wg.Add(len(nodes))
 		for _, node := range nodes {
-			//p.forwardChan <- node.calcData
 			node.CalcData(ctx)
 		}
-		//p.wg.Wait()
 	}
 }
 
 func (p *Pipeline) Backward(ctx context.Context) {
-	for _, resetFunc := range p.resetGradsFunc {
-		resetFunc(p.ctx)
+	for i, node := range p.resetGradsNodes {
+		if i == 0 {
+			p.device.FillGradWithOnes(node)
+		} else {
+			p.device.FillGradWithZeros(node)
+		}
 	}
 
 	for _, nodes := range p.backwardLayers {
-		//p.wg.Add(len(nodes))
 		for _, node := range nodes {
-			//p.forwardChan <- node.calcGrad
 			node.CalcGrad(ctx)
-			//p.forwardChan <- node.calcGrad
 		}
-		//p.wg.Wait()
 	}
 }

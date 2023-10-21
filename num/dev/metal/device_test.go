@@ -5,17 +5,11 @@ import (
 	"math"
 	"testing"
 
-	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/num"
 	"github.com/stretchr/testify/require"
 )
 
-var xx = func() int {
-	mps.InitDefaultDevice()
-	return 0
-}()
-
-var testDevice = &Device{}
+var testDevice = NewDevice()
 
 func roundFloats(t *testing.T, src Float32s) Float32s {
 	t.Helper()
@@ -44,7 +38,7 @@ func newTestData(t *testing.T, dims num.Dims, data, grad Float32s) *num.Data {
 
 func runPipelines(t *testing.T, lastNode *num.Data) {
 	t.Helper()
-	pipeline := NewPipeline(lastNode)
+	pipeline := NewPipeline(testDevice, lastNode)
 	pipeline.Forward(context.Background())
 	pipeline.Backward(context.Background())
 }

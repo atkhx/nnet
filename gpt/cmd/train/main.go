@@ -12,28 +12,24 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/gpt/dataset"
 	"github.com/atkhx/nnet/gpt/pkg"
 	"github.com/atkhx/nnet/num"
 	numDevice "github.com/atkhx/nnet/num/dev/metal"
 
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
+	"github.com/dustin/go-humanize"
 )
 
 var (
-	filename      string
-	statChunkSize int
-	epochs        int
-
-	printer = message.NewPrinter(language.English)
+	filename string
+	statSize int
+	epochs   int
 )
 
 func init() {
 	flag.StringVar(&filename, "c", "./gpt/config.json", "nn config file")
 	flag.IntVar(&epochs, "i", 5_000, "iterations count")
-	flag.IntVar(&statChunkSize, "s", 10, "show statistics every n iterations")
+	flag.IntVar(&statSize, "s", 10, "show statistics every n iterations")
 	flag.Parse()
 }
 
@@ -49,32 +45,31 @@ func main() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	mps.InitDefaultDevice()
-	defer mps.ReleaseDefaultDevice()
+	device := numDevice.NewDevice()
+	defer device.Close()
 
-	trainDataset := dataset.NewDataset(pkg.ContextLength, pkg.TrainingMiniBatchSize)
+	trainDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
 	trainDataset.ParseAlphabet()
 	trainDataset.ParseTokens()
 
-	device := &numDevice.Device{}
+	optimizer := pkg.CreateOptimizer(epochs, device)
+	model := pkg.CreateModel(trainDataset.GetAlphabetSize(), pkg.MiniBatchSize, device, optimizer)
 
-	modelOptimizer := device.GetOptimizerAdam(epochs, 0.9, 0.98, 0.0003, 0.000000001)
-	model := pkg.CreateNN(trainDataset.GetAlphabetSize(), pkg.TrainingMiniBatchSize, device, modelOptimizer)
+	output := model.Compile()
+	inputs := model.GetInput()
+	target := device.NewData(num.NewDims(1, pkg.ContextLength*pkg.MiniBatchSize))
 
-	modelOutput := model.Compile()
-	if err := model.LoadFromFile(filename); err != nil {
-		log.Fatalln(err)
+	lossFunc := device.CrossEntropyPos(output, target)
+	lossMean := device.Mean(lossFunc)
+	pipeline := numDevice.NewPipeline(device, lossMean)
+
+	if err = model.LoadFromFile(filename); err != nil {
+		return
 	}
 
-	targets := device.NewData(num.NewDims(1, pkg.ContextLength*pkg.TrainingMiniBatchSize))
-	inputs := model.GetInput()
-
-	lossFunc := device.CrossEntropyPos(modelOutput, targets)
-	lossMean := device.Mean(lossFunc)
-	pipeline := numDevice.NewPipeline(lossMean)
-
-	printer.Printf("trainable params count: %d \n", model.GetTrainableParamsCount())
-	printer.Printf("alphabet size: %d \n", trainDataset.GetAlphabetSize())
+	fmt.Println("params count:", humanize.Bytes(uint64(model.GetTrainableParamsCount())))
+	fmt.Println("alphabet size:", trainDataset.GetAlphabetSize())
+	fmt.Println("features count:", pkg.FeaturesCount)
 
 	defer func() {
 		if err := model.SaveToFile(filename); err != nil {
@@ -100,7 +95,7 @@ func main() {
 			}
 
 			batchInputs, batchTarget := trainDataset.ReadRandomSampleBatch()
-			copy(targets.Data, batchTarget)
+			copy(target.Data, batchTarget)
 			copy(inputs.Data, batchInputs)
 
 			pipeline.Forward(ctx)
@@ -109,8 +104,8 @@ func main() {
 
 			lossAvg += lossMean.Data[0]
 
-			if iteration > 0 && iteration%statChunkSize == 0 {
-				lossAvg /= float32(statChunkSize)
+			if iteration > 0 && iteration%statSize == 0 {
+				lossAvg /= float32(statSize)
 				fmt.Println(
 					fmt.Sprintf("lossFunc: %.8f", lossAvg), "\t",
 					"iteration:", iteration, "\t",

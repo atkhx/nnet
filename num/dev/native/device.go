@@ -8,7 +8,16 @@ import (
 	"github.com/atkhx/nnet/num/broadcast"
 )
 
-type Device struct{}
+type Device struct {
+}
+
+func NewDevice() *Device {
+	return &Device{}
+}
+
+func (d *Device) Close() error {
+	return nil
+}
 
 func (d *Device) NewData(dims num.Dims, srcNodes ...*num.Data) *num.Data {
 	return num.NewData(
@@ -59,6 +68,14 @@ func (d *Device) FillDataWithZeros(aData *num.Data) {
 
 func (d *Device) FillDataWithOnes(aData *num.Data) {
 	Float32s(aData.Data).Ones()
+}
+
+func (d *Device) FillGradWithZeros(aData *num.Data) {
+	Float32s(aData.Grad).Zero()
+}
+
+func (d *Device) FillGradWithOnes(aData *num.Data) {
+	Float32s(aData.Grad).Ones()
 }
 
 func (d *Device) GetDataDims(aData *num.Data) num.Dims {

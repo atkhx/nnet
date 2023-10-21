@@ -4,11 +4,11 @@ go 1.21
 
 require (
 	github.com/atkhx/mps v0.0.1
+	github.com/dustin/go-humanize v1.0.1
 	github.com/dustin/go-wikiparse v0.0.0-20230222053353-0bffc9007375
 	github.com/json-iterator/go v1.1.12
 	github.com/m-m-f/gowiki v0.0.0-20180103212159-93aa7513fb32
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/text v0.13.0
 )
 
 require (

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testDevice = &Device{}
+var testDevice = NewDevice()
 
 func roundFloats(t *testing.T, src Float32s) Float32s {
 	t.Helper()
@@ -38,7 +38,7 @@ func newTestData(t *testing.T, dims num.Dims, data, grad Float32s) *num.Data {
 
 func runPipelines(t *testing.T, lastNode *num.Data) {
 	t.Helper()
-	pipeline := NewPipeline(lastNode)
+	pipeline := NewPipeline(testDevice, lastNode)
 	pipeline.Forward(context.Background())
 	pipeline.Backward(context.Background())
 }

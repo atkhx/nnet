@@ -10,16 +10,33 @@ import (
 	"github.com/atkhx/nnet/num/broadcast"
 )
 
+type Device struct {
+	dev *mps.MTLDevice
+}
+
+func NewDevice() *Device {
+	return &Device{
+		dev: mps.NewMTLDevice(),
+	}
+}
+
+func (d *Device) Close() error {
+	d.dev.Release()
+	return nil
+}
+
+func (d *Device) CreateCommandQueue() *mps.MTLCommandQueue {
+	return d.dev.CreateCommandQueue()
+}
+
 type dataOpts struct {
 	dataBuffer *mps.MTLBuffer
 	gradBuffer *mps.MTLBuffer
 }
 
-type Device struct{}
-
 func (d *Device) NewData(dims num.Dims, srcNodes ...*num.Data) *num.Data {
-	dataBuffer := mps.DefaultDevice.CreateNewBufferWithLength(dims.Size())
-	gradBuffer := mps.DefaultDevice.CreateNewBufferWithLength(dims.Size())
+	dataBuffer := d.dev.CreateNewBufferWithLength(dims.Size())
+	gradBuffer := d.dev.CreateNewBufferWithLength(dims.Size())
 
 	return num.NewData(
 		dataBuffer.GetData(),
@@ -72,6 +89,14 @@ func (d *Device) FillDataWithZeros(aData *num.Data) {
 
 func (d *Device) FillDataWithOnes(aData *num.Data) {
 	Float32s(aData.Data).Ones()
+}
+
+func (d *Device) FillGradWithZeros(aData *num.Data) {
+	Float32s(aData.Grad).Zero()
+}
+
+func (d *Device) FillGradWithOnes(aData *num.Data) {
+	Float32s(aData.Grad).Ones()
 }
 
 func (d *Device) GetDataDims(aData *num.Data) num.Dims {
