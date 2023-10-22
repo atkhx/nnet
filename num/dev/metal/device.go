@@ -3,7 +3,6 @@ package metal
 import (
 	"context"
 	"math"
-	"sync"
 
 	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/num"
@@ -127,6 +126,7 @@ func (d *Device) Mean(aData *num.Data) *num.Data {
 	}
 	output.CalcGrad = func(ctx context.Context) {
 		Float32s(aData.Grad).AddScalar(output.Grad[0] * 1.0 / float32(len(aData.Data)))
+		//Float32s(aData.Grad).AddScalar(output.Grad[0])
 	}
 	return output
 }
@@ -188,21 +188,20 @@ func (d *Device) LNorm(aData, gamma, beta *num.Data) *num.Data {
 
 func (d *Device) Relu(aData *num.Data) *num.Data {
 	output := d.newLinkedCopy(aData)
+
+	aDataBuffer := aData.Opts.(dataOpts).dataBuffer
+	aGradBuffer := aData.Opts.(dataOpts).gradBuffer
+	oDataBuffer := output.Opts.(dataOpts).dataBuffer
+	oGradBuffer := output.Opts.(dataOpts).gradBuffer
+
 	output.CalcData = func(ctx context.Context) {
-		for i, x := range aData.Data {
-			if x > 0 {
-				output.Data[i] = x
-			} else {
-				output.Data[i] = 0
-			}
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.ReLuMTLBuffer(oDataBuffer, aDataBuffer)
 	}
+
 	output.CalcGrad = func(ctx context.Context) {
-		for i, y := range output.Data {
-			if y > 0 {
-				aData.Grad[i] += output.Grad[i]
-			}
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.ReLuMTLBufferBwd(aGradBuffer, oGradBuffer, oDataBuffer)
 	}
 	return output
 }
@@ -232,6 +231,18 @@ func (d *Device) MulScalar(aData *num.Data, k float32) *num.Data {
 func (d *Device) Add(aData, bData *num.Data) *num.Data {
 	config := broadcast.NewConfig(aData.Dims, bData.Dims)
 	output := d.NewData(config.OutDims, aData, bData)
+
+	if aData.Dims == bData.Dims {
+		output.CalcData = func(ctx context.Context) {
+			Float32s(aData.Data).AddTo(output.Data, bData.Data)
+		}
+		output.CalcGrad = func(ctx context.Context) {
+			Float32s(aData.Grad).Add(output.Grad)
+			Float32s(bData.Grad).Add(output.Grad)
+		}
+		return output
+	}
+
 	output.CalcData = func(ctx context.Context) {
 		config.Broadcast(func(ax, bx, offset int) {
 			output.Data[offset] = aData.Data[ax] + bData.Data[bx]
@@ -648,14 +659,12 @@ func (d *Device) GetOptimizerAdam(iterations int, beta1, beta2, learningRate, ep
 	iterations++
 	return func(nodes []*num.Data) func(iteration int) {
 
-		mm := make([]Float32s, len(nodes))
-		vv := make([]Float32s, len(nodes))
+		mm := make([]*mps.MTLBuffer, len(nodes))
+		vv := make([]*mps.MTLBuffer, len(nodes))
 
-		weightsCount := 0
 		for i, node := range nodes {
-			weightsCount += len(node.Data)
-			mm[i] = NewFloat32s(len(node.Data))
-			vv[i] = NewFloat32s(len(node.Data))
+			mm[i] = d.dev.CreateNewBufferWithLength(len(node.Data))
+			vv[i] = d.dev.CreateNewBufferWithLength(len(node.Data))
 		}
 
 		beta1pow := NewFloat32s(iterations)
@@ -676,40 +685,29 @@ func (d *Device) GetOptimizerAdam(iterations int, beta1, beta2, learningRate, ep
 			beta2pow[i] = 1 / (1 - beta2pow[i])
 		}
 
-		beta1o := 1 - beta1
-		beta2o := 1 - beta2
-
-		wg := sync.WaitGroup{}
+		commandQueue := d.dev.CreateCommandQueue()
 
 		return func(iteration int) {
 			beta1powIterationLR := learningRate * beta1pow[iteration]
 			beta2powIteration := beta2pow[iteration]
 
-			wg.Add(len(nodes))
-			defer wg.Wait()
+			commandBuffer := commandQueue.GetCommandBuffer()
+			defer func() {
+				commandBuffer.Wait()
+				//commandBuffer.Release()
+			}()
 
 			for i, node := range nodes {
-				go func(i int, node *num.Data) {
-					defer wg.Done()
-					m := mm[i]
-					v := vv[i]
-
-					m.MulScalar(beta1)
-					v.MulScalar(beta2)
-
-					m.AddWeighted(node.Grad, beta1o)
-
-					for j, g := range node.Grad {
-						//m[j] = beta1*m[j] + beta1o*g
-						//v[j] = beta2*v[j] + beta2o*g*g
-
-						//m[j] += beta1o * g
-						v[j] += beta2o * g * g
-
-						sqrt := float32(math.Sqrt(float64(v[j] * beta2powIteration)))
-						node.Data[j] -= m[j] * beta1powIterationLR / (sqrt + eps)
-					}
-				}(i, node)
+				commandBuffer.UpdateWithAdam(
+					node.Opts.(dataOpts).dataBuffer,
+					node.Opts.(dataOpts).gradBuffer,
+					mm[i],
+					vv[i],
+					beta1,
+					beta2,
+					beta1powIterationLR,
+					beta2powIteration,
+				)
 			}
 		}
 	}

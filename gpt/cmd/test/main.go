@@ -69,10 +69,13 @@ func main() {
 		}
 
 		logits := output.Data[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
-		numDevice.Float32s(logits).Softmax() // probs
-		numDevice.Float32s(logits).CumulativeSum()
+		numDevice.Float32s(logits).Softmax()       // probs
+		numDevice.Float32s(logits).CumulativeSum() // for Multinomial
 		f := numDevice.Float32s(logits).Multinomial()
+
 		//f := sampleWithTemperature(logits, 0.9)
+		//f := greedyMax(logits)
+
 		b := trainDataset.Decode(f)
 
 		inputTokens = append(inputTokens, b...)
@@ -85,6 +88,18 @@ func main() {
 	}
 
 	fmt.Println()
+}
+
+func greedyMax(logits numDevice.Float32s) int {
+	f := 0
+	m := logits[0]
+	for i := 1; i < len(logits); i++ {
+		if m < logits[i] {
+			m = logits[i]
+			f = i
+		}
+	}
+	return f
 }
 
 func sampleWithTemperature(logits numDevice.Float32s, temperature float32) int {

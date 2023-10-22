@@ -178,3 +178,35 @@ void customKernelSoftmaxTrilBwd(
         offset:offset
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
+
+// customKernelUpdateWithAdam
+
+void* customKernelUpdateWithAdamCreate(void *deviceID, const char *kernelSource) {
+    return [[KernelMTLBufferUpdateWithAdamImpl alloc]
+        initWithDevice:(id<MTLDevice>)deviceID
+        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+}
+
+void customKernelUpdateWithAdam(
+    void *kernelID,
+    void *commandBufferID,
+    void *dataBufferID,
+    void *gradBufferID,
+    void *mBufferID,
+    void *vBufferID,
+    float beta1,
+    float beta2,
+    float beta1powIterationLR,
+    float beta2powIteration
+) {
+    [(__bridge KernelMTLBufferUpdateWithAdamImpl*)kernelID
+        updateWithAdam:(id<MTLBuffer>)dataBufferID
+        gradBuffer:(id<MTLBuffer>)gradBufferID
+        mBuffer:(id<MTLBuffer>)mBufferID
+        vBuffer:(id<MTLBuffer>)vBufferID
+        beta1:beta1
+        beta2:beta2
+        beta1powIterationLR:beta1powIterationLR
+        beta2powIteration:beta2powIteration
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}

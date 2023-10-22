@@ -67,7 +67,8 @@ func main() {
 		return
 	}
 
-	fmt.Println("params count:", humanize.Bytes(uint64(model.GetTrainableParamsCount())))
+	fmt.Println("params weight:", humanize.Bytes(uint64(model.GetTrainableParamsCount()*4)))
+	fmt.Println("params count:", model.GetTrainableParamsCount())
 	fmt.Println("alphabet size:", trainDataset.GetAlphabetSize())
 	fmt.Println("features count:", pkg.FeaturesCount)
 
@@ -104,6 +105,10 @@ func main() {
 
 			lossAvg += lossMean.Data[0]
 
+			//if iteration == 0 {
+			//	generateSample(ctx, trainDataset, pipeline, inputs, output)
+			//}
+
 			if iteration > 0 && iteration%statSize == 0 {
 				lossAvg /= float32(statSize)
 				fmt.Println(
@@ -112,6 +117,11 @@ func main() {
 					"duration:", time.Since(t), "\t",
 				)
 				lossAvg = 0
+
+				//if iteration%(10*statSize) == 0 {
+				//	generateSample(ctx, trainDataset, pipeline, inputs, output)
+				//}
+
 				t = time.Now()
 			}
 		}
@@ -125,4 +135,47 @@ func main() {
 		cancel()
 		<-trainStopped
 	}
+}
+
+func generateSample(
+	ctx context.Context,
+	trainDataset *dataset.Dataset,
+	pipeline *numDevice.Pipeline,
+	inputs *num.Data,
+	output *num.Data,
+) {
+	fmt.Println("generate sample")
+	defer fmt.Println()
+
+	inputIndexes := trainDataset.EncodeString(` `)
+	inputTokens := trainDataset.Decode(inputIndexes...)
+
+	fmt.Print(trainDataset.Decode(inputIndexes...))
+	for j := 0; j < pkg.ContextLength; j++ {
+		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
+		copy(inputs.Data, inputsFloat)
+
+		pipeline.Forward(ctx)
+
+		pos := len(inputTokens) - 1
+		if pos < 0 {
+			pos = 0
+		}
+
+		logits := output.Data[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
+		numDevice.Float32s(logits).Softmax() // probs
+		numDevice.Float32s(logits).CumulativeSum()
+		f := numDevice.Float32s(logits).Multinomial()
+		b := trainDataset.Decode(f)
+
+		inputTokens = append(inputTokens, b...)
+		if len(inputTokens) > pkg.ContextLength {
+			l := len(inputTokens)
+			inputTokens = inputTokens[l-pkg.ContextLength:]
+		}
+
+		fmt.Print(b)
+	}
+
+	fmt.Println()
 }

@@ -7,19 +7,25 @@ import (
 )
 
 const (
-	MiniBatchSize = 10
+	MiniBatchSize = 40
 
-	ContextLength  = 64
-	HeadSize       = 64
-	HeadsCount     = 8
+	ContextLength  = 128
+	HeadSize       = 1024
+	HeadsCount     = 1
 	FeaturesCount  = HeadSize * HeadsCount
 	HeadLinearSize = 4
-	BlocksCount    = 1
-	DropoutProb    = 0.3
+	BlocksCount    = 4
+	DropoutProb    = 0.1
+	InitWeightK    = 0.007
+
+	adamBeta1        = 0.9
+	adamBeta2        = 0.98
+	adamLearningRate = 0.0003
+	adamEPS          = 0.000000001
 )
 
 func CreateOptimizer(epochs int, device nnet.Device) func(nodes []*num.Data) func(iteration int) {
-	return device.GetOptimizerAdam(epochs, 0.9, 0.98, 0.0003, 0.000000001)
+	return device.GetOptimizerAdam(epochs, adamBeta1, adamBeta2, adamLearningRate, adamEPS)
 }
 
 func CreateModel(
@@ -39,6 +45,8 @@ func CreateModel(
 		alphabetSize,
 		miniBatchSize,
 		DropoutProb,
+		InitWeightK,
+
 		device,
 		optimizer,
 	)

@@ -189,3 +189,29 @@ func (b *MTLCommandBuffer) MatrixMultiply(aM, bM, cM *Matrix, iC int, aT, bT boo
 		mpsMatrixMultiply(b.deviceID, b.id, aM.matrixID, bM.matrixID, cM.matrixID, iC, aT, bT, alpha, beta)
 	})
 }
+
+func (b *MTLCommandBuffer) UpdateWithAdam(
+	dataBuffer,
+	gradBuffer,
+	mBuffer,
+	vBuffer *MTLBuffer,
+
+	beta1,
+	beta2,
+	beta1powIterationLR,
+	beta2powIteration float32,
+) {
+	b.exclusive(func() {
+		customKernelUpdateWithAdam(
+			b.device.krnUpdateWithAdam, b.id,
+			dataBuffer.bufferID,
+			gradBuffer.bufferID,
+			mBuffer.bufferID,
+			vBuffer.bufferID,
+			beta1,
+			beta2,
+			beta1powIterationLR,
+			beta2powIteration,
+		)
+	})
+}

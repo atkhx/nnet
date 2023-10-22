@@ -10,6 +10,7 @@
 #include "krn_mtl_buffer_softmax.h"
 #include "krn_mtl_buffer_softmax_tril.h"
 #include "krn_mtl_buffer_softmax_tril_bwd.h"
+#include "krn_mtl_buffer_update_with_adam.h"
 
 // CustomKernelFill
 
@@ -88,5 +89,24 @@ void customKernelSoftmaxTrilBwd(
     uint colsCount,
     uint rowsCount,
     uint offset
+);
+
+
+// customKernelUpdateWithAdam
+
+void* customKernelUpdateWithAdamCreate(void *deviceID, const char *kernelSource);
+void customKernelUpdateWithAdam(
+    void *kernelID,
+    void *commandBufferID,
+
+    void *dataBufferID,
+    void *gradBufferID,
+    void *mBufferID,
+    void *vBufferID,
+
+    float beta1,
+    float beta2,
+    float beta1powIterationLR,
+    float beta2powIteration
 );
 

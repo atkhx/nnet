@@ -37,15 +37,19 @@ func (p *Pipeline) Forward(ctx context.Context) {
 	}
 }
 
-func (p *Pipeline) Backward(ctx context.Context) {
+func (p *Pipeline) resetGrads(ctx context.Context) {
+	commandBuffer := p.commandQueue.GetCommandBuffer()
 	for i, node := range p.resetGradsNodes {
 		if i == 0 {
-			p.device.FillGradWithOnes(node)
+			commandBuffer.FillMTLBuffer(node.Opts.(dataOpts).gradBuffer, 1.0)
 		} else {
-			p.device.FillGradWithZeros(node)
+			commandBuffer.ClearMTLBuffer(node.Opts.(dataOpts).gradBuffer)
 		}
 	}
+	commandBuffer.Wait()
+}
 
+func (p *Pipeline) calcGrads(ctx context.Context) {
 	for _, nodes := range p.backwardLayers {
 		commandBuffer := p.commandQueue.GetCommandBuffer()
 		ctx := mps.ContextWithCommandBuffer(ctx, commandBuffer)
@@ -54,4 +58,9 @@ func (p *Pipeline) Backward(ctx context.Context) {
 		}
 		commandBuffer.Wait()
 	}
+}
+
+func (p *Pipeline) Backward(ctx context.Context) {
+	p.resetGrads(ctx)
+	p.calcGrads(ctx)
 }

@@ -35,6 +35,7 @@ func NewMTLDevice() *MTLDevice {
 		krnSoftmax:        customKernelSoftmaxForwardCreate(deviceID),
 		krnSoftmaxTrilFwd: customKernelSoftmaxTrilForwardCreate(deviceID),
 		krnSoftmaxTrilBwd: customKernelSoftmaxTrilBackwardCreate(deviceID),
+		krnUpdateWithAdam: customKernelUpdateWithAdamCreate(deviceID),
 	}
 
 	return device
@@ -52,6 +53,7 @@ type MTLDevice struct {
 	krnSoftmax        unsafe.Pointer
 	krnSoftmaxTrilFwd unsafe.Pointer
 	krnSoftmaxTrilBwd unsafe.Pointer
+	krnUpdateWithAdam unsafe.Pointer
 }
 
 func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {

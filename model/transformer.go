@@ -17,6 +17,7 @@ func NewTransformer(
 	alphabetSize,
 	miniBatchSize int,
 	dropout float32,
+	initWeightK float32,
 	device nnet.Device,
 	modelOptimizer Optimizer,
 ) *Sequential {
@@ -26,9 +27,7 @@ func NewTransformer(
 		D: 1,
 	}
 
-	//initWeight := &initializer.InitWeightFixed{NormK: 0.02}
-	//initWeight := &initializer.InitWeightFixed{NormK: 0.010}
-	initWeight := &initializer.InitWeightFixed{NormK: 0.007}
+	initWeight := &initializer.InitWeightFixed{NormK: initWeightK}
 
 	layers := layer.Layers{}
 

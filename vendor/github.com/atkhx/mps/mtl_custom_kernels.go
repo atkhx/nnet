@@ -181,3 +181,42 @@ func customKernelSoftmaxTrilBackward(
 		C.uint(offset*4),
 	)
 }
+
+//go:embed krn_mtl_buffer_update_with_adam.metal
+var kernelUpdateWithAdam string
+
+func customKernelUpdateWithAdamCreate(deviceID unsafe.Pointer) unsafe.Pointer {
+	cKernelString := C.CString(kernelUpdateWithAdam)
+	defer C.free(unsafe.Pointer(cKernelString))
+	return C.customKernelUpdateWithAdamCreate(deviceID, cKernelString)
+}
+
+func customKernelUpdateWithAdam(
+	kernelID,
+	commandBufferID,
+
+	dataBufferID,
+	gradBufferID,
+	mBufferID,
+	vBufferID unsafe.Pointer,
+
+	beta1,
+	beta2,
+	beta1powIterationLR,
+	beta2powIteration float32,
+) {
+	C.customKernelUpdateWithAdam(
+		kernelID,
+		commandBufferID,
+
+		dataBufferID,
+		gradBufferID,
+		mBufferID,
+		vBufferID,
+
+		C.float(beta1),
+		C.float(beta2),
+		C.float(beta1powIterationLR),
+		C.float(beta2powIteration),
+	)
+}
