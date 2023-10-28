@@ -28,6 +28,19 @@ func customKernelFillPart(kernelID, commandBufferID, bufferID unsafe.Pointer, of
 	C.customKernelFillPart(kernelID, commandBufferID, bufferID, C.uint(offset*4), C.uint(length*4), C.float(value))
 }
 
+//go:embed krn_mtl_buffer_copy.metal
+var kernelCopy string
+
+func customKernelCopyCreate(deviceID unsafe.Pointer) unsafe.Pointer {
+	cKernelString := C.CString(kernelCopy)
+	defer C.free(unsafe.Pointer(cKernelString))
+	return C.customKernelCopyCreate(deviceID, cKernelString)
+}
+
+func customKernelCopy(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {
+	C.customKernelCopy(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(dstOffset*4), C.uint(srcOffset*4), C.uint(length*4))
+}
+
 //go:embed krn_mtl_buffer_relu_fwd.metal
 var kernelReLUFwd string
 
@@ -52,6 +65,23 @@ func customKernelReLUBackwardCreate(deviceID unsafe.Pointer) unsafe.Pointer {
 
 func customKernelReLUBackward(kernelID, commandBufferID, dstBufferID, srcBufferID, maskBufferID unsafe.Pointer) {
 	C.customKernelReLUBwd(kernelID, commandBufferID, dstBufferID, srcBufferID, maskBufferID)
+}
+
+//go:embed krn_mtl_buffer_add.metal
+var kernelAdd string
+
+func customKernelAddCreate(deviceID unsafe.Pointer) unsafe.Pointer {
+	cKernelString := C.CString(kernelAdd)
+	defer C.free(unsafe.Pointer(cKernelString))
+	return C.customKernelAddCreate(deviceID, cKernelString)
+}
+
+func customKernelAdd(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {
+	C.customKernelAdd(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(dstOffset*4), C.uint(srcOffset*4), C.uint(length*4))
+}
+
+func customKernelAddTo(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer unsafe.Pointer) {
+	C.customKernelAddTo(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer)
 }
 
 //go:embed krn_mtl_buffer_mul.metal

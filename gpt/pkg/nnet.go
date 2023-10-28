@@ -7,15 +7,15 @@ import (
 )
 
 const (
-	MiniBatchSize = 40
+	MiniBatchSize = 50
 
-	ContextLength  = 128
+	ContextLength  = 256
 	HeadSize       = 1024
 	HeadsCount     = 1
 	FeaturesCount  = HeadSize * HeadsCount
 	HeadLinearSize = 4
 	BlocksCount    = 4
-	DropoutProb    = 0.1
+	DropoutProb    = 0.05
 	InitWeightK    = 0.007
 
 	adamBeta1        = 0.9

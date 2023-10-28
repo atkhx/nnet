@@ -86,6 +86,7 @@ func main() {
 
 		lossAvg := float32(0.0)
 
+		fmt.Println("training started")
 		t := time.Now()
 
 		for iteration := 0; iteration < epochs; iteration++ {

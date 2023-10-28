@@ -78,6 +78,12 @@ func (b *MTLCommandBuffer) FillMTLBufferPart(buffer *MTLBuffer, value float32, o
 	})
 }
 
+func (b *MTLCommandBuffer) Copy(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
+	b.exclusive(func() {
+		customKernelCopy(b.device.krnCopy, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	})
+}
+
 func (b *MTLCommandBuffer) ReLuMTLBuffer(destinationBuffer, sourceBuffer *MTLBuffer) {
 	b.exclusive(func() {
 		customKernelReLUForward(b.device.krnReLUFwd, b.id, destinationBuffer.bufferID, sourceBuffer.bufferID)
@@ -87,6 +93,18 @@ func (b *MTLCommandBuffer) ReLuMTLBuffer(destinationBuffer, sourceBuffer *MTLBuf
 func (b *MTLCommandBuffer) ReLuMTLBufferBwd(destinationBuffer, sourceBuffer, maskBuffer *MTLBuffer) {
 	b.exclusive(func() {
 		customKernelReLUBackward(b.device.krnReLUBwd, b.id, destinationBuffer.bufferID, sourceBuffer.bufferID, maskBuffer.bufferID)
+	})
+}
+
+func (b *MTLCommandBuffer) Add(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
+	b.exclusive(func() {
+		customKernelAdd(b.device.krnAdd, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	})
+}
+
+func (b *MTLCommandBuffer) AddTo(dst, aBuffer, bBuffer *MTLBuffer) {
+	b.exclusive(func() {
+		customKernelAddTo(b.device.krnAdd, b.id, dst.bufferID, aBuffer.bufferID, bBuffer.bufferID)
 	})
 }
 

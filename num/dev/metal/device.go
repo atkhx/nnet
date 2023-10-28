@@ -232,15 +232,49 @@ func (d *Device) Add(aData, bData *num.Data) *num.Data {
 	config := broadcast.NewConfig(aData.Dims, bData.Dims)
 	output := d.NewData(config.OutDims, aData, bData)
 
-	if aData.Dims == bData.Dims {
+	addRep := func(WH, aSize int) *num.Data {
 		output.CalcData = func(ctx context.Context) {
-			Float32s(aData.Data).AddTo(output.Data, bData.Data)
+			cbuf := mps.CommandBufferFromContext(ctx)
+			cbuf.Copy(output.Opts.(dataOpts).dataBuffer, aData.Opts.(dataOpts).dataBuffer, 0, 0, aSize)
+
+			for i := 0; i < aSize; i += WH {
+				cbuf.Add(output.Opts.(dataOpts).dataBuffer, bData.Opts.(dataOpts).dataBuffer, i, 0, WH)
+			}
 		}
 		output.CalcGrad = func(ctx context.Context) {
-			Float32s(aData.Grad).Add(output.Grad)
-			Float32s(bData.Grad).Add(output.Grad)
+			cbuf := mps.CommandBufferFromContext(ctx)
+			cbuf.Add(aData.Opts.(dataOpts).gradBuffer, output.Opts.(dataOpts).gradBuffer, 0, 0, aSize)
+
+			for i := 0; i < aSize; i += WH {
+				cbuf.Add(bData.Opts.(dataOpts).gradBuffer, output.Opts.(dataOpts).gradBuffer, 0, i, WH)
+			}
 		}
 		return output
+	}
+
+	if aData.Dims == bData.Dims {
+		output.CalcData = func(ctx context.Context) {
+			cbuf := mps.CommandBufferFromContext(ctx)
+			cbuf.AddTo(
+				output.Opts.(dataOpts).dataBuffer,
+				aData.Opts.(dataOpts).dataBuffer,
+				bData.Opts.(dataOpts).dataBuffer,
+			)
+		}
+		output.CalcGrad = func(ctx context.Context) {
+			cbuf := mps.CommandBufferFromContext(ctx)
+			cbuf.Add(aData.Opts.(dataOpts).gradBuffer, output.Opts.(dataOpts).gradBuffer, 0, 0, len(aData.Grad))
+			cbuf.Add(bData.Opts.(dataOpts).gradBuffer, output.Opts.(dataOpts).gradBuffer, 0, 0, len(aData.Grad))
+		}
+		return output
+	}
+
+	if aData.Dims.W == bData.Dims.W && aData.Dims.H == bData.Dims.H && bData.Dims.D == 1 {
+		return addRep(aData.Dims.W*aData.Dims.H, aData.Dims.Size())
+	}
+
+	if aData.Dims.W == bData.Dims.W && bData.Dims.H == 1 && bData.Dims.D == 1 {
+		return addRep(aData.Dims.W, aData.Dims.Size())
 	}
 
 	output.CalcData = func(ctx context.Context) {
@@ -340,23 +374,42 @@ func (d *Device) Dropout(aData *num.Data, prob float32) *num.Data {
 		return aData
 	}
 
-	mask10 := make([]bool, aData.Dims.Size())
+	//mask10 := make([]bool, aData.Dims.Size())
 	output := d.newLinkedCopy(aData)
+
+	mask := d.NewData(aData.Dims)
+
 	output.CalcData = func(ctx context.Context) {
-		d.FillDataWithZeros(output)
-		for i, v := range aData.Data {
-			if mask10[i] = randGenerator.Float32() > prob; mask10[i] {
-				output.Data[i] = v
-			}
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.DropoutBuffer(
+			output.Opts.(dataOpts).dataBuffer,
+			aData.Opts.(dataOpts).dataBuffer,
+			mask.Opts.(dataOpts).dataBuffer,
+			prob,
+		)
 	}
 	output.CalcGrad = func(ctx context.Context) {
 		for i, g := range output.Grad {
-			if mask10[i] {
+			if mask.Data[i] > 0 {
 				aData.Grad[i] += g
 			}
 		}
 	}
+	//output.CalcData = func(ctx context.Context) {
+	//	d.FillDataWithZeros(output)
+	//	for i, v := range aData.Data {
+	//		if mask10[i] = randGenerator.Float32() > prob; mask10[i] {
+	//			output.Data[i] = v
+	//		}
+	//	}
+	//}
+	//output.CalcGrad = func(ctx context.Context) {
+	//	for i, g := range output.Grad {
+	//		if mask10[i] {
+	//			aData.Grad[i] += g
+	//		}
+	//	}
+	//}
 	return output
 }
 

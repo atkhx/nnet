@@ -28,8 +28,10 @@ func NewMTLDevice() *MTLDevice {
 		deviceID: deviceID,
 
 		krnFill:           customKernelFillCreate(deviceID),
+		krnCopy:           customKernelCopyCreate(deviceID),
 		krnReLUFwd:        customKernelReLUForwardCreate(deviceID),
 		krnReLUBwd:        customKernelReLUBackwardCreate(deviceID),
+		krnAdd:            customKernelAddCreate(deviceID),
 		krnMul:            customKernelMulCreate(deviceID),
 		krnDropout:        customKernelDropoutCreate(deviceID),
 		krnSoftmax:        customKernelSoftmaxForwardCreate(deviceID),
@@ -46,8 +48,10 @@ type MTLDevice struct {
 	resources []Releasable
 
 	krnFill           unsafe.Pointer
+	krnCopy           unsafe.Pointer
 	krnReLUFwd        unsafe.Pointer
 	krnReLUBwd        unsafe.Pointer
+	krnAdd            unsafe.Pointer
 	krnMul            unsafe.Pointer
 	krnDropout        unsafe.Pointer
 	krnSoftmax        unsafe.Pointer

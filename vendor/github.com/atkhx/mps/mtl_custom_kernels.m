@@ -22,6 +22,32 @@ void customKernelFillPart(void *kernelID, void *commandBufferID, void *bufferID,
         length:length];
 }
 
+// CustomKernelCopy
+
+void* customKernelCopyCreate(void *deviceID, const char *kernelSource) {
+    return [[KernelMTLBufferCopyImpl alloc]
+        initWithDevice:(id<MTLDevice>)deviceID
+        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+}
+
+void customKernelCopy(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    const uint dstOffset,
+    const uint srcOffset,
+    const uint length
+) {
+    [(__bridge KernelMTLBufferCopyImpl*)kernelID
+        copy:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        dstOffset:dstOffset
+        srcOffset:srcOffset
+        length:length
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
 // CustomKernelReLUFwd
 
 void* customKernelReLUFwdCreate(void *deviceID, const char *kernelSource) {
@@ -50,6 +76,46 @@ void customKernelReLUBwd(void *kernelID, void *commandBufferID, void *destinatio
         reluBwd:(id<MTLBuffer>)destinationBufferID
         sourceBuffer:(id<MTLBuffer>)sourceBufferID
         maskBuffer:(id<MTLBuffer>)maskBufferID
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
+// CustomKernelAddl
+
+void* customKernelAddCreate(void *deviceID, const char *kernelSource) {
+    return [[KernelMTLBufferAddImpl alloc]
+        initWithDevice:(id<MTLDevice>)deviceID
+        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+}
+
+void customKernelAdd(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    const uint dstOffset,
+    const uint srcOffset,
+    const uint length
+) {
+    [(__bridge KernelMTLBufferAddImpl*)kernelID
+        add:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        dstOffset:dstOffset
+        srcOffset:srcOffset
+        length:length
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
+void customKernelAddTo(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *aBuffer,
+    void *bBuffer
+) {
+    [(__bridge KernelMTLBufferAddImpl*)kernelID
+        addTo:(id<MTLBuffer>)dstBufferID
+        aBuffer:(id<MTLBuffer>)aBuffer
+        bBuffer:(id<MTLBuffer>)bBuffer
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
