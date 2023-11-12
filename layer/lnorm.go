@@ -17,16 +17,17 @@ type LNorm struct {
 }
 
 func (l *LNorm) Compile(device nnet.Device, inputs *num.Data) *num.Data {
-	rowWidth := device.GetDataDims(inputs).W
-
-	l.Beta = device.NewData(num.NewDims(rowWidth))
-	l.Gamma = device.NewData(num.NewDims(rowWidth))
-
-	device.FillDataWithOnes(l.Gamma)
-
-	l.forUpdate = []*num.Data{l.Gamma, l.Beta}
-
-	return device.LNorm(inputs, l.Gamma, l.Beta)
+	panic("not implemented")
+	//rowWidth := device.GetDataDims(inputs).W
+	//
+	//l.Beta = device.NewData(num.NewDims(rowWidth))
+	//l.Gamma = device.NewData(num.NewDims(rowWidth))
+	//
+	//device.FillDataWithOnes(l.Gamma)
+	//
+	//l.forUpdate = []*num.Data{l.Gamma, l.Beta}
+	//
+	//return device.LNorm(inputs, l.Gamma, l.Beta)
 }
 
 func (l *LNorm) ForUpdate() []*num.Data {

@@ -25,39 +25,17 @@ type Releasable interface {
 func NewMTLDevice() *MTLDevice {
 	deviceID := mtlDeviceCreate()
 	device := &MTLDevice{
-		deviceID: deviceID,
-
-		krnFill:           customKernelFillCreate(deviceID),
-		krnCopy:           customKernelCopyCreate(deviceID),
-		krnReLUFwd:        customKernelReLUForwardCreate(deviceID),
-		krnReLUBwd:        customKernelReLUBackwardCreate(deviceID),
-		krnAdd:            customKernelAddCreate(deviceID),
-		krnMul:            customKernelMulCreate(deviceID),
-		krnDropout:        customKernelDropoutCreate(deviceID),
-		krnSoftmax:        customKernelSoftmaxForwardCreate(deviceID),
-		krnSoftmaxTrilFwd: customKernelSoftmaxTrilForwardCreate(deviceID),
-		krnSoftmaxTrilBwd: customKernelSoftmaxTrilBackwardCreate(deviceID),
-		krnUpdateWithAdam: customKernelUpdateWithAdamCreate(deviceID),
+		deviceID:      deviceID,
+		customKernels: customKernelCreate(deviceID),
 	}
 
 	return device
 }
 
 type MTLDevice struct {
-	deviceID  unsafe.Pointer
-	resources []Releasable
-
-	krnFill           unsafe.Pointer
-	krnCopy           unsafe.Pointer
-	krnReLUFwd        unsafe.Pointer
-	krnReLUBwd        unsafe.Pointer
-	krnAdd            unsafe.Pointer
-	krnMul            unsafe.Pointer
-	krnDropout        unsafe.Pointer
-	krnSoftmax        unsafe.Pointer
-	krnSoftmaxTrilFwd unsafe.Pointer
-	krnSoftmaxTrilBwd unsafe.Pointer
-	krnUpdateWithAdam unsafe.Pointer
+	deviceID      unsafe.Pointer
+	resources     []Releasable
+	customKernels unsafe.Pointer
 }
 
 func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
@@ -76,6 +54,29 @@ func (device *MTLDevice) CreateBufferWithLength(bfLength int) *MTLBuffer {
 	buffer := NewMTLBufferWithLength(device, bfLength)
 	device.regSource(buffer)
 	return buffer
+}
+
+type MatrixRandomDistribution struct {
+	id unsafe.Pointer
+}
+
+func (device *MTLDevice) CreateMatrixRandomDistribution(min, max float32) *MatrixRandomDistribution {
+	return &MatrixRandomDistribution{id: mpsMatrixRandomDistributionCreate(min, max)}
+}
+
+type MatrixRandomMTGP32 struct {
+	id unsafe.Pointer
+}
+
+func (device *MTLDevice) CreateMatrixRandomMTGP32(
+	distribution *MatrixRandomDistribution,
+	seed uint64,
+) *MatrixRandomMTGP32 {
+	return &MatrixRandomMTGP32{id: mpsMatrixRandomMTGP32Create(
+		device.deviceID,
+		distribution.id,
+		seed,
+	)}
 }
 
 func (device *MTLDevice) regSource(source Releasable) {

@@ -115,3 +115,25 @@ func mpsMatrixMultiply(
 		C.bool(transposeRight),
 	)
 }
+
+func mpsMatrixRandomDistributionCreate(min, max float32) unsafe.Pointer {
+	// todo add release func
+	return C.mpsMatrixRandomDistributionCreate(C.float(min), C.float(max))
+}
+
+func mpsMatrixRandomMTGP32Create(deviceID, distributionID unsafe.Pointer, seed uint64) unsafe.Pointer {
+	// todo add release func
+	return C.mpsMatrixRandomMTGP32Create(
+		deviceID,
+		distributionID,
+		C.ulong(seed),
+	)
+}
+
+func mpsMatrixRandom(kernelID, commandBufferID, aMatrixID unsafe.Pointer) {
+	C.mpsMatrixRandom(
+		kernelID,
+		commandBufferID,
+		aMatrixID,
+	)
+}

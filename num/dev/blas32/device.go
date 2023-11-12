@@ -166,6 +166,55 @@ func (d *Device) LNorm(aData, gamma, beta *num.Data) *num.Data {
 	return d.Add(xMul, beta)              // matrix [W, H, D] - aData[i] += beta[ColI]
 }
 
+func (d *Device) RMSNorm(aData *num.Data) *num.Data {
+	aSize := aData.Dims.Size()
+	width := aData.Dims.W
+
+	ssBuffer := NewFloat32s(aSize / width)
+
+	k := 1.0 / float32(width)
+
+	output := d.newLinkedCopy(aData)
+	output.CalcData = func(ctx context.Context) {
+		for i := 0; i < aSize/width; i++ {
+			aData := aData.Data[i*width : (i+1)*width]
+			oData := output.Data[i*width : (i+1)*width]
+
+			var ss float32
+			for _, v := range aData {
+				ss += v * v
+			}
+			ss = float32(math.Sqrt(1e-5 + float64(ss*k)))
+
+			for j, v := range aData {
+				oData[j] = v / ss
+			}
+			ssBuffer[i] = ss
+		}
+	}
+	output.CalcGrad = func(ctx context.Context) {
+		for i := 0; i < aSize/width; i++ {
+			aGrad := aData.Grad[i*width : (i+1)*width]
+			aData := aData.Data[i*width : (i+1)*width]
+			oGrad := output.Grad[i*width : (i+1)*width]
+			oData := output.Data[i*width : (i+1)*width]
+
+			ss := ssBuffer[i]
+
+			var ssGrad float32
+			for j, g := range oGrad {
+				ssGrad -= g * oData[j]
+			}
+
+			ssGrad *= k / ss
+			for j, v := range aData {
+				aGrad[j] += (oGrad[j] + v*ssGrad) / ss
+			}
+		}
+	}
+	return output
+}
+
 func (d *Device) Relu(aData *num.Data) *num.Data {
 	output := d.newLinkedCopy(aData)
 	output.CalcData = func(ctx context.Context) {

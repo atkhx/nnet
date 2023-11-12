@@ -16,9 +16,22 @@ func NewEmbedding(
 	}
 }
 
+func NewEmbeddingWithSkipTraining(
+	valEmbedding *num.Data,
+	posEmbedding *num.Data,
+) *Embedding {
+	return &Embedding{
+		ValEmbedding: valEmbedding,
+		posEmbedding: posEmbedding,
+		skipTraining: true,
+		forUpdate:    []*num.Data{},
+	}
+}
+
 type Embedding struct {
 	ValEmbedding *num.Data
 	posEmbedding *num.Data
+	skipTraining bool
 
 	forUpdate []*num.Data
 }

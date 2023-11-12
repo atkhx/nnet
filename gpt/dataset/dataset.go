@@ -170,10 +170,8 @@ func (d *Dataset) DecodeFloats(pos ...float32) []Token {
 }
 
 func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets native.Float32s) {
-	inputSampleSize := d.contextSize
-
-	sampleInputs = make(native.Float32s, inputSampleSize*d.miniBatchSize)
-	sampleTargets = make(native.Float32s, inputSampleSize*d.miniBatchSize)
+	sampleInputs = make(native.Float32s, d.contextSize*d.miniBatchSize)
+	sampleTargets = make(native.Float32s, d.contextSize*d.miniBatchSize)
 
 	tokens := make([]Token, d.contextSize)
 	tokenLength := 1
@@ -181,19 +179,19 @@ func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets native.Fl
 	for b := 0; b < d.miniBatchSize; b++ {
 		pos := rand.Intn(len(d.rawRunes) - (d.contextSize * tokenLength) - 1)
 
-		chunk := d.rawRunes[pos : (pos+1)+(inputSampleSize*tokenLength)]
+		chunk := d.rawRunes[pos : (pos+1)+(d.contextSize*tokenLength)]
 		for i := 0; i < d.contextSize; i++ {
 			tokens[i] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
 		}
 
-		sampleInputs := sampleInputs[b*inputSampleSize : (b+1)*inputSampleSize]
+		sampleInputs := sampleInputs[b*d.contextSize : (b+1)*d.contextSize]
 		copy(sampleInputs, d.EncodeToFloats(tokens...))
 
 		for i := 1; i < d.contextSize+1; i++ {
 			tokens[i-1] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
 		}
 
-		sampleTargets := sampleTargets[b*inputSampleSize : (b+1)*inputSampleSize]
+		sampleTargets := sampleTargets[b*d.contextSize : (b+1)*d.contextSize]
 		copy(sampleTargets, d.EncodeToFloats(tokens...))
 	}
 

@@ -7,19 +7,19 @@ import (
 )
 
 const (
-	MiniBatchSize = 50
+	MiniBatchSize = 10
 
-	ContextLength  = 256
-	HeadSize       = 1024
-	HeadsCount     = 1
+	ContextLength  = 512
+	HeadSize       = 64
+	HeadsCount     = 16
 	FeaturesCount  = HeadSize * HeadsCount
 	HeadLinearSize = 4
-	BlocksCount    = 4
-	DropoutProb    = 0.05
+	BlocksCount    = 1
+	DropoutProb    = 0.1
 	InitWeightK    = 0.007
 
 	adamBeta1        = 0.9
-	adamBeta2        = 0.98
+	adamBeta2        = 0.8
 	adamLearningRate = 0.0003
 	adamEPS          = 0.000000001
 )
@@ -34,7 +34,8 @@ func CreateModel(
 	device nnet.Device,
 	optimizer model.Optimizer,
 ) *model.Sequential {
-	return model.NewTransformer(
+	return model.NewLLaMaExperiment(
+		//return model.NewTransformer(
 		ContextLength,
 		FeaturesCount,
 		HeadsCount,

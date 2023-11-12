@@ -52,12 +52,12 @@ func main() {
 
 	pipeline := numDevice.NewPipeline(device, output)
 
-	inputIndexes := trainDataset.EncodeString(` `)
+	inputIndexes := trainDataset.EncodeString(`Телефон`)
 	inputTokens := trainDataset.Decode(inputIndexes...)
 
 	fmt.Print(trainDataset.Decode(inputIndexes...))
 	ctx := context.Background()
-	for j := 0; j < 10000; j++ {
+	for j := 0; j < pkg.ContextLength*10; j++ {
 		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
 		copy(inputs.Data, inputsFloat)
 
@@ -69,11 +69,11 @@ func main() {
 		}
 
 		logits := output.Data[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
-		numDevice.Float32s(logits).Softmax()       // probs
-		numDevice.Float32s(logits).CumulativeSum() // for Multinomial
-		f := numDevice.Float32s(logits).Multinomial()
+		//numDevice.Float32s(logits).Softmax()       // probs
+		//numDevice.Float32s(logits).CumulativeSum() // for Multinomial
+		//f := numDevice.Float32s(logits).Multinomial()
 
-		//f := sampleWithTemperature(logits, 0.9)
+		f := sampleWithTemperature(logits, 0.9)
 		//f := greedyMax(logits)
 
 		b := trainDataset.Decode(f)

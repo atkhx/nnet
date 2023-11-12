@@ -122,3 +122,22 @@ void mpsMatrixMultiply(
 
     [kernel release];
 }
+
+void* mpsMatrixRandomDistributionCreate(float min, float max) {
+    return [MPSMatrixRandomDistributionDescriptor uniformDistributionDescriptorWithMinimum:min maximum:max];
+}
+
+void* mpsMatrixRandomMTGP32Create(void *deviceID, void *distribution, NSUInteger seed) {
+    return [[MPSMatrixRandomMTGP32 alloc]
+        initWithDevice:(id<MTLDevice>)deviceID
+        destinationDataType:MPSDataTypeFloat32
+        seed:seed
+        distributionDescriptor:(__bridge MPSMatrixRandomDistributionDescriptor*)distribution
+    ];
+}
+
+void mpsMatrixRandom(void *kernelID, void *commandBufferID, void *dstMatrix) {
+    [(__bridge MPSMatrixRandomMTGP32*)kernelID
+        encodeToCommandBuffer:(id<MTLCommandBuffer>)commandBufferID
+        destinationMatrix:(__bridge MPSMatrix*)dstMatrix];
+}

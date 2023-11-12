@@ -52,3 +52,8 @@ void mpsMatrixMultiply(
     bool _transposeRight
 );
 
+// Random
+void* mpsMatrixRandomDistributionCreate(float min, float max);
+void* mpsMatrixRandomMTGP32Create(void *deviceID, void *distribution, NSUInteger seed);
+void mpsMatrixRandom(void *kernelID, void *commandBufferID, void *dstMatrix);
+

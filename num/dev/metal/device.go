@@ -3,6 +3,7 @@ package metal
 import (
 	"context"
 	"math"
+	"time"
 
 	"github.com/atkhx/mps"
 	"github.com/atkhx/nnet/num"
@@ -10,22 +11,31 @@ import (
 )
 
 type Device struct {
-	dev *mps.MTLDevice
+	mtlDevice    *mps.MTLDevice
+	distribution *mps.MatrixRandomDistribution
+	randomizer   *mps.MatrixRandomMTGP32
 }
 
 func NewDevice() *Device {
+	mtlDevice := mps.NewMTLDevice()
+
+	distribution := mtlDevice.CreateMatrixRandomDistribution(0, 1)
+	randomizer := mtlDevice.CreateMatrixRandomMTGP32(distribution, uint64(time.Now().UnixNano()))
+
 	return &Device{
-		dev: mps.NewMTLDevice(),
+		mtlDevice:    mtlDevice,
+		distribution: distribution,
+		randomizer:   randomizer,
 	}
 }
 
 func (d *Device) Close() error {
-	d.dev.Release()
+	d.mtlDevice.Release()
 	return nil
 }
 
 func (d *Device) CreateCommandQueue() *mps.MTLCommandQueue {
-	return d.dev.CreateCommandQueue()
+	return d.mtlDevice.CreateCommandQueue()
 }
 
 type dataOpts struct {
@@ -34,8 +44,8 @@ type dataOpts struct {
 }
 
 func (d *Device) NewData(dims num.Dims, srcNodes ...*num.Data) *num.Data {
-	dataBuffer := d.dev.CreateNewBufferWithLength(dims.Size())
-	gradBuffer := d.dev.CreateNewBufferWithLength(dims.Size())
+	dataBuffer := d.mtlDevice.CreateNewBufferWithLength(dims.Size())
+	gradBuffer := d.mtlDevice.CreateNewBufferWithLength(dims.Size())
 
 	return num.NewData(
 		dataBuffer.GetData(),
@@ -82,22 +92,6 @@ func (d *Device) NewPositionEmbeddingTable(featuresCount, contextSize int) *num.
 	return result
 }
 
-func (d *Device) FillDataWithZeros(aData *num.Data) {
-	Float32s(aData.Data).Zero()
-}
-
-func (d *Device) FillDataWithOnes(aData *num.Data) {
-	Float32s(aData.Data).Ones()
-}
-
-func (d *Device) FillGradWithZeros(aData *num.Data) {
-	Float32s(aData.Grad).Zero()
-}
-
-func (d *Device) FillGradWithOnes(aData *num.Data) {
-	Float32s(aData.Grad).Ones()
-}
-
 func (d *Device) GetDataDims(aData *num.Data) num.Dims {
 	return aData.Dims
 }
@@ -106,84 +100,60 @@ func (d *Device) GetDataLength(aData *num.Data) int {
 	return len(aData.Data)
 }
 
-func (d *Device) Sqrt(aData *num.Data) *num.Data {
-	output := d.newLinkedCopy(aData)
-	output.CalcData = func(ctx context.Context) {
-		Float32s(aData.Data).SqrtTo(output.Data)
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		for i, y := range output.Data {
-			aData.Grad[i] += output.Grad[i] * 0.5 / y
-		}
-	}
-	return output
-}
-
 func (d *Device) Mean(aData *num.Data) *num.Data {
 	output := d.NewData(num.NewDims(), aData)
 	output.CalcData = func(ctx context.Context) {
 		output.Data[0] = Float32s(aData.Data).Mean()
 	}
 	output.CalcGrad = func(ctx context.Context) {
-		Float32s(aData.Grad).AddScalar(output.Grad[0] * 1.0 / float32(len(aData.Data)))
-		//Float32s(aData.Grad).AddScalar(output.Grad[0])
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.AddScalar(aData.Opts.(dataOpts).gradBuffer, output.Grad[0]*1.0/float32(len(aData.Data)))
 	}
 	return output
 }
 
-func (d *Device) MeanByRows(aData *num.Data) *num.Data {
-	chunkSize := aData.Dims.W
-	chunksCount := len(aData.Data) / chunkSize
+func (d *Device) RMSNorm(aData *num.Data) *num.Data {
+	aSize := aData.Dims.Size()
+	width := aData.Dims.W
 
-	k := 1.0 / float32(chunkSize)
+	//ssBuffer := NewFloat32s(aSize / width)
 
-	output := d.NewData(num.NewDims(1, aData.Dims.H, aData.Dims.D), aData)
+	k := 1.0 / float32(width)
+
+	smSum := d.NewData(num.NewDims(aData.Dims.Size() / width))
+
+	output := d.newLinkedCopy(aData)
 	output.CalcData = func(ctx context.Context) {
-		for i := 0; i < chunksCount; i++ {
-			output.Data[i] = Float32s(aData.Data[i*chunkSize : (i+1)*chunkSize]).Mean()
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.RMSNorm(
+			output.Opts.(dataOpts).dataBuffer,
+			aData.Opts.(dataOpts).dataBuffer,
+			smSum.Opts.(dataOpts).dataBuffer,
+			width,
+		)
 	}
 	output.CalcGrad = func(ctx context.Context) {
-		for i := 0; i < chunksCount; i++ {
-			Float32s(aData.Grad[i*chunkSize : (i+1)*chunkSize]).AddScalar(output.Grad[i] * k)
-		}
-	}
-	return output
-}
+		// todo move to kernel
+		for i := 0; i < aSize/width; i++ {
+			aGrad := aData.Grad[i*width : (i+1)*width]
+			aData := aData.Data[i*width : (i+1)*width]
+			oGrad := output.Grad[i*width : (i+1)*width]
+			oData := output.Data[i*width : (i+1)*width]
 
-func (d *Device) VarianceByRows(aData, mean *num.Data) *num.Data {
-	chunkSize := aData.Dims.W
-	chunksCount := len(aData.Data) / chunkSize
+			ss := smSum.Data[i]
 
-	k := 1.0 / float32(chunkSize-1)
+			var ssGrad float32
+			for j, g := range oGrad {
+				ssGrad -= g * oData[j]
+			}
 
-	output := d.NewData(num.NewDims(1, aData.Dims.H, aData.Dims.D), aData, mean)
-	output.CalcData = func(ctx context.Context) {
-		for i := 0; i < chunksCount; i++ {
-			output.Data[i] = Float32s(aData.Data[i*chunkSize : (i+1)*chunkSize]).Variance(mean.Data[i])
-		}
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		for i, g := range output.Grad {
-			for j, v := range aData.Data[i*chunkSize : (i+1)*chunkSize] {
-				aData.Grad[i*chunkSize+j] += g * 2.0 * k * (v - mean.Data[i])
+			ssGrad *= k / ss
+			for j, v := range aData {
+				aGrad[j] += (oGrad[j] + v*ssGrad) / ss
 			}
 		}
 	}
 	return output
-}
-
-func (d *Device) LNorm(aData, gamma, beta *num.Data) *num.Data {
-	eps := float32(0.000000001)
-
-	mean := d.MeanByRows(aData)           // matrix [1, H, D]
-	vars := d.VarianceByRows(aData, mean) // matrix [1, H, D]
-	xSub := d.Sub(aData, mean)            // matrix [W, H, D]
-	sqrt := d.Sqrt(vars)                  // matrix [1, H, D] - √var
-	sqrtEps := d.AddScalar(sqrt, eps)     // matrix [1, H, D] - √var - eps
-	xDiv := d.Div(xSub, sqrtEps)          // matrix [W, H, D] - aData[i] /= sqrtEps[ColI]
-	xMul := d.Mul(gamma, xDiv)            // matrix [W, H, D] - aData[i] *= gamma[ColI]
-	return d.Add(xMul, beta)              // matrix [W, H, D] - aData[i] += beta[ColI]
 }
 
 func (d *Device) Relu(aData *num.Data) *num.Data {
@@ -202,28 +172,6 @@ func (d *Device) Relu(aData *num.Data) *num.Data {
 	output.CalcGrad = func(ctx context.Context) {
 		cbuf := mps.CommandBufferFromContext(ctx)
 		cbuf.ReLuMTLBufferBwd(aGradBuffer, oGradBuffer, oDataBuffer)
-	}
-	return output
-}
-
-func (d *Device) AddScalar(aData *num.Data, k float32) *num.Data {
-	output := d.newLinkedCopy(aData)
-	output.CalcData = func(ctx context.Context) {
-		Float32s(aData.Data).AddScalarTo(output.Data, k)
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		Float32s(aData.Grad).Add(output.Grad)
-	}
-	return output
-}
-
-func (d *Device) MulScalar(aData *num.Data, k float32) *num.Data {
-	output := d.newLinkedCopy(aData)
-	output.CalcData = func(ctx context.Context) {
-		Float32s(aData.Data).MulScalarTo(output.Data, k)
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		Float32s(aData.Grad).AddWeighted(output.Grad, k)
 	}
 	return output
 }
@@ -277,6 +225,7 @@ func (d *Device) Add(aData, bData *num.Data) *num.Data {
 		return addRep(aData.Dims.W, aData.Dims.Size())
 	}
 
+	panic("aaa")
 	output.CalcData = func(ctx context.Context) {
 		config.Broadcast(func(ax, bx, offset int) {
 			output.Data[offset] = aData.Data[ax] + bData.Data[bx]
@@ -291,76 +240,46 @@ func (d *Device) Add(aData, bData *num.Data) *num.Data {
 	return output
 }
 
-func (d *Device) Sub(aData, bData *num.Data) *num.Data {
-	config := broadcast.NewConfig(aData.Dims, bData.Dims)
-	output := d.NewData(config.OutDims, aData, bData)
-	output.CalcData = func(ctx context.Context) {
-		config.Broadcast(func(ax, bx, offset int) {
-			output.Data[offset] = aData.Data[ax] - bData.Data[bx]
-		})
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		config.Broadcast(func(ax, bx, offset int) {
-			aData.Grad[ax] += output.Grad[offset]
-			bData.Grad[bx] -= output.Grad[offset]
-		})
-	}
-	return output
-}
-
-func (d *Device) Mul(aData, bData *num.Data) *num.Data {
-	config := broadcast.NewConfig(aData.Dims, bData.Dims)
-	output := d.NewData(config.OutDims, aData, bData)
-	output.CalcData = func(ctx context.Context) {
-		config.Broadcast(func(ax, bx, offset int) {
-			output.Data[offset] = aData.Data[ax] * bData.Data[bx]
-		})
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		config.Broadcast(func(ax, bx, offset int) {
-			aData.Grad[ax] += output.Grad[offset] * bData.Data[bx]
-			bData.Grad[bx] += output.Grad[offset] * aData.Data[ax]
-		})
-	}
-	return output
-}
-
-func (d *Device) Div(aData, bData *num.Data) *num.Data {
-	config := broadcast.NewConfig(aData.Dims, bData.Dims)
-	output := d.NewData(config.OutDims, aData, bData)
-	output.CalcData = func(ctx context.Context) {
-		config.Broadcast(func(ax, bx, offset int) {
-			output.Data[offset] = aData.Data[ax] / bData.Data[bx]
-		})
-	}
-	output.CalcGrad = func(ctx context.Context) {
-		config.Broadcast(func(ax, bx, offset int) {
-			aData.Grad[ax] += output.Grad[offset] / bData.Data[bx]
-			bData.Grad[bx] -= output.Grad[offset] * output.Data[ax] / bData.Data[bx]
-		})
-	}
-	return output
-}
-
 func (d *Device) ConcatByRows(bData ...*num.Data) *num.Data {
 	dims := bData[0].Dims
 
 	output := d.NewData(num.NewDims(dims.W*len(bData), dims.H, dims.D), bData...)
 	output.CalcData = func(ctx context.Context) {
+		cbuf := mps.CommandBufferFromContext(ctx)
+
 		var oOffset, bOffset int
 		for i := 0; i < dims.H*dims.D; i++ {
 			for _, node := range bData {
-				Float32s(output.Data[oOffset : oOffset+dims.W]).CopyFrom(node.Data[bOffset : bOffset+dims.W])
+				// +2 сек (512/64x16/1b)
+				cbuf.Copy(
+					output.Opts.(dataOpts).dataBuffer,
+					node.Opts.(dataOpts).dataBuffer,
+					oOffset,
+					bOffset,
+					dims.W,
+				)
+				// todo move to kernel
+				//Float32s(output.Data[oOffset : oOffset+dims.W]).CopyFrom(node.Data[bOffset : bOffset+dims.W])
 				oOffset += dims.W
 			}
 			bOffset += dims.W
 		}
 	}
 	output.CalcGrad = func(ctx context.Context) {
+		cbuf := mps.CommandBufferFromContext(ctx)
 		var oOffset, bOffset int
 		for i := 0; i < dims.H*dims.D; i++ {
 			for _, node := range bData {
-				Float32s(node.Grad[bOffset : bOffset+dims.W]).Add(output.Grad[oOffset : oOffset+dims.W])
+				// +2 сек (512/64x16/1b)
+				cbuf.Add(
+					node.Opts.(dataOpts).gradBuffer,
+					output.Opts.(dataOpts).gradBuffer,
+					bOffset,
+					oOffset,
+					dims.W,
+				)
+				// todo move to kernel
+				//Float32s(node.Grad[bOffset : bOffset+dims.W]).Add(output.Grad[oOffset : oOffset+dims.W])
 				oOffset += dims.W
 			}
 			bOffset += dims.W
@@ -374,42 +293,26 @@ func (d *Device) Dropout(aData *num.Data, prob float32) *num.Data {
 		return aData
 	}
 
-	//mask10 := make([]bool, aData.Dims.Size())
 	output := d.newLinkedCopy(aData)
 
-	mask := d.NewData(aData.Dims)
+	maskBuffer := d.NewData(aData.Dims)
+	maskMatrix := maskBuffer.Opts.(dataOpts).dataBuffer.CreateMatrix(aData.Dims.W, aData.Dims.H*aData.Dims.D, 0)
+
+	aDataBuffer := aData.Opts.(dataOpts).dataBuffer
+	aGradBuffer := aData.Opts.(dataOpts).gradBuffer
+	oDataBuffer := output.Opts.(dataOpts).dataBuffer
+	oGradBuffer := output.Opts.(dataOpts).gradBuffer
+	mDataBuffer := maskBuffer.Opts.(dataOpts).dataBuffer
 
 	output.CalcData = func(ctx context.Context) {
 		cbuf := mps.CommandBufferFromContext(ctx)
-		cbuf.DropoutBuffer(
-			output.Opts.(dataOpts).dataBuffer,
-			aData.Opts.(dataOpts).dataBuffer,
-			mask.Opts.(dataOpts).dataBuffer,
-			prob,
-		)
+		cbuf.MatrixRandom(d.randomizer, maskMatrix)
+		cbuf.DropoutBuffer(oDataBuffer, aDataBuffer, mDataBuffer, prob)
 	}
 	output.CalcGrad = func(ctx context.Context) {
-		for i, g := range output.Grad {
-			if mask.Data[i] > 0 {
-				aData.Grad[i] += g
-			}
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.DropoutBwdBuffer(aGradBuffer, oGradBuffer, mDataBuffer, prob)
 	}
-	//output.CalcData = func(ctx context.Context) {
-	//	d.FillDataWithZeros(output)
-	//	for i, v := range aData.Data {
-	//		if mask10[i] = randGenerator.Float32() > prob; mask10[i] {
-	//			output.Data[i] = v
-	//		}
-	//	}
-	//}
-	//output.CalcGrad = func(ctx context.Context) {
-	//	for i, g := range output.Grad {
-	//		if mask10[i] {
-	//			aData.Grad[i] += g
-	//		}
-	//	}
-	//}
 	return output
 }
 
@@ -441,32 +344,31 @@ func (d *Device) CrossEntropyPos(aData, targets *num.Data) *num.Data {
 	}
 
 	chunkSize := aData.Dims.W
-	softmax := Float32s(aData.Data).CopyZero()
+	//softmax := Float32s(aData.Data).CopyZero()
+	softmax := d.NewData(aData.Dims)
+	smSum := d.NewData(num.NewDims(aData.Dims.Size() / chunkSize))
 
 	output := d.NewData(targets.Dims, aData)
 	output.CalcData = func(ctx context.Context) {
-		softmax.CopyFrom(aData.Data)
-		for i := 0; i < len(softmax); i += chunkSize {
-			softmax[i : i+chunkSize].Softmax()
-		}
-
-		for rowIdx, correctIdx := range targets.Data {
-			output.Data[rowIdx] = float32(-math.Log(float64(softmax[rowIdx*chunkSize+int(correctIdx)])))
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.CrossEntropyPos(
+			output.Opts.(dataOpts).dataBuffer,
+			aData.Opts.(dataOpts).dataBuffer,
+			softmax.Opts.(dataOpts).dataBuffer,
+			smSum.Opts.(dataOpts).dataBuffer,
+			targets.Opts.(dataOpts).dataBuffer,
+			chunkSize,
+		)
 	}
 	output.CalcGrad = func(ctx context.Context) {
-		offset := 0
-		for rowIdx, ci := range targets.Data {
-			correctIdx := int(ci)
-			for i, softmaxI := range softmax[offset : offset+chunkSize] {
-				if i == correctIdx {
-					aData.Grad[offset+i] += output.Grad[rowIdx] * (softmaxI - 1)
-				} else {
-					aData.Grad[offset+i] += output.Grad[rowIdx] * softmaxI
-				}
-			}
-			offset += chunkSize
-		}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		cbuf.CrossEntropyPosBwd(
+			output.Opts.(dataOpts).gradBuffer,
+			aData.Opts.(dataOpts).gradBuffer,
+			targets.Opts.(dataOpts).dataBuffer,
+			softmax.Opts.(dataOpts).dataBuffer,
+			chunkSize,
+		)
 	}
 	return output
 }
@@ -485,6 +387,7 @@ func (d *Device) Embeddings(aData *num.Data, tEmbeddings, pEmbeddings *num.Data)
 	output.CalcData = func(ctx context.Context) {
 		p := 0
 		for i, s := range Float32s(aData.Data).ToInt() {
+			// todo move to kernel
 			tFeatures := tEmbeddings.Data[s*featuresCount : (s+1)*featuresCount]
 			pFeatures := pEmbeddings.Data[p*featuresCount : (p+1)*featuresCount]
 			outBuffer := output.Data[i*featuresCount : (i+1)*featuresCount]
@@ -498,7 +401,17 @@ func (d *Device) Embeddings(aData *num.Data, tEmbeddings, pEmbeddings *num.Data)
 		}
 	}
 	output.CalcGrad = func(ctx context.Context) {
+		//_ = mps.CommandBufferFromContext(ctx)
+
 		for i, s := range Float32s(aData.Data).ToInt() {
+			//cbuf.Add(
+			//	tEmbeddings.Opts.(dataOpts).gradBuffer,
+			//	output.Opts.(dataOpts).gradBuffer,
+			//	s*featuresCount,
+			//	i*featuresCount,
+			//	featuresCount,
+			//)
+			// todo move to kernel
 			tGrads := Float32s(tEmbeddings.Grad[s*featuresCount : (s+1)*featuresCount])
 			tGrads.Add(output.Grad[i*featuresCount : (i+1)*featuresCount])
 		}
@@ -514,10 +427,12 @@ func (d *Device) Transpose(aData *num.Data) *num.Data {
 	output.Dims.H = aData.Dims.W
 
 	output.CalcData = func(ctx context.Context) {
+		// todo move to kernel
 		Float32s(aData.Data).TransposeTo(output.Data, IW, IH)
 	}
 
 	output.CalcGrad = func(ctx context.Context) {
+		// todo move to kernel
 		Float32s(output.Grad).TransposeAndAddTo(aData.Grad, IH, IW)
 	}
 	return output
@@ -528,34 +443,24 @@ func (d *Device) TriangleLowerSoftmax(aData *num.Data) *num.Data {
 
 	output := d.newLinkedCopy(aData)
 	output.CalcData = func(ctx context.Context) {
-		for z := 0; z < D; z++ {
-			for y := 0; y < H; y++ {
-				c := z*WH + y*W
-				Float32s(aData.Data[c : c+y+1]).SoftmaxTo(output.Data[c : c+y+1])
-			}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		for offset := 0; offset < WH*D; offset += WH {
+			cbuf.SoftmaxBufferTril(
+				output.Opts.(dataOpts).dataBuffer,
+				aData.Opts.(dataOpts).dataBuffer,
+				W, H, offset,
+			)
 		}
 	}
 	output.CalcGrad = func(ctx context.Context) {
-		for z := 0; z < D; z++ {
-			for y := 0; y < H; y++ {
-				c := z*WH + y*W
-
-				iGrad := aData.Grad[c : c+y+1]
-				oGrad := output.Grad[c : c+y+1]
-				softmax := output.Data[c : c+y+1]
-
-				var softmaxByGrads float32
-				for i, softmaxI := range softmax {
-					softmaxByGradI := softmaxI * oGrad[i]
-					softmaxByGrads += softmaxByGradI
-
-					iGrad[i] += softmaxByGradI
-				}
-
-				for i, softmaxI := range softmax {
-					iGrad[i] -= softmaxI * softmaxByGrads
-				}
-			}
+		cbuf := mps.CommandBufferFromContext(ctx)
+		for offset := 0; offset < WH*D; offset += WH {
+			cbuf.SoftmaxBufferTrilBwd(
+				aData.Opts.(dataOpts).gradBuffer,
+				output.Opts.(dataOpts).gradBuffer,
+				output.Opts.(dataOpts).dataBuffer,
+				W, H, offset,
+			)
 		}
 	}
 	return output
@@ -716,8 +621,8 @@ func (d *Device) GetOptimizerAdam(iterations int, beta1, beta2, learningRate, ep
 		vv := make([]*mps.MTLBuffer, len(nodes))
 
 		for i, node := range nodes {
-			mm[i] = d.dev.CreateNewBufferWithLength(len(node.Data))
-			vv[i] = d.dev.CreateNewBufferWithLength(len(node.Data))
+			mm[i] = d.mtlDevice.CreateNewBufferWithLength(len(node.Data))
+			vv[i] = d.mtlDevice.CreateNewBufferWithLength(len(node.Data))
 		}
 
 		beta1pow := NewFloat32s(iterations)
@@ -738,7 +643,7 @@ func (d *Device) GetOptimizerAdam(iterations int, beta1, beta2, learningRate, ep
 			beta2pow[i] = 1 / (1 - beta2pow[i])
 		}
 
-		commandQueue := d.dev.CreateCommandQueue()
+		commandQueue := d.mtlDevice.CreateCommandQueue()
 
 		return func(iteration int) {
 			beta1powIterationLR := learningRate * beta1pow[iteration]

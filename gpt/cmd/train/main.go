@@ -21,6 +21,8 @@ import (
 )
 
 var (
+	//embeddings = "/Users/andrey.tikhonov/go/src/github.com/atkhx/nnet/gpt/embeddings.json"
+
 	filename string
 	statSize int
 	epochs   int
@@ -66,6 +68,10 @@ func main() {
 	if err = model.LoadFromFile(filename); err != nil {
 		return
 	}
+
+	//if err = model.LoadFromFile(embeddings); err != nil {
+	//	return
+	//}
 
 	fmt.Println("params weight:", humanize.Bytes(uint64(model.GetTrainableParamsCount()*4)))
 	fmt.Println("params count:", model.GetTrainableParamsCount())
