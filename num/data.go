@@ -2,27 +2,28 @@ package num
 
 import (
 	"context"
+
+	"github.com/atkhx/mps"
 )
 
-func NewData(data, grad []float32, dims Dims, opts any, srcNodes ...*Data) *Data {
+func NewData(data, grad *mps.MTLBuffer, dims Dims, srcNodes ...*Data) *Data {
 	return &Data{
 		Data:     data,
 		Grad:     grad,
 		Dims:     dims,
-		Opts:     opts,
 		SrcNodes: srcNodes,
 	}
 }
 
 type Data struct {
-	Data []float32
-	Grad []float32 `json:"-"`
+	Data *mps.MTLBuffer
+	Grad *mps.MTLBuffer
+
 	Dims Dims
-	Opts any `json:"-"`
 
-	SrcNodes Nodes                     `json:"-"`
-	CalcData func(ctx context.Context) `json:"-"`
-	CalcGrad func(ctx context.Context) `json:"-"`
+	SrcNodes Nodes
+	CalcData func(ctx context.Context)
+	CalcGrad func(ctx context.Context)
 
-	SkipResetGrad bool `json:"-"`
+	SkipResetGrad bool
 }

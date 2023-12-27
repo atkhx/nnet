@@ -20,3 +20,7 @@ func (l *Residual) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 func (l *Residual) ForUpdate() []*num.Data {
 	return l.Layers.ForUpdate()
 }
+
+func (l *Residual) LoadFromProvider() {
+	l.Layers.LoadFromProvider()
+}

@@ -2,6 +2,9 @@ package mps
 
 import (
 	"unsafe"
+
+	"github.com/atkhx/mps/custom-kernel"
+	"github.com/atkhx/mps/framework"
 )
 
 var DefaultDevice *MTLDevice
@@ -23,19 +26,19 @@ type Releasable interface {
 }
 
 func NewMTLDevice() *MTLDevice {
-	deviceID := mtlDeviceCreate()
+	deviceID := framework.MTLDeviceCreate()
 	device := &MTLDevice{
-		deviceID:      deviceID,
-		customKernels: customKernelCreate(deviceID),
+		DeviceID:      deviceID,
+		CustomKernels: custom_kernel.CustomKernelCreate(deviceID),
 	}
 
 	return device
 }
 
 type MTLDevice struct {
-	deviceID      unsafe.Pointer
+	DeviceID      unsafe.Pointer
 	resources     []Releasable
-	customKernels unsafe.Pointer
+	CustomKernels unsafe.Pointer
 }
 
 func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
@@ -45,15 +48,36 @@ func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
 }
 
 func (device *MTLDevice) CreateBufferWithBytes(data []float32) *MTLBuffer {
-	buffer := NewMTLBufferWithBytes(device, data)
+	buffer := newMTLBufferWithBytes(device, data)
 	device.regSource(buffer)
 	return buffer
 }
 
 func (device *MTLDevice) CreateBufferWithLength(bfLength int) *MTLBuffer {
-	buffer := NewMTLBufferWithLength(device, bfLength)
+	buffer := newMTLBufferWithLength(device, bfLength)
 	device.regSource(buffer)
 	return buffer
+}
+
+func (device *MTLDevice) CreateMatrixMultiplyKernel(
+	resultRows int,
+	resultColumns int,
+	interiorColumns int,
+	alpha float32,
+	beta float32,
+	transposeLeft bool,
+	transposeRight bool,
+) unsafe.Pointer {
+	return framework.MPSMatrixMultiplicationCreate(
+		device.DeviceID,
+		resultRows,
+		resultColumns,
+		interiorColumns,
+		alpha,
+		beta,
+		transposeLeft,
+		transposeRight,
+	)
 }
 
 type MatrixRandomDistribution struct {
@@ -61,19 +85,19 @@ type MatrixRandomDistribution struct {
 }
 
 func (device *MTLDevice) CreateMatrixRandomDistribution(min, max float32) *MatrixRandomDistribution {
-	return &MatrixRandomDistribution{id: mpsMatrixRandomDistributionCreate(min, max)}
+	return &MatrixRandomDistribution{id: framework.MPSMatrixRandomDistributionDescriptorCreate(min, max)}
 }
 
 type MatrixRandomMTGP32 struct {
-	id unsafe.Pointer
+	ID unsafe.Pointer
 }
 
 func (device *MTLDevice) CreateMatrixRandomMTGP32(
 	distribution *MatrixRandomDistribution,
 	seed uint64,
 ) *MatrixRandomMTGP32 {
-	return &MatrixRandomMTGP32{id: mpsMatrixRandomMTGP32Create(
-		device.deviceID,
+	return &MatrixRandomMTGP32{ID: framework.MPSMatrixRandomMTGP32Create(
+		device.DeviceID,
 		distribution.id,
 		seed,
 	)}
@@ -88,5 +112,5 @@ func (device *MTLDevice) Release() {
 		device.resources[i-1].Release()
 	}
 	device.resources = nil
-	mtlDeviceRelease(device.deviceID)
+	framework.MTLDeviceRelease(device.DeviceID)
 }

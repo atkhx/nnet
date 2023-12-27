@@ -1,21 +1,35 @@
 package layer
 
 import (
+	"encoding/json"
+
 	"github.com/atkhx/nnet"
 	"github.com/atkhx/nnet/initializer"
 	"github.com/atkhx/nnet/num"
 )
 
-func NewLinear(featuresCount int, initWeights initializer.Initializer) *Linear {
-	return &Linear{featuresCount: featuresCount, initWeights: initWeights}
+func NewLinear(
+	featuresCount int,
+	initWeights initializer.Initializer,
+	withBias bool,
+	provideWeights func(weights *num.Data),
+) *Linear {
+	return &Linear{
+		featuresCount:  featuresCount,
+		initWeights:    initWeights,
+		withBias:       withBias,
+		provideWeights: provideWeights,
+	}
 }
 
 type Linear struct {
-	initWeights   initializer.Initializer
-	featuresCount int
+	initWeights    initializer.Initializer
+	provideWeights func(weights *num.Data)
+	featuresCount  int
 
-	WeightObj *num.Data
-	BiasesObj *num.Data
+	withBias  bool
+	weightObj *num.Data
+	biasesObj *num.Data
 
 	forUpdate []*num.Data
 }
@@ -24,13 +38,53 @@ func (l *Linear) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	weightK := l.initWeights.GetNormK(device.GetDataLength(inputs))
 	inputWidth := device.GetDataDims(inputs).W
 
-	l.WeightObj = device.NewDataRandNormWeighted(num.NewDims(l.featuresCount, inputWidth), weightK)
-	l.BiasesObj = device.NewData(num.NewDims(l.featuresCount))
-	l.forUpdate = []*num.Data{l.WeightObj, l.BiasesObj}
+	l.weightObj = device.NewDataRandNormWeighted(num.NewDims(l.featuresCount, inputWidth), weightK)
+	l.forUpdate = []*num.Data{l.weightObj}
 
-	return device.Add(device.MatrixMultiply3D(inputs, l.WeightObj, 1), l.BiasesObj)
+	result := device.MatrixMultiply(inputs, l.weightObj, 1)
+
+	if l.withBias {
+		l.biasesObj = device.NewData(num.NewDims(l.featuresCount))
+		l.forUpdate = append(l.forUpdate, l.biasesObj)
+
+		result = device.AddRow(result, l.biasesObj, l.featuresCount)
+	}
+
+	return result
 }
 
 func (l *Linear) ForUpdate() []*num.Data {
 	return l.forUpdate
+}
+
+type linearConfig struct {
+	WithBias bool
+	Weights  []float32
+	Bias     []float32
+}
+
+func (l *Linear) MarshalJSON() ([]byte, error) {
+	cfg := linearConfig{
+		Weights:  l.weightObj.Data.GetData(),
+		WithBias: l.withBias,
+	}
+	if l.biasesObj != nil {
+		cfg.Bias = l.biasesObj.Data.GetData()
+	}
+	return json.Marshal(cfg)
+}
+
+func (l *Linear) UnmarshalJSON(bytes []byte) error {
+	cfg := linearConfig{
+		Weights:  l.weightObj.Data.GetData(),
+		WithBias: l.withBias,
+	}
+	if l.biasesObj != nil {
+		cfg.Bias = l.biasesObj.Data.GetData()
+	}
+	return json.Unmarshal(bytes, &cfg)
+}
+
+func (l *Linear) LoadFromProvider() {
+	l.provideWeights(l.weightObj)
 }

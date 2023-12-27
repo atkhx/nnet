@@ -15,14 +15,11 @@ import (
 	"github.com/atkhx/nnet/gpt/dataset"
 	"github.com/atkhx/nnet/gpt/pkg"
 	"github.com/atkhx/nnet/num"
-	numDevice "github.com/atkhx/nnet/num/dev/metal"
-
+	"github.com/atkhx/nnet/num/dev/metal"
 	"github.com/dustin/go-humanize"
 )
 
 var (
-	//embeddings = "/Users/andrey.tikhonov/go/src/github.com/atkhx/nnet/gpt/embeddings.json"
-
 	filename string
 	statSize int
 	epochs   int
@@ -47,8 +44,8 @@ func main() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	device := numDevice.NewDevice()
-	defer device.Close()
+	device := metal.NewDevice()
+	defer device.Release()
 
 	trainDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
 	trainDataset.ParseAlphabet()
@@ -63,15 +60,11 @@ func main() {
 
 	lossFunc := device.CrossEntropyPos(output, target)
 	lossMean := device.Mean(lossFunc)
-	pipeline := numDevice.NewPipeline(device, lossMean)
+	pipeline := metal.NewPipeline(device, lossMean)
 
 	if err = model.LoadFromFile(filename); err != nil {
 		return
 	}
-
-	//if err = model.LoadFromFile(embeddings); err != nil {
-	//	return
-	//}
 
 	fmt.Println("params weight:", humanize.Bytes(uint64(model.GetTrainableParamsCount()*4)))
 	fmt.Println("params count:", model.GetTrainableParamsCount())
@@ -103,20 +96,19 @@ func main() {
 			}
 
 			batchInputs, batchTarget := trainDataset.ReadRandomSampleBatch()
-			copy(target.Data, batchTarget)
-			copy(inputs.Data, batchInputs)
+			copy(target.Data.GetData(), batchTarget)
+			copy(inputs.Data.GetData(), batchInputs)
 
-			pipeline.Forward(ctx)
-			pipeline.Backward(ctx)
-			model.Update(iteration)
+			pipeline.TrainIteration(ctx,
+				func(ctx context.Context) {
+					model.Update(ctx, iteration)
+				},
+			)
 
-			lossAvg += lossMean.Data[0]
+			lossAvg += device.GetData(lossMean)[0]
+			//lossAvg += lossMean.Data[0]
 
-			//if iteration == 0 {
-			//	generateSample(ctx, trainDataset, pipeline, inputs, output)
-			//}
-
-			if iteration > 0 && iteration%statSize == 0 {
+			if (iteration > 0 || statSize == 1) && iteration%statSize == 0 {
 				lossAvg /= float32(statSize)
 				fmt.Println(
 					fmt.Sprintf("lossFunc: %.8f", lossAvg), "\t",
@@ -124,11 +116,6 @@ func main() {
 					"duration:", time.Since(t), "\t",
 				)
 				lossAvg = 0
-
-				//if iteration%(10*statSize) == 0 {
-				//	generateSample(ctx, trainDataset, pipeline, inputs, output)
-				//}
-
 				t = time.Now()
 			}
 		}
@@ -142,47 +129,4 @@ func main() {
 		cancel()
 		<-trainStopped
 	}
-}
-
-func generateSample(
-	ctx context.Context,
-	trainDataset *dataset.Dataset,
-	pipeline *numDevice.Pipeline,
-	inputs *num.Data,
-	output *num.Data,
-) {
-	fmt.Println("generate sample")
-	defer fmt.Println()
-
-	inputIndexes := trainDataset.EncodeString(` `)
-	inputTokens := trainDataset.Decode(inputIndexes...)
-
-	fmt.Print(trainDataset.Decode(inputIndexes...))
-	for j := 0; j < pkg.ContextLength; j++ {
-		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
-		copy(inputs.Data, inputsFloat)
-
-		pipeline.Forward(ctx)
-
-		pos := len(inputTokens) - 1
-		if pos < 0 {
-			pos = 0
-		}
-
-		logits := output.Data[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
-		numDevice.Float32s(logits).Softmax() // probs
-		numDevice.Float32s(logits).CumulativeSum()
-		f := numDevice.Float32s(logits).Multinomial()
-		b := trainDataset.Decode(f)
-
-		inputTokens = append(inputTokens, b...)
-		if len(inputTokens) > pkg.ContextLength {
-			l := len(inputTokens)
-			inputTokens = inputTokens[l-pkg.ContextLength:]
-		}
-
-		fmt.Print(b)
-	}
-
-	fmt.Println()
 }

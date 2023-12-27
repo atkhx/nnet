@@ -11,6 +11,7 @@ func NewLLaMaExperiment(
 	contextLength,
 	embeddingFeatures,
 	headsCount,
+	kvHeadsCount,
 	headSize,
 	headLinearSize,
 	blocksCount,
@@ -27,18 +28,24 @@ func NewLLaMaExperiment(
 		D: 1,
 	}
 
+	initWeightK = 0.007
+
 	initWeight := &initializer.InitWeightFixed{NormK: initWeightK}
+	initWeightRMSMul := &initializer.InitWeightFixed{NormK: 3.7}
+	//initWeightRMSMul := &initializer.InitWeightFixed{NormK: 0.7}
+	//initWeightRMSMul := &initializer.InitWeightFixed{NormK: initWeightK}
 
 	layers := layer.Layers{}
 
+	embeddings := device.NewTokenEmbeddingTable(embeddingFeatures, alphabetSize)
+	for i := range embeddings.Data.GetData() {
+		//embeddings.Data.GetData()[i] *= 0.02
+		embeddings.Data.GetData()[i] *= initWeightK
+	}
+
 	//---Embedding table------------------------------------------------------
 	layers = append(layers,
-		//layer.NewEmbeddingWithSkipTraining(
-		layer.NewEmbedding(
-			device.NewTokenEmbeddingTable(embeddingFeatures, alphabetSize),
-			// todo change approach with position embeddings
-			device.NewPositionEmbeddingTable(embeddingFeatures, contextLength),
-		),
+		layer.NewEmbeddings(embeddings, nil),
 		// out: [ embeddingFeatures, contextLength, batchSize ]
 	)
 
@@ -46,25 +53,26 @@ func NewLLaMaExperiment(
 		return []nnet.Layer{
 			layer.NewResidual(
 				layer.Layers{
-					// layer.NewLNorm(),
 					layer.NewRMSLNorm(),
-					layer.NewMSAMultiHead(embeddingFeatures, headSize, headsCount, dropout, initWeight),
+					layer.NewMulRows(embeddingFeatures, initWeightRMSMul, nil),
+					// out: [ embeddingFeatures, contextLength, batchSize ]
+
+					//layer.NewSAMultiHeadRope(embeddingFeatures, headSize, headsCount, contextLength, dropout, initWeight, nil),
+					layer.NewSAMultiHeadRopeCols(embeddingFeatures, headSize, headsCount, contextLength, dropout, initWeight, nil),
 					// out: [ headSize * headsCount, contextLength, batchSize ]
-					layer.NewLinear(embeddingFeatures, initWeight),
+					layer.NewLinear(embeddingFeatures, initWeight, false, nil),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 					layer.NewDropout(dropout),
 				},
 			),
 			layer.NewResidual(
-				// the goal of this block https://youtu.be/XowwKOAWYoQ?t=1297
 				layer.Layers{
 					// layer.NewLNorm(),
 					layer.NewRMSLNorm(),
-
+					layer.NewMulRows(embeddingFeatures, initWeightRMSMul, nil),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
-					layer.NewLinear(headLinearSize*embeddingFeatures, initWeight),
-					layer.NewReLu(),
-					layer.NewLinear(embeddingFeatures, initWeight),
+
+					layer.NewSwiGLU(embeddingFeatures, headLinearSize, initWeight, nil),
 					// out: [ embeddingFeatures, contextLength, batchSize ]
 					layer.NewDropout(dropout),
 				},
@@ -76,13 +84,12 @@ func NewLLaMaExperiment(
 	for i := 0; i < blocksCount; i++ {
 		layers = append(layers, createSABlock()...)
 	}
-	// out: [ embeddingFeatures, contextLength, batchSize ]
-
 	//---Probabilities--------------------------------------------------------
 	layers = append(layers,
-		//layer.NewLNorm(),
 		layer.NewRMSLNorm(),
-		layer.NewLinear(alphabetSize, initWeight),
+		layer.NewMulRows(embeddingFeatures, initWeightRMSMul, nil),
+		//layer.NewLinear(alphabetSize, initWeight, false, nil),
+		layer.NewLinearWithWeights(device.Transpose(embeddings)),
 		// out: [ alphabetSize, contextLength, batchSize ]
 	)
 
@@ -91,6 +98,5 @@ func NewLLaMaExperiment(
 		layer.NewReshape(num.NewDims(alphabetSize, miniBatchSize*contextLength)),
 		// out: [ alphabetSize, contextLength * batchSize ]
 	)
-
 	return NewSequential(inDims, layers, device, modelOptimizer)
 }

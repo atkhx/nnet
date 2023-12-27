@@ -8,8 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-
-	"github.com/atkhx/nnet/num/dev/native"
 )
 
 func NewDataset(contextSize, miniBatchSize int) *Dataset {
@@ -169,20 +167,27 @@ func (d *Dataset) DecodeFloats(pos ...float32) []Token {
 	return result
 }
 
-func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets native.Float32s) {
-	sampleInputs = make(native.Float32s, d.contextSize*d.miniBatchSize)
-	sampleTargets = make(native.Float32s, d.contextSize*d.miniBatchSize)
+func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets []float32) {
+	sampleInputs = make([]float32, d.contextSize*d.miniBatchSize)
+	sampleTargets = make([]float32, d.contextSize*d.miniBatchSize)
 
-	tokens := make([]Token, d.contextSize)
+	tokens := make(Tokens, d.contextSize)
 	tokenLength := 1
 
+	pos := rand.Intn(len(d.rawRunes) - d.miniBatchSize*((d.contextSize+1)*tokenLength))
+	//*metal.ABSPosition = pos
+
+	//fmt.Println("metal.ABSPosition", *metal.ABSPosition)
+
 	for b := 0; b < d.miniBatchSize; b++ {
-		pos := rand.Intn(len(d.rawRunes) - (d.contextSize * tokenLength) - 1)
+		// pos := rand.Intn(len(d.rawRunes) - (d.contextSize * tokenLength) - 1)
 
 		chunk := d.rawRunes[pos : (pos+1)+(d.contextSize*tokenLength)]
 		for i := 0; i < d.contextSize; i++ {
 			tokens[i] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
 		}
+
+		//fmt.Println(tokens.String())
 
 		sampleInputs := sampleInputs[b*d.contextSize : (b+1)*d.contextSize]
 		copy(sampleInputs, d.EncodeToFloats(tokens...))
@@ -191,9 +196,15 @@ func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets native.Fl
 			tokens[i-1] = Token(chunk[i*tokenLength : (i+1)*tokenLength])
 		}
 
+		//fmt.Println(tokens.String())
+		//fmt.Println()
+
 		sampleTargets := sampleTargets[b*d.contextSize : (b+1)*d.contextSize]
 		copy(sampleTargets, d.EncodeToFloats(tokens...))
+
+		pos += d.contextSize * tokenLength
 	}
 
+	//os.Exit(1)
 	return sampleInputs, sampleTargets
 }

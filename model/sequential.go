@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -16,7 +17,7 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-type Optimizer func(nodes []*num.Data) func(iteration int)
+type Optimizer func(nodes []*num.Data) func(ctx context.Context, iteration int)
 
 func NewSequential(
 	inDims num.Dims,
@@ -41,7 +42,7 @@ type Sequential struct {
 	device nnet.Device
 
 	optimizer  Optimizer
-	updateFunc func(iteration int)
+	updateFunc func(ctx context.Context, iteration int)
 }
 
 func (s *Sequential) Compile() *num.Data {
@@ -71,8 +72,8 @@ func (s *Sequential) GetTrainableParamsCount() (result int) {
 	return result
 }
 
-func (s *Sequential) Update(iteration int) {
-	s.updateFunc(iteration)
+func (s *Sequential) Update(ctx context.Context, iteration int) {
+	s.updateFunc(ctx, iteration)
 }
 
 func (s *Sequential) LoadFromFile(filename string) error {
@@ -93,6 +94,20 @@ func (s *Sequential) LoadFromFile(filename string) error {
 	}
 	fmt.Println("unmarshal success:", time.Since(t))
 	return nil
+}
+
+type LC interface {
+	LoadFromProvider()
+}
+
+func (s *Sequential) LoadFromProvider() {
+	for _, ll := range s.Layers {
+		if l, ok := ll.(LC); ok {
+			l.LoadFromProvider()
+		} else {
+			fmt.Println("not LC", fmt.Sprintf("%T", ll))
+		}
+	}
 }
 
 func (s *Sequential) SaveToFile(filename string) error {

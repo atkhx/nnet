@@ -29,18 +29,17 @@ func main() {
 	}()
 
 	device := numDevice.NewDevice()
-	defer device.Close()
+	defer device.Release()
 
 	batchSize := 1
 
 	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
 	trainDataset.ParseAlphabet()
 
-	model := pkg.CreateModel(
+	model := pkg.CreateModelForTest(
 		trainDataset.GetAlphabetSize(),
 		batchSize,
 		device,
-		nil,
 	)
 
 	output := model.Compile()
@@ -52,28 +51,31 @@ func main() {
 
 	pipeline := numDevice.NewPipeline(device, output)
 
-	inputIndexes := trainDataset.EncodeString(`Телефон`)
+	inputIndexes := trainDataset.EncodeString(`Китай`)
 	inputTokens := trainDataset.Decode(inputIndexes...)
 
 	fmt.Print(trainDataset.Decode(inputIndexes...))
 	ctx := context.Background()
 	for j := 0; j < pkg.ContextLength*10; j++ {
 		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
-		copy(inputs.Data, inputsFloat)
+		copy(inputs.Data.GetData(), inputsFloat)
 
+		//commandBuffer := pipeline.GetCommandBuffer()
+		//ctx = mps.ContextWithCommandBuffer(ctx, commandBuffer)
 		pipeline.Forward(ctx)
+		//commandBuffer.Wait()
 
 		pos := len(inputTokens) - 1
 		if pos < 0 {
 			pos = 0
 		}
 
-		logits := output.Data[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
+		logits := output.Data.GetData()[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
 		//numDevice.Float32s(logits).Softmax()       // probs
 		//numDevice.Float32s(logits).CumulativeSum() // for Multinomial
 		//f := numDevice.Float32s(logits).Multinomial()
 
-		f := sampleWithTemperature(logits, 0.9)
+		f := sampleWithTemperature(logits, 1)
 		//f := greedyMax(logits)
 
 		b := trainDataset.Decode(f)
@@ -90,19 +92,7 @@ func main() {
 	fmt.Println()
 }
 
-func greedyMax(logits numDevice.Float32s) int {
-	f := 0
-	m := logits[0]
-	for i := 1; i < len(logits); i++ {
-		if m < logits[i] {
-			m = logits[i]
-			f = i
-		}
-	}
-	return f
-}
-
-func sampleWithTemperature(logits numDevice.Float32s, temperature float32) int {
+func sampleWithTemperature(logits []float32, temperature float32) int {
 	for i := 0; i < len(logits); i++ {
 		logits[i] /= temperature
 	}

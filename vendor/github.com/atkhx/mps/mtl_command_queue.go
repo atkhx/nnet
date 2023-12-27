@@ -1,11 +1,15 @@
 package mps
 
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+
+	"github.com/atkhx/mps/framework"
+)
 
 func NewMTLCommandQueue(device *MTLDevice) *MTLCommandQueue {
 	return &MTLCommandQueue{
-		queueID: mtlCommandQueueCreate(device.deviceID),
+		queueID: framework.MTLCommandQueueCreate(device.DeviceID),
 		device:  device,
 	}
 }
@@ -20,7 +24,7 @@ type MTLCommandQueue struct {
 func (queue *MTLCommandQueue) Release() {
 	if !queue.released {
 		queue.buffer.Release()
-		mtlCommandQueueRelease(queue.queueID)
+		framework.MTLCommandQueueRelease(queue.queueID)
 		queue.released = true
 	}
 }

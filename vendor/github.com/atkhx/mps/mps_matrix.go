@@ -1,41 +1,27 @@
 package mps
 
-import "unsafe"
+import (
+	"unsafe"
 
-func NewMatrix(buffer *MTLBuffer, cols, rows, offset int) *Matrix {
-	descriptorID := mpsMatrixDescriptorCreate(cols, rows)
-	matrixID := mpsMatrixCreate(buffer.bufferID, descriptorID, offset)
+	"github.com/atkhx/mps/framework"
+)
 
-	return &Matrix{
-		matrixID:     matrixID,
-		descriptorID: descriptorID,
-		mtlBuffer:    buffer,
+func NewMPSMatrix(bufferID unsafe.Pointer, cols, rows, batchSize, batchStride, offset int) *MPSMatrix {
+	descriptorID := framework.MPSMatrixDescriptorCreate(cols, rows, batchSize, batchStride)
+	matrixID := framework.MPSMatrixCreate(bufferID, descriptorID, offset)
 
-		offset: offset,
-		length: cols * rows,
-
-		cols: cols,
-		rows: rows,
+	return &MPSMatrix{
+		MatrixID:     matrixID,
+		DescriptorID: descriptorID,
 	}
 }
 
-type Matrix struct {
-	matrixID     unsafe.Pointer
-	descriptorID unsafe.Pointer
-	mtlBuffer    *MTLBuffer
-
-	offset int
-	length int
-
-	cols int
-	rows int
+type MPSMatrix struct {
+	MatrixID     unsafe.Pointer
+	DescriptorID unsafe.Pointer
 }
 
-func (m *Matrix) GetData() []float32 {
-	return m.mtlBuffer.GetData()[m.offset : m.offset+m.length]
-}
-
-func (m *Matrix) Release() {
-	mpsMatrixDescriptorRelease(m.descriptorID)
-	mpsMatrixRelease(m.matrixID)
+func (m *MPSMatrix) Release() {
+	framework.MPSMatrixDescriptorRelease(m.DescriptorID)
+	framework.MPSMatrixRelease(m.MatrixID)
 }

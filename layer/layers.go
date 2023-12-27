@@ -11,7 +11,6 @@ func (s Layers) Compile(device nnet.Device, inputs *num.Data) *num.Data {
 	for _, layer := range s {
 		inputs = layer.Compile(device, inputs)
 	}
-
 	return inputs
 }
 
@@ -23,4 +22,12 @@ func (s Layers) ForUpdate() []*num.Data {
 		}
 	}
 	return result
+}
+
+func (s Layers) LoadFromProvider() {
+	for _, ll := range s {
+		if l, ok := ll.(nnet.LayerWithWeightsProvider); ok {
+			l.LoadFromProvider()
+		}
+	}
 }
