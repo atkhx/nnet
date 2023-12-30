@@ -239,7 +239,7 @@ func (d *Device) MulEqual(input, weights *num.Data) *num.Data {
 
 func (d *Device) RMSNorm(input *num.Data, width int) *num.Data {
 	output := d.newLinkedCopy(input)
-	operation := ops.NewOpNormRMSByRows(
+	operation := ops.NewOpRMSNormByRows(
 		d.mtlDevice,
 		input.Data,
 		input.Grad,
@@ -387,7 +387,6 @@ func (d *Device) ConcatByRows(bData ...*num.Data) *num.Data {
 }
 
 func (d *Device) Dropout(input *num.Data, prob float32) *num.Data {
-	return input
 	if prob == 0 {
 		return input
 	}
@@ -549,7 +548,7 @@ func (d *Device) Transpose(input *num.Data) *num.Data {
 func (d *Device) TriangleLowerSoftmax(input *num.Data) *num.Data {
 	output := d.newLinkedCopy(input)
 
-	operation := ops.NewOpTriangularLowedSoftmax(
+	operation := ops.NewOpTriangularLowedSoftmax3(
 		d.mtlDevice,
 		input.Data,
 		input.Grad,
