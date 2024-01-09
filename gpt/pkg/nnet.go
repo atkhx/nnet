@@ -1,26 +1,24 @@
 package pkg
 
 import (
-	"context"
+	"math"
 
-	"github.com/atkhx/nnet"
-	"github.com/atkhx/nnet/model"
-	"github.com/atkhx/nnet/num"
+	"github.com/atkhx/metal/nn/model"
+	"github.com/atkhx/metal/nn/proc"
 )
 
 const (
-	MiniBatchSize = 55
+	MiniBatchSize      = 10
+	TrainingIterations = 5000
 
-	ContextLength = 512
-	FeaturesCount = 128
+	ContextLength = 1024
+	FeaturesCount = 1024
 	HeadsCount    = 16
 	HeadSize      = FeaturesCount / HeadsCount
-	KVHeadsCount  = 1
-	HiddenDim     = 768 //4 * FeaturesCount
+	HiddenDim     = 2 * FeaturesCount
 	BlocksCount   = 2
 
 	DropoutProb = 0
-	InitWeightK = 0.007
 
 	adamBeta1        = 0.9
 	adamBeta2        = 0.98
@@ -28,22 +26,22 @@ const (
 	adamEPS          = 0.000000001
 )
 
-func CreateOptimizer(epochs int, device nnet.Device) func(nodes []*num.Data) func(ctx context.Context, iteration int) {
+var InitWeightK = float32(1. / math.Sqrt(float64(FeaturesCount/2)))
+
+func CreateOptimizer(epochs int, device *proc.Device) proc.Optimizer {
 	return device.GetOptimizerAdam(epochs, adamBeta1, adamBeta2, adamLearningRate, adamEPS)
 }
 
-func CreateModel(
+func CreateTrainingModel(
 	alphabetSize int,
 	miniBatchSize int,
-	device nnet.Device,
-	optimizer model.Optimizer,
-) *model.Sequential {
-	return model.NewLLaMaExperiment(
-		//return model.NewTransformer(
+	device *proc.Device,
+	optimizer proc.Optimizer,
+) *model.Model {
+	return NewLLaMaExperiment(
 		ContextLength,
 		FeaturesCount,
 		HeadsCount,
-		KVHeadsCount,
 		HeadSize,
 		HiddenDim,
 		BlocksCount,
@@ -58,17 +56,15 @@ func CreateModel(
 	)
 }
 
-func CreateModelForTest(
+func CreateInferenceModel(
 	alphabetSize int,
 	miniBatchSize int,
-	device nnet.Device,
-) *model.Sequential {
-	return model.NewLLaMaExperiment(
-		//return model.NewTransformer(
+	device *proc.Device,
+) *model.Model {
+	return NewLLaMaExperiment(
 		ContextLength,
 		FeaturesCount,
 		HeadsCount,
-		KVHeadsCount,
 		HeadSize,
 		HiddenDim,
 		BlocksCount,

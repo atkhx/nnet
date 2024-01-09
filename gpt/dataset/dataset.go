@@ -2,6 +2,7 @@ package dataset
 
 import (
 	"bufio"
+	"bytes"
 	_ "embed"
 	"fmt"
 	"io"
@@ -28,32 +29,15 @@ type Dataset struct {
 
 	contextSize   int
 	miniBatchSize int
-
-	alphabetSize int
-	samplesCount int
-}
-
-func (d *Dataset) GetSamplesCount() int {
-	return d.samplesCount
-}
-
-func (d *Dataset) GetContextSize() int {
-	return d.contextSize
+	alphabetSize  int
 }
 
 func (d *Dataset) GetAlphabetSize() int {
 	return d.alphabetSize
 }
 
-func (d *Dataset) GetMiniBatchSize() int {
-	return d.miniBatchSize
-}
-
 var sourceTxt = "./gpt/data/ruwiki12.txt"
 var sourceAlphabet = "./gpt/data/ruwiki12.alphabet"
-
-//var sourceTxt = "./gpt/data/rus_sentences.txt"
-//var sourceAlphabet = "./gpt/data/rus_sentences.alphabet"
 
 func (d *Dataset) ParseAlphabet() {
 	f2, err := os.OpenFile(sourceAlphabet, os.O_RDONLY, os.ModePerm)
@@ -93,21 +77,12 @@ func (d *Dataset) ParseTokens() {
 	defer f.Close()
 
 	b, err := io.ReadAll(f)
-
-	//b := make([]byte, 60_000_000)
-	//n, err := f.ReadAt(b, 0)
-	//n, err := f.ReadAt(b, 30_000_000)
-	//n, err := f.ReadAt(b, 60_000_000)
-	//n, err := f.ReadAt(b, 90_000_000)
-	//n, err := f.ReadAt(b, 120_000_000)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	//b = b[:n]
 	fmt.Println("length b", len(b))
 
-	rawBytes := []rune(string(b))
-	d.rawRunes = rawBytes
+	d.rawRunes = bytes.Runes(b)
 }
 
 func (d *Dataset) EncodeString(value string) []int {
@@ -175,9 +150,6 @@ func (d *Dataset) ReadRandomSampleBatch() (sampleInputs, sampleTargets []float32
 	tokenLength := 1
 
 	pos := rand.Intn(len(d.rawRunes) - d.miniBatchSize*((d.contextSize+1)*tokenLength))
-	//*metal.ABSPosition = pos
-
-	//fmt.Println("metal.ABSPosition", *metal.ABSPosition)
 
 	for b := 0; b < d.miniBatchSize; b++ {
 		// pos := rand.Intn(len(d.rawRunes) - (d.contextSize * tokenLength) - 1)

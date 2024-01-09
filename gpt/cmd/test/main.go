@@ -1,16 +1,15 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
 	"math"
 	"math/rand"
 
+	"github.com/atkhx/metal/nn/proc"
 	"github.com/atkhx/nnet/gpt/dataset"
 	"github.com/atkhx/nnet/gpt/pkg"
-	numDevice "github.com/atkhx/nnet/num/dev/metal"
 )
 
 var filename string
@@ -28,7 +27,7 @@ func main() {
 		}
 	}()
 
-	device := numDevice.NewDevice()
+	device := proc.NewWithSystemDefaultDevice()
 	defer device.Release()
 
 	batchSize := 1
@@ -36,7 +35,7 @@ func main() {
 	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
 	trainDataset.ParseAlphabet()
 
-	model := pkg.CreateModelForTest(
+	model := pkg.CreateInferenceModel(
 		trainDataset.GetAlphabetSize(),
 		batchSize,
 		device,
@@ -49,35 +48,24 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	pipeline := numDevice.NewPipeline(device, output)
+	pipeline := device.GetInferencePipeline(output)
 
 	inputIndexes := trainDataset.EncodeString(`Китай`)
 	inputTokens := trainDataset.Decode(inputIndexes...)
 
 	fmt.Print(trainDataset.Decode(inputIndexes...))
-	ctx := context.Background()
 	for j := 0; j < pkg.ContextLength*10; j++ {
 		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
-		copy(inputs.Data.GetData(), inputsFloat)
-
-		//commandBuffer := pipeline.GetCommandBuffer()
-		//ctx = mps.ContextWithCommandBuffer(ctx, commandBuffer)
-		pipeline.Forward(ctx)
-		//commandBuffer.Wait()
+		copy(inputs.Data.GetFloats(), inputsFloat)
+		pipeline.Forward()
 
 		pos := len(inputTokens) - 1
 		if pos < 0 {
 			pos = 0
 		}
 
-		logits := output.Data.GetData()[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
-		//numDevice.Float32s(logits).Softmax()       // probs
-		//numDevice.Float32s(logits).CumulativeSum() // for Multinomial
-		//f := numDevice.Float32s(logits).Multinomial()
-
-		f := sampleWithTemperature(logits, 1)
-		//f := greedyMax(logits)
-
+		logits := output.Data.GetFloats()[pos*trainDataset.GetAlphabetSize() : (pos+1)*trainDataset.GetAlphabetSize()]
+		f := sampleWithTemperature(logits, 0.9)
 		b := trainDataset.Decode(f)
 
 		inputTokens = append(inputTokens, b...)
