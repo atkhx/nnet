@@ -1,3 +1,5 @@
+github.com/atkhx/metal v0.0.0-20240109104846-dc3f30502514 h1:mtbNWCUxOStF6B0shsZ0BpPHamjphBMwbqiXTmJRRfo=
+github.com/atkhx/metal v0.0.0-20240109104846-dc3f30502514/go.mod h1:9sESzgPB0APtTbBv8ZBfDCw+ETMLzwaKhdkzWfpGZ9A=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
