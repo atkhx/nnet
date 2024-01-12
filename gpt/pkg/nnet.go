@@ -11,12 +11,12 @@ const (
 	MiniBatchSize      = 10
 	TrainingIterations = 5000
 
-	ContextLength = 1024
-	FeaturesCount = 1024
+	ContextLength = 256
+	FeaturesCount = 512
 	HeadsCount    = 16
 	HeadSize      = FeaturesCount / HeadsCount
-	HiddenDim     = 2 * FeaturesCount
-	BlocksCount   = 2
+	HiddenDim     = 1.5 * FeaturesCount
+	BlocksCount   = 6
 
 	DropoutProb = 0
 
