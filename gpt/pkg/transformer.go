@@ -33,11 +33,12 @@ func NewLLaMaExperiment(
 
 	layers := layer.Layers{}
 
-	embeddings := device.NewTokenEmbeddingTable(embeddingFeatures, alphabetSize, initWeightK)
+	embeddingsIn := device.NewTokenEmbeddingTable(embeddingFeatures, alphabetSize, initWeightK)
+	embeddingsOut := device.Transpose(embeddingsIn)
 
 	//---Embedding table------------------------------------------------------
 	layers = append(layers,
-		layer.NewEmbeddings(embeddings, nil),
+		layer.NewEmbeddings(embeddingsIn, nil),
 		// out: [ embeddingFeatures, contextLength, batchSize ]
 	)
 
@@ -79,7 +80,7 @@ func NewLLaMaExperiment(
 	layers = append(layers,
 		layer.NewRMSLNorm(),
 		layer.NewMulRows(embeddingFeatures, initWeightRMSMul, nil),
-		layer.NewLinearWithWeights(device.Transpose(embeddings)),
+		layer.NewLinearWithWeights(embeddingsOut),
 		// out: [ alphabetSize, contextLength, batchSize ]
 	)
 

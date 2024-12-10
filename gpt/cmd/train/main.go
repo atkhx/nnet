@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -47,9 +46,15 @@ func main() {
 	device := proc.NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	trainDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize)
-	trainDataset.ParseAlphabet()
-	trainDataset.ParseTokens()
+	trainDataset := dataset.NewDataset(pkg.ContextLength, pkg.MiniBatchSize, pkg.DatasetSourceTxt, pkg.DatasetSourceAlphabet)
+	if err = trainDataset.ParseAlphabet(); err != nil {
+		err = fmt.Errorf("parse alphabet: %w", err)
+		return
+	}
+	if err = trainDataset.ParseTokens(); err != nil {
+		err = fmt.Errorf("parse tokens: %w", err)
+		return
+	}
 
 	optimizer := pkg.CreateOptimizer(epochs, device)
 	model := pkg.CreateTrainingModel(trainDataset.GetAlphabetSize(), pkg.MiniBatchSize, device, optimizer)
@@ -77,8 +82,13 @@ func main() {
 		}
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	trainStopped := make(chan any)
+
+	targetDataFloats := target.Data.GetFloats()
+	inputsDataFloats := inputs.Data.GetFloats()
 
 	go func() {
 		defer close(trainStopped)
@@ -96,9 +106,8 @@ func main() {
 			}
 
 			batchInputs, batchTarget := trainDataset.ReadRandomSampleBatch()
-			copy(target.Data.GetFloats(), batchTarget)
-			copy(inputs.Data.GetFloats(), batchInputs)
-
+			copy(targetDataFloats, batchTarget)
+			copy(inputsDataFloats, batchInputs)
 			pipeline.TrainIteration(func(b *mtl.CommandBuffer) {
 				model.Update(b, iteration)
 			})
@@ -117,12 +126,10 @@ func main() {
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case <-trainStopped:
-	case <-quit:
-		cancel()
+	case <-ctx.Done():
+		//cancel()
 		<-trainStopped
 	}
 }

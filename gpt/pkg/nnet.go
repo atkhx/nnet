@@ -24,6 +24,9 @@ const (
 	adamBeta2        = 0.98
 	adamLearningRate = 0.0003
 	adamEPS          = 0.000000001
+
+	DatasetSourceTxt      = "./gpt/data/ruwiki12.txt"
+	DatasetSourceAlphabet = "./gpt/data/ruwiki12.alphabet"
 )
 
 var InitWeightK = float32(1. / math.Sqrt(float64(FeaturesCount/2)))

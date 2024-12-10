@@ -32,8 +32,11 @@ func main() {
 
 	batchSize := 1
 
-	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize)
-	trainDataset.ParseAlphabet()
+	trainDataset := dataset.NewDataset(pkg.ContextLength, batchSize, pkg.DatasetSourceTxt, pkg.DatasetSourceAlphabet)
+	if err = trainDataset.ParseAlphabet(); err != nil {
+		err = fmt.Errorf("parse alphabet: %w", err)
+		return
+	}
 
 	model := pkg.CreateInferenceModel(
 		trainDataset.GetAlphabetSize(),
@@ -53,8 +56,8 @@ func main() {
 	inputIndexes := trainDataset.EncodeString(`Китай`)
 	inputTokens := trainDataset.Decode(inputIndexes...)
 
-	fmt.Print(trainDataset.Decode(inputIndexes...))
-	for j := 0; j < pkg.ContextLength*10; j++ {
+	fmt.Print(string(trainDataset.Decode(inputIndexes...)))
+	for j := 0; j < 10*pkg.ContextLength; j++ {
 		inputsFloat := trainDataset.EncodeToFloats(inputTokens...)
 		copy(inputs.Data.GetFloats(), inputsFloat)
 		pipeline.Forward()
@@ -74,7 +77,7 @@ func main() {
 			inputTokens = inputTokens[l-pkg.ContextLength:]
 		}
 
-		fmt.Print(b)
+		fmt.Print(string(b))
 	}
 
 	fmt.Println()
